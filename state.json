@@ -1,0 +1,79 @@
+{
+  "project": {
+    "name": "International-Civil-Research-Patent-Scout",
+    "registered_at": "2026-07-31",
+    "start_date": "2026-07-31",
+    "phase_mode": "development"
+  },
+  "goal": "MVP（認証・横断検索・AI要約・比較・レポート）をローカル systemd + Neon で稼働させ、Cloudflare サブドメイン決定後に移行する",
+  "phase": "Monitor",
+  "kpi": {
+    "success_rate_target": 0.9,
+    "ci_success_rate": null,
+    "test_pass_rate": 1.0,
+    "test_count": 19,
+    "security_critical": 0,
+    "blocker_count": 0
+  },
+  "execution": {
+    "max_duration_minutes": 300,
+    "last_session": {
+      "date": "2026-07-31",
+      "summary": "v0.1.0 MVP 実装・ローカル systemd 稼働開始（http://192.168.0.185:8787）+ Neon マイグレーション適用 + E2E スモーク成功。次: サブドメイン選択と Cloudflare 移行"
+    },
+    "repair_count": 0,
+    "max_repair": 3,
+    "same_error_limit": 2
+  },
+  "automation": {
+    "auto_issue_generation": true,
+    "self_evolution": true
+  },
+  "deploy": {
+    "ready": true,
+    "scope": "ローカル運用（自動割当IP:8787・systemd 自動起動）。Cloudflare はサブドメイン承認後に移行",
+    "runbook": "docs/operations/deploy-runbook.md",
+    "rollback": "docs/operations/rollback.md",
+    "checklist": "docs/operations/release-checklist.md",
+    "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
+    "released": {
+      "version": "v0.1.0",
+      "date": "2026-07-31",
+      "production_url": "http://192.168.0.185:8787",
+      "service": "icrps.service（enabled・active）",
+      "neon_project_id": "green-dawn-58312822",
+      "neon_migrations_applied": [
+        "0001_initial_schema.sql"
+      ],
+      "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
+      "cloudflare": "サブドメイン未決定（mirai-dx-platform.com 配下・候補を README に記載）"
+    }
+  },
+  "infra": {
+    "github_repo": "Kensan196948G/International-Civil-Research-Patent-Scout",
+    "github_project": null,
+    "neon_project_id": "green-dawn-58312822",
+    "neon_region": "aws-ap-southeast-1",
+    "neon_main_branch": "br-silent-surf-az03oa48",
+    "cloudflare_account_id": "4f1e888469df7e0b896bb4e211b12633",
+    "cloudflare_zone": "mirai-dx-platform.com (e375e651e49a40801a305b89e297bff0)",
+    "cloudflare_worker_candidate": "icrps-api（wrangler.jsonc 定義済み・未デプロイ）"
+  },
+  "completed_issues": [],
+  "blocked_issues": [
+    "Cloudflare サブドメイン選択（ユーザー承認待ち）"
+  ],
+  "learning": {
+    "failure_patterns": [
+      "jose の setExpirationTime に秒数をそのまま渡すと NumericDate（epoch 秒）として解釈され即失効する → 文字列 '43200s' で指定",
+      "Node ESM 実行時は相対 import に .js 拡張子が必要（tsc 出力）",
+      "Hono node-server の c.env は process.env ではない → resolveEnv(c.env) で両環境対応",
+      "ローカル WebUI 配信はビルド出力パス（dist/src/server.js から ../../../web/dist）に注意"
+    ],
+    "success_patterns": [
+      "E2E スモークスクリプト（登録→検索→保存→要約→比較→レポート）でリリース可否を一括判定",
+      "npm audit は eslint 10 + react-router 8 へ更新して 0 件に到達",
+      "systemd + EnvironmentFile（0600）でシークレットをリポジトリ外に分離"
+    ]
+  }
+}

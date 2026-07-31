@@ -1,0 +1,10 @@
+# ローカル開発用（.dev.vars にコピーし、実際の値はこのファイルへ書かない）
+DATABASE_URL=postgresql://user:password@localhost:5432/civil_research
+JWT_SECRET=local-dev-secret
+JWT_EXPIRES_IN=12h
+OPENAI_API_KEY=
+OPENAI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-4o-mini
+CROSSREF_API_URL=https://api.crossref.org
+OPENALEX_API_URL=https://api.openalex.org
+SERP_API_KEY=

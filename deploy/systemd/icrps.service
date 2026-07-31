@@ -1,0 +1,27 @@
+[Unit]
+Description=International Civil Research & Patent Scout (ICRPS)
+Documentation=https://github.com/Kensan196948G/International-Civil-Research-Patent-Scout
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kensan
+Group=kensan
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=/etc/icrps/icrps.env
+Environment=NODE_ENV=production
+ExecStart=__NODE_BIN__ apps/api/dist/src/server.js
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+
+# セキュリティ強化
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=__APP_DIR__
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target

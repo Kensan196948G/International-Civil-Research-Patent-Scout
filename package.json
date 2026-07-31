@@ -1,0 +1,29 @@
+{
+  "name": "international-civil-research-patent-scout",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "国際土木技術・論文・特許リサーチ支援システム（Cloudflare Workers + Neon PostgreSQL）",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @icrps/api && npm run build --workspace @icrps/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint . --max-warnings 0",
+    "test": "npm run test --workspaces --if-present",
+    "dev:api": "npm run dev --workspace @icrps/api",
+    "dev:web": "npm run dev --workspace @icrps/web",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

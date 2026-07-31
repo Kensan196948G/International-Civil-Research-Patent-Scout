@@ -1,0 +1,35 @@
+{
+  "name": "@icrps/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Workers API — 認証・横断検索・AI要約・比較・レポート（Neon PostgreSQL）",
+  "scripts": {
+    "dev": "wrangler dev",
+    "serve": "tsx src/server.ts",
+    "start": "node dist/src/server.js",
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "deploy:preview": "wrangler versions upload --env preview",
+    "deploy:production:upload": "wrangler versions upload",
+    "deploy:production:promote": "wrangler versions deploy"
+  },
+  "dependencies": {
+    "@icrps/contracts": "*",
+    "@neondatabase/serverless": "^1.1.0",
+    "@hono/node-server": "^2.0.10",
+    "bcryptjs": "^3.0.2",
+    "hono": "^4.12.30",
+    "jose": "^6.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260701.0",
+    "@types/node": "^26.1.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.107.1"
+  }
+}
