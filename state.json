@@ -51,7 +51,7 @@
   },
   "infra": {
     "github_repo": "Kensan196948G/International-Civil-Research-Patent-Scout",
-    "github_project": null,
+    "github_project": 51,
     "neon_project_id": "green-dawn-58312822",
     "neon_region": "aws-ap-southeast-1",
     "neon_main_branch": "br-silent-surf-az03oa48",
