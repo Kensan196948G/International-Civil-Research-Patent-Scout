@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
+import { randomUUID } from "node:crypto";
 import type { AppBindings } from "./types.js";
 import { authRoutes } from "./routes/auth.js";
 import { projectRoutes } from "./routes/projects.js";
@@ -16,6 +17,12 @@ import type { ApiErrorBody } from "@icrps/contracts";
 export function createApp(): Hono<AppBindings> {
   const app = new Hono<AppBindings>();
   app.use("*", logger());
+  app.use("*", async (c, next) => {
+    const requestId = c.req.header("x-request-id") ?? randomUUID();
+    c.set("requestId", requestId);
+    c.header("X-Request-Id", requestId);
+    await next();
+  });
   app.use("*", async (c, next) => {
     await next();
     c.header("X-Content-Type-Options", "nosniff");
@@ -42,7 +49,7 @@ export function createApp(): Hono<AppBindings> {
       const body: ApiErrorBody = { error: { code: err.code, message: err.message, details: err.details } };
       return c.json(body, err.status as 400 | 401 | 403 | 404 | 409 | 500);
     }
-    console.error("unhandled error", err);
+    console.error(`request_id=${c.get("requestId") ?? "-"} unhandled error`, err);
     const body: ApiErrorBody = { error: { code: "internal_error", message: "サーバー内部エラーが発生しました" } };
     return c.json(body, 500);
   });
