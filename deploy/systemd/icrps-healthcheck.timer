@@ -1,0 +1,10 @@
+[Unit]
+Description=ICRPS health check timer (every 5 minutes)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=icrps-healthcheck.service
+
+[Install]
+WantedBy=timers.target

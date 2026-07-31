@@ -23,6 +23,7 @@ sudo DATABASE_URL_FILE=/path/to/db-url.txt ./deploy/install-local.sh
 
 # 4. 確認
 systemctl status icrps
+systemctl status icrps-healthcheck.timer   # 5分間隔の死活監視（失敗時自動再起動）
 curl http://127.0.0.1:8787/api/health
 ./scripts/smoke-local.sh
 BASE_URL=http://127.0.0.1:8787 node scripts/smoke-e2e.mjs

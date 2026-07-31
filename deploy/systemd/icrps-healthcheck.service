@@ -1,0 +1,7 @@
+[Unit]
+Description=ICRPS periodic health check (restarts service on failure)
+After=network-online.target icrps.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/icrps-healthcheck.sh

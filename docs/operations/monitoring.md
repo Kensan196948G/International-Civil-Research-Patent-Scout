@@ -26,6 +26,17 @@ journalctl -u icrps --since "1 hour ago"
 */5 * * * * curl -fsS http://127.0.0.1:8787/api/health >/dev/null || systemctl restart icrps
 ```
 
+## 自動化された死活監視（v0.1.1 以降）
+
+`deploy/install-local.sh` により、5 分間隔の systemd timer が有効化される。
+
+```bash
+systemctl status icrps-healthcheck.timer
+journalctl -u icrps-healthcheck.service -n 20
+```
+
+ヘルスチェック失敗時は `icrps.service` を自動再起動する（`/usr/local/bin/icrps-healthcheck.sh`）。
+
 ## Cloudflare 移行後
 
 - Workers ログ: `wrangler tail icrps-api`
