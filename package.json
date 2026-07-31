@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace @icrps/api && npm run build --workspace @icrps/web",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run build --workspace @icrps/contracts && npm run typecheck --workspaces --if-present",
     "lint": "eslint . --max-warnings 0",
     "test": "npm run test --workspaces --if-present",
     "dev:api": "npm run dev --workspace @icrps/api",
