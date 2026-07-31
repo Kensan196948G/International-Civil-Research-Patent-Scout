@@ -13,7 +13,7 @@
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
 | Cloudflare ドメイン | `mirai-dx-platform.com`（**サブドメインは後日決定**。承認まで DNS 変更なし） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.1.0（MVP・ローカル運用開始 2026-07-31） |
+| バージョン | v0.1.1（リリース直前準備版 / MVP は 2026-07-31 ローカル運用開始） |
 
 ## 🏗️ アーキテクチャ
 
@@ -69,6 +69,7 @@ sequenceDiagram
 | テスト | Vitest 3 |
 | CI/CD | GitHub Actions（将来の Cloudflare デプロイ用） |
 | 運用 | systemd（`icrps.service`）+ スモークテスト |
+| 監視 | systemd timer による 5 分間隔ヘルスチェック（失敗時自動再起動） |
 
 ## 📁 リポジトリ構成
 

@@ -5,13 +5,13 @@
     "start_date": "2026-07-31",
     "phase_mode": "development"
   },
-  "goal": "MVP（認証・横断検索・AI要約・比較・レポート）をローカル systemd + Neon で稼働させ、Cloudflare サブドメイン決定後に移行する",
+  "goal": "v0.1.1 リリース直前準備（堅牢化・運用監視・文書化）を Draft PR まで完了させ、Cloudflare サブドメイン決定後に移行する",
   "phase": "Monitor",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 19,
+    "test_count": 23,
     "security_critical": 0,
     "blocker_count": 0
   },
@@ -19,7 +19,7 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-07-31",
-      "summary": "v0.1.0 MVP 実装・ローカル systemd 稼働開始（http://192.168.0.185:8787）+ Neon マイグレーション適用 + E2E スモーク成功。次: サブドメイン選択と Cloudflare 移行"
+      "summary": "v0.1.1 準備: 認証レート制限・X-Request-Id・監視 timer・インシデント手順・Dependabot を追加し、branch release/v0.1.1-readiness で Draft PR 作成。次: サブドメイン選択と Cloudflare 移行"
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -37,10 +37,10 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.1.0",
-      "date": "2026-07-31",
+      "version": "v0.1.1（Draft PR 承認待ち）",
+      "date": "2026-08-01",
       "production_url": "http://192.168.0.185:8787",
-      "service": "icrps.service（enabled・active）",
+      "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer",
       "neon_project_id": "green-dawn-58312822",
       "neon_migrations_applied": [
         "0001_initial_schema.sql"
