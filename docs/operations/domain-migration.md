@@ -14,6 +14,7 @@
 | Secrets | ✅ DATABASE_URL / JWT_SECRET |
 | カスタムドメインルート | ✅ `icrps.mirai-dx-platform.com` 稼働中 |
 | HTTPS 検証 | ✅ `https://icrps.mirai-dx-platform.com/api/health` → 200（v0.1.1・db ok） |
+| 監視 | ✅ Workers Logs 100%・Workers Traces 100%（observability） |
 | Cloudflare Access | ⏳ ユーザーが後日設定（通知待ち） |
 
 ### 設定経緯メモ（2026-08-01）

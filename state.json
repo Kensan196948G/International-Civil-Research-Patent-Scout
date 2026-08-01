@@ -58,8 +58,9 @@
       "domain_migration": {
         "status": "稼働中（Access 設定待ち）",
         "subdomain": "icrps.mirai-dx-platform.com",
-        "worker": "icrps-api デプロイ済み（653b5b8e…）",
+        "worker": "icrps-api デプロイ済み（beb23e50…）",
         "secrets": "DATABASE_URL / JWT_SECRET 登録済み",
+        "observability": "Workers Logs 100%・Traces 100% 有効",
         "verified": "https://icrps.mirai-dx-platform.com/api/health -> 200（v0.1.1・db ok）",
         "note_apex": "Dashboard 誤操作で apex に紐付いたエントリは解除済み。apex は現在 origin 未設定（1016）のため、旧コンテンツがあれば復元確認が必要",
         "runbook": "docs/operations/domain-migration.md",
