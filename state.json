@@ -42,14 +42,23 @@
       "production_url": "http://192.168.0.185:8787",
       "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer",
       "migration_0002": "app_settings 適用済み（2026-08-01）",
-      "backup_branch": "release-v0.1.1-backup（br-morning-king-azghscq7）",
+      "migration_0003": "watch_topics 拡張 適用済み（2026-08-01）",
+      "backup_branches": [
+        "release-v0.1.1-backup（br-morning-king-azghscq7）",
+        "release-20260801-sidebar-detail（br-young-sea-azoaihau）"
+      ],
       "pr": 13,
       "neon_project_id": "green-dawn-58312822",
       "neon_migrations_applied": [
         "0001_initial_schema.sql"
       ],
       "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
-      "cloudflare": "サブドメイン未決定（mirai-dx-platform.com 配下・候補を README に記載）"
+      "cloudflare": "サブドメイン指定待ち（mirai-dx-platform.com 配下・候補を README に記載・DNS 変更なし）",
+      "domain_migration": {
+        "status": "指定待ち",
+        "runbook": "docs/operations/domain-migration.md",
+        "note": "ドメイン名・サブドメイン名の指定後に、承認済み手順で Cloudflare Workers + custom domain 移行を実施"
+      }
     }
   },
   "infra": {

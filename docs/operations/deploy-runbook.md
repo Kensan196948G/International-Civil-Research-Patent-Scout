@@ -56,10 +56,6 @@ sudo ufw allow 8787/tcp   # Ubuntu の場合
 
 ## Cloudflare 移行（サブドメイン決定後）
 
-1. ユーザーがサブドメイン候補から選択（承認が必要）
-2. `apps/api/wrangler.jsonc` の `routes` に `{ pattern = "<sub>.mirai-dx-platform.com", custom_domain = true }` を設定
-3. Neon 接続情報・JWT シークレットを `wrangler secret put` で登録
-4. GitHub Actions（`.github/workflows/deploy.yml`）または `wrangler deploy` で公開
-5. Cloudflare Access で保護し、workers.dev を無効化
+詳細は [domain-migration.md](domain-migration.md) を参照。
 
 > ⚠️ DNS・サブドメイン変更はユーザー承認前に行わない。
