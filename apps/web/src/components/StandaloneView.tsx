@@ -7,7 +7,7 @@ export function StandaloneView({ v }: { v: any }) {
   const {
     showDisclaimer, navGroups, pageTitle, pageSub,
     isDashboard, isFeed, isSearch, isDoc, isCompare, isFit, isReport, isChat, isWatch, isProjects, isAdmin,
-    goFeed, goSearch, goChat, goWatch, goProjects, goDoc, goCompare, goReport,
+    goFeed, goSearch, goChat, goWatch, goProjects, goCompare, goReport,
     digestText, digestBusy, regenDigest,
     domainChips, typeChips, feed, feedCount,
     q, setQ, runSearch, searchStatus, hasSteps, steps, termsReady, terms,
@@ -252,7 +252,7 @@ export function StandaloneView({ v }: { v: any }) {
                   </>))}
                 </div>
                 <div style={css("margin-top:auto;padding:14px 17px;display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
-                  <button onClick={goDoc } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>詳細と全文要約</button>
+                  <button onClick={it.goDoc } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>詳細と全文要約</button>
                   <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>保存</button>
                   <div style={css("flex:1")}></div>
                   <a href={it.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
@@ -326,7 +326,7 @@ export function StandaloneView({ v }: { v: any }) {
                       <span style={css("font-size:11px;color:#8A97A8")}>関連度</span>
                       <span style={css("font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#1F8255")}>{r.score}</span>
                     </div>
-                    <div onClick={goDoc } style={css("font-size:14.5px;font-weight:600;line-height:1.55;cursor:pointer;color:#1A2433;text-wrap:pretty")}>{r.title}</div>
+                    <div onClick={r.goDoc } style={css("font-size:14.5px;font-weight:600;line-height:1.55;cursor:pointer;color:#1A2433;text-wrap:pretty")}>{r.title}</div>
                     <div style={css("font-size:11.5px;color:#8A97A8;margin-top:5px;line-height:1.5")}>{r.original}</div>
                     <div style={css("font-size:12.5px;line-height:1.75;color:#5A6678;margin-top:9px")}>{r.summary}</div>
                     <div style={css("font-size:11.5px;color:#8A97A8;margin-top:9px;font-family:'IBM Plex Mono',monospace")}>{r.venue}</div>

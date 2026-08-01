@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { StandaloneView } from "../src/components/StandaloneView";
 
 function baseVars() {
@@ -239,5 +239,37 @@ describe("StandaloneView", () => {
     v.settingsAccessDenied = true;
     render(<StandaloneView v={v as never} />);
     expect(screen.getByText("システム設定は管理者権限が必要です")).toBeTruthy();
+  });
+
+  it("opens the correct document from a search result title", () => {
+    const v = baseVars();
+    v.isDashboard = false;
+    v.isSearch = true;
+    v.pageTitle = "AI 横断検索";
+    v.resultsReady = true;
+    const itemGoDoc = vi.fn();
+    const globalGoDoc = vi.fn();
+    v.goDoc = globalGoDoc;
+    v.results = [
+      {
+        title: "低炭素コンクリートの耐久性評価",
+        original: "",
+        venue: "J-STAGE",
+        url: "https://example.test/doc",
+        summary: "要旨",
+        domain: "論文",
+        typeStyle: "",
+        typeLabel: "論文",
+        score: 0.9,
+        goDoc: itemGoDoc,
+        pickLabel: "比較に追加",
+        pickStyle: "",
+        toggle: () => undefined
+      }
+    ];
+    render(<StandaloneView v={v as never} />);
+    fireEvent.click(screen.getByText("低炭素コンクリートの耐久性評価"));
+    expect(itemGoDoc).toHaveBeenCalledTimes(1);
+    expect(globalGoDoc).not.toHaveBeenCalled();
   });
 });
