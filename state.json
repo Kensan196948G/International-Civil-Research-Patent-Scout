@@ -19,7 +19,7 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-07-31",
-      "summary": "v0.1.1 準備: WebUI を「ICRPS WebUI (standalone).html」へ 100% 適用（11 画面・実 API 接続）、認証レート制限・監視 timer・インシデント手順・Dependabot を追加。Draft PR #13 更新中"
+      "summary": "v0.1.1 本番適用済み（2026-08-01）: WebUI standalone 100% 適用・システム設定（DeepSeek/Anthropic）・認証レート制限・監視 timer・migration 0002 適用。Draft PR #13 は merge 承認待ち"
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -37,10 +37,13 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.1.1（Draft PR 承認待ち）",
+      "version": "v0.1.1（本番適用済み）",
       "date": "2026-08-01",
       "production_url": "http://192.168.0.185:8787",
       "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer",
+      "migration_0002": "app_settings 適用済み（2026-08-01）",
+      "backup_branch": "release-v0.1.1-backup（br-morning-king-azghscq7）",
+      "pr": 13,
       "neon_project_id": "green-dawn-58312822",
       "neon_migrations_applied": [
         "0001_initial_schema.sql"
