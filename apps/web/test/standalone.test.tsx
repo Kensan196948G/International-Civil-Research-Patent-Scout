@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { StandaloneView } from "../src/components/StandaloneView";
 
 function baseVars() {
@@ -54,6 +54,7 @@ function baseVars() {
     toggleQueryEdit: () => undefined,
     acceptSuggest: () => undefined,
     docTitle: "文書タイトル",
+    docId: null,
     docSub: "原題",
     enBtnLabel: "原題（English）を表示",
     enBtnStyle: "",
@@ -141,6 +142,15 @@ function baseVars() {
     clearAnthropic: () => undefined,
     clearAnInput: () => undefined,
     settingsAccessDenied: false,
+    saveOpenFor: null,
+    saveProjectId: "",
+    setSaveProjectId: () => undefined,
+    saveBusy: false,
+    saveMsg: null,
+    startSave: () => undefined,
+    confirmSave: () => undefined,
+    cancelSave: () => undefined,
+    clearSaveMsg: () => undefined,
     trendRows: [],
     alertRows: [],
     recentProjectRows: [],
@@ -199,6 +209,8 @@ function baseVars() {
 }
 
 describe("StandaloneView", () => {
+  afterEach(cleanup);
+
   it("renders sidebar and dashboard shell", () => {
     render(<StandaloneView v={baseVars() as never} />);
     expect(screen.getByText("ICRPS")).toBeTruthy();
@@ -271,5 +283,71 @@ describe("StandaloneView", () => {
     fireEvent.click(screen.getByText("低炭素コンクリートの耐久性評価"));
     expect(itemGoDoc).toHaveBeenCalledTimes(1);
     expect(globalGoDoc).not.toHaveBeenCalled();
+  });
+
+  it("opens project picker when saving a search result", () => {
+    const v = baseVars();
+    v.isDashboard = false;
+    v.isSearch = true;
+    v.pageTitle = "AI 横断検索";
+    v.resultsReady = true;
+    const startSave = vi.fn();
+    v.startSave = startSave;
+    v.projects = [{ id: "p1", title: "調査プロジェクトA" }];
+    v.results = [
+      {
+        documentId: "doc-1",
+        title: "高耐久コンクリートの実証",
+        original: "",
+        venue: "J-STAGE",
+        url: "https://example.test/doc",
+        summary: "要旨",
+        domain: "論文",
+        typeStyle: "",
+        typeLabel: "論文",
+        score: 0.9,
+        goDoc: () => undefined,
+        pickLabel: "比較に追加",
+        pickStyle: "",
+        toggle: () => undefined
+      }
+    ];
+    render(<StandaloneView v={v as never} />);
+    fireEvent.click(screen.getByText("プロジェクトに保存"));
+    expect(startSave).toHaveBeenCalledWith("doc-1");
+  });
+
+  it("confirms save from the project picker", () => {
+    const v = baseVars();
+    v.isDashboard = false;
+    v.isSearch = true;
+    v.pageTitle = "AI 横断検索";
+    v.resultsReady = true;
+    const confirmSave = vi.fn();
+    v.confirmSave = confirmSave;
+    v.saveOpenFor = "doc-1";
+    v.saveProjectId = "p1";
+    v.projects = [{ id: "p1", title: "調査プロジェクトA" }];
+    v.results = [
+      {
+        documentId: "doc-1",
+        title: "高耐久コンクリートの実証",
+        original: "",
+        venue: "J-STAGE",
+        url: "https://example.test/doc",
+        summary: "要旨",
+        domain: "論文",
+        typeStyle: "",
+        typeLabel: "論文",
+        score: 0.9,
+        goDoc: () => undefined,
+        pickLabel: "比較に追加",
+        pickStyle: "",
+        toggle: () => undefined
+      }
+    ];
+    render(<StandaloneView v={v as never} />);
+    fireEvent.click(screen.getByText("保存する"));
+    expect(confirmSave).toHaveBeenCalledTimes(1);
   });
 });

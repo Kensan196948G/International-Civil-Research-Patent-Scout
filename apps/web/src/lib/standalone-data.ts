@@ -187,6 +187,10 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [showNewProject, setShowNewProject] = useState(false);
   const [projectMsg, setProjectMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [saveOpenFor, setSaveOpenFor] = useState<string | null>(null);
+  const [saveProjectId, setSaveProjectId] = useState("");
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [projectFilter, setProjectFilter] = useState("すべて");
   const [suggestDismissed, setSuggestDismissed] = useState(false);
   const [docActionMsg, setDocActionMsg] = useState<string | null>(null);
@@ -635,6 +639,42 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       setProjectMsg({ type: "error", text: err instanceof Error ? err.message : "作成に失敗しました" });
     }
   }, [newProjectTitle]);
+
+  const startSave = useCallback((documentId: string | null) => {
+    if (!documentId) return;
+    if (projects.length === 0) {
+      setSaveMsg({ type: "error", text: "保存先のプロジェクトがありません。先に「プロジェクト」画面で作成してください。" });
+      return;
+    }
+    setSaveMsg(null);
+    setSaveProjectId(projects[0]!.id);
+    setSaveOpenFor(documentId);
+  }, [projects]);
+
+  const confirmSave = useCallback(async () => {
+    if (!saveOpenFor || !saveProjectId) return;
+    setSaveBusy(true);
+    setSaveMsg(null);
+    try {
+      await api.projects.documents.save(saveProjectId, { documentId: saveOpenFor });
+      const res = await api.projects.documents.list(saveProjectId);
+      setProjectDocs((prev) => ({ ...prev, [saveProjectId]: res.projectDocuments }));
+      const projectName = projects.find((p) => p.id === saveProjectId)?.title ?? "";
+      setSaveMsg({ type: "ok", text: `「${projectName}」に保存しました。` });
+      setSaveOpenFor(null);
+    } catch (err) {
+      setSaveMsg({ type: "error", text: err instanceof Error ? err.message : "保存に失敗しました" });
+    } finally {
+      setSaveBusy(false);
+    }
+  }, [saveOpenFor, saveProjectId, projects]);
+
+  const cancelSave = useCallback(() => {
+    setSaveOpenFor(null);
+    setSaveMsg(null);
+  }, []);
+
+  const clearSaveMsg = useCallback(() => setSaveMsg(null), []);
 
   const exportCompareCsv = useCallback(() => {
     if (!comparison) return;
@@ -1340,6 +1380,15 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     createProject,
     projectMsg,
     docActionMsg,
+    saveOpenFor,
+    saveProjectId,
+    setSaveProjectId: (e: { target: { value: string } }) => setSaveProjectId(e.target.value),
+    saveBusy,
+    saveMsg,
+    startSave,
+    confirmSave,
+    cancelSave,
+    clearSaveMsg,
     adoptSummary,
     discardSummary,
     editSummary,
@@ -1382,6 +1431,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     docVenue: doc?.sourceName ?? "—",
     docDoi: doc?.doi ?? doc?.patentNumber ?? "—",
     docSource: doc?.sourceType === "patent" ? "Google Patents" : "Crossref / OpenAlex",
+    docId: doc?.id ?? null,
     docUrl: doc?.url ?? "#",
     docUrlHost: doc?.url ? new URL(doc.url).hostname : "出典なし",
     docTypeLabel: doc ? (TYPE_LABEL[doc.sourceType === "pdf" ? "book" : doc.sourceType] ?? doc.sourceType) : "文書",

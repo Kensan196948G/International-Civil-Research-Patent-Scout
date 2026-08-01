@@ -11,15 +11,15 @@
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 43,
+    "test_count": 46,
     "security_critical": 0,
     "blocker_count": 0
   },
   "execution": {
     "max_duration_minutes": 300,
     "last_session": {
-      "date": "2026-07-31",
-      "summary": "土木建設技術文献の自動収集を実装・稼働開始: J-STAGE（公式WebAPI）/ 土木研究所 / ITC / 国交省 / 関東地整を 2時間ごとに収集（icrps-ingest.timer）。初回収集で 1,743 件を新規登録（J-STAGE 1,538・PWRI 10・ITC 100・MLIT 40・KTR 55）。管理画面「システム設定→文献データ連携」に履歴・手動実行を追加。PATENTSCOPE/J-PlatPat は対象外（後日手動取り込みUI検討）"
+      "date": "2026-08-01",
+      "summary": "土木建設技術文献の自動収集を実装・稼働開始（2時間ごと・icrps-ingest.timer）。文書詳細クリック不具合を修正し、保存フロー（検索結果/フィード/文書詳細→プロジェクト選択→保存）を実装。Cloudflare 本番へ 8eac6543 を 100% デプロイ済み（https://icrps.mirai-dx-platform.com）。ローカル :8787 も反映済み。PATENTSCOPE/J-PlatPat は対象外（後日手動取り込みUI検討）"
     },
     "repair_count": 0,
     "max_repair": 3,

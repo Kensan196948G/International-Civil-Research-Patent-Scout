@@ -27,6 +27,7 @@ export function StandaloneView({ v }: { v: any }) {
     testDeepSeek, saveDeepSeek, clearDeepSeek, clearDsInput,
     testAnthropic, saveAnthropic, clearAnthropic, clearAnInput, settingsAccessDenied,
     ingestRuns, ingestBusy, ingestMsg, runIngestNow,
+    docId, saveOpenFor, saveProjectId, setSaveProjectId, saveBusy, saveMsg, startSave, confirmSave, cancelSave, clearSaveMsg,
     trendRows, alertRows, recentProjectRows, projectStatusCounts, projectFilter, setProjectFilter,
     newProjectTitle, setNewProjectTitle, showNewProject, setShowNewProject, createProject, projectMsg,
     watchName, setWatchName, watchTerms, setWatchTerms, watchFreq, setWatchFreq,
@@ -37,6 +38,16 @@ export function StandaloneView({ v }: { v: any }) {
     exportCompareCsv, compareSummary, adminTotalUsers, adminAdmins, adminCostLabel,
     adminConnectorLabel, adminRejectLabel, adminAccessDenied
   } = v as Record<string, any>;
+
+  const savePicker = () => (
+    <span style={css("display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap")}>
+      <select value={saveProjectId} onChange={setSaveProjectId} style={css("font:inherit;font-size:12px;padding:6px 9px;border:1px solid #E3E8EF;border-radius:8px;outline:none;color:#1A2433;max-width:230px;background:#fff")}>
+        {projects.map((p: any) => (<option key={p.id} value={p.id}>{p.title}</option>))}
+      </select>
+      <button onClick={confirmSave} disabled={saveBusy} style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>{saveBusy ? "保存中…" : "保存する"}</button>
+      <button onClick={cancelSave} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>取消</button>
+    </span>
+  );
   return (
     <>
 
@@ -108,6 +119,11 @@ export function StandaloneView({ v }: { v: any }) {
     </header>
 
     <div style={css("flex:1;overflow:auto;padding:20px 22px 40px")}>
+
+      {(saveMsg) && (<div style={css("margin-bottom:14px;padding:10px 13px;border-radius:8px;font-size:12px;line-height:1.7;display:flex;align-items:center;gap:10px;" + (saveMsg.type === "ok" ? "background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255" : "background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F"))}>
+        <span style={css("flex:1")}>{saveMsg.text}</span>
+        <button onClick={clearSaveMsg} style={css("cursor:pointer;border:none;background:none;color:inherit;font:inherit;font-size:14px;font-weight:700")}>×</button>
+      </div>)}
 
       {/* ===================== ダッシュボード ===================== */}
       {(isDashboard ) && (<>
@@ -253,7 +269,7 @@ export function StandaloneView({ v }: { v: any }) {
                 </div>
                 <div style={css("margin-top:auto;padding:14px 17px;display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
                   <button onClick={it.goDoc } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>詳細と全文要約</button>
-                  <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>保存</button>
+                  {saveOpenFor === it.id ? savePicker() : (<button onClick={() => startSave(it.id)} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>保存</button>)}
                   <div style={css("flex:1")}></div>
                   <a href={it.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
                 </div>
@@ -332,7 +348,7 @@ export function StandaloneView({ v }: { v: any }) {
                     <div style={css("font-size:11.5px;color:#8A97A8;margin-top:9px;font-family:'IBM Plex Mono',monospace")}>{r.venue}</div>
                     <div style={css("display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center")}>
                       <button onClick={r.toggle } style={css(r.pickStyle )}>{r.pickLabel}</button>
-                      <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>プロジェクトに保存</button>
+                      {saveOpenFor === r.documentId ? savePicker() : (<button onClick={() => startSave(r.documentId)} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>プロジェクトに保存</button>)}
                       <div style={css("flex:1")}></div>
                       <a href={r.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
                     </div>
@@ -518,7 +534,7 @@ export function StandaloneView({ v }: { v: any }) {
               </div>
 
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 17px;display:flex;flex-direction:column;gap:8px")}>
-                <button style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:9px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>プロジェクトに保存</button>
+                {saveOpenFor === docId ? savePicker() : (<button onClick={() => startSave(docId)} style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:9px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>プロジェクトに保存</button>)}
                 <button onClick={goCompare } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:9px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>比較表に追加</button>
                 <button onClick={goWatch } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:9px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>著者・主題をウォッチ</button>
               </div>
