@@ -253,6 +253,18 @@ describe("StandaloneView", () => {
     expect(screen.getByText("システム設定は管理者権限が必要です")).toBeTruthy();
   });
 
+  it("shows empty state when no document is selected", () => {
+    const v = baseVars();
+    v.isDashboard = false;
+    v.isDoc = true;
+    v.pageTitle = "文書詳細";
+    v.docId = null;
+    render(<StandaloneView v={v as never} />);
+    expect(screen.getByText("文書が選択されていません")).toBeTruthy();
+    expect(screen.getByText("AI 横断検索へ")).toBeTruthy();
+    expect(screen.getByText("技術文献フィードへ")).toBeTruthy();
+  });
+
   it("opens the correct document from a search result title", () => {
     const v = baseVars();
     v.isDashboard = false;

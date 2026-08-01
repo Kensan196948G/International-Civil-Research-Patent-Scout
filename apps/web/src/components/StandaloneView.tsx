@@ -410,6 +410,15 @@ export function StandaloneView({ v }: { v: any }) {
       {/* ===================== 文書詳細 ===================== */}
       {(isDoc ) && (<>
         <div data-screen-label="04 文書詳細">
+          {(!docId ) ? (<div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:46px 24px;text-align:center")}>
+            <div style={css("font-size:28px;margin-bottom:10px")}>📄</div>
+            <div style={css("font-size:14.5px;font-weight:600;color:#1A2433;margin-bottom:6px")}>文書が選択されていません</div>
+            <div style={css("font-size:12px;color:#8A97A8;line-height:1.8;margin-bottom:18px")}>検索結果または技術文献フィードで文書タイトルをクリックすると、この画面に詳細が表示されます。</div>
+            <div style={css("display:flex;gap:8px;justify-content:center;flex-wrap:wrap")}>
+              <button onClick={goSearch } style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:8px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>AI 横断検索へ</button>
+              <button onClick={goFeed } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:8px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>技術文献フィードへ</button>
+            </div>
+          </div>) : (<>
           <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-items:start")}>
             <div style={css("display:flex;flex-direction:column;gap:16px;min-width:0")}>
 
@@ -540,6 +549,7 @@ export function StandaloneView({ v }: { v: any }) {
               </div>
             </div>
           </div>
+          </>)}
         </div>
       </>)}
 

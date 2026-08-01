@@ -317,7 +317,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       dashboard: "/dashboard",
       feed: "/feed",
       search: "/search",
-      document: lastDocId ? `/documents/${lastDocId}` : "/search",
+      document: "/documents",
       compare: "/compare",
       fit: "/fit",
       report: "/report",
