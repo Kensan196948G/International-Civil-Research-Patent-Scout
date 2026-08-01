@@ -27,9 +27,10 @@ export function LoginPage() {
 
   return (
     <div className="auth-page">
-      <form className="card auth-card" onSubmit={onSubmit}>
-        <h1>ログイン</h1>
-        {error && <p className="alert alert-danger" role="alert">{error}</p>}
+      <form className="auth-card" onSubmit={onSubmit}>
+        <h1>ICRPS にログイン</h1>
+        <p className="auth-sub">国際土木技術・論文・特許リサーチ支援</p>
+        {error && <p className="auth-error" role="alert">{error}</p>}
         <label>
           メールアドレス
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
@@ -38,8 +39,8 @@ export function LoginPage() {
           パスワード
           <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         </label>
-        <button type="submit" className="button button-primary" disabled={submitting}>
-          {submitting ? "送信中…" : "ログイン"}
+        <button type="submit" className="auth-button" disabled={submitting}>
+          {submitting ? "ログイン中…" : "ログイン"}
         </button>
         <p className="muted">
           アカウントをお持ちでない場合は <Link to="/register">新規登録</Link>

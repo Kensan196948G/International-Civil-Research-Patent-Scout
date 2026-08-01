@@ -11,7 +11,7 @@
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 23,
+    "test_count": 24,
     "security_critical": 0,
     "blocker_count": 0
   },
@@ -19,7 +19,7 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-07-31",
-      "summary": "v0.1.1 準備: 認証レート制限・X-Request-Id・監視 timer・インシデント手順・Dependabot を追加し、branch release/v0.1.1-readiness で Draft PR 作成。次: サブドメイン選択と Cloudflare 移行"
+      "summary": "v0.1.1 準備: WebUI を「ICRPS WebUI (standalone).html」へ 100% 適用（11 画面・実 API 接続）、認証レート制限・監視 timer・インシデント手順・Dependabot を追加。Draft PR #13 更新中"
     },
     "repair_count": 0,
     "max_repair": 3,

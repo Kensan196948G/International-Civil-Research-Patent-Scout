@@ -62,6 +62,7 @@ sequenceDiagram
 | レイヤー | 技術 |
 | --- | --- |
 | フロントエンド | React 19 + Vite 7 + TypeScript + react-router 8 |
+| WebUI デザイン | [ICRPS WebUI (standalone).html](ICRPS%20WebUI%20(standalone).html) に 100% 準拠（サイドバー型 11 画面） |
 | API | Hono 4（Cloudflare Workers 互換・Node.js 両対応） |
 | DB | Neon PostgreSQL 17（`@neondatabase/serverless`） |
 | 認証 | bcryptjs + JWT（jose / HS256） |

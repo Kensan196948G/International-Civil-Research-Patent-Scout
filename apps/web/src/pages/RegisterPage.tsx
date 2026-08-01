@@ -37,9 +37,10 @@ export function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <form className="card auth-card" onSubmit={onSubmit}>
+      <form className="auth-card" onSubmit={onSubmit}>
         <h1>新規登録</h1>
-        {error && <p className="alert alert-danger" role="alert">{error}</p>}
+        <p className="auth-sub">国際土木技術・論文・特許リサーチ支援</p>
+        {error && <p className="auth-error" role="alert">{error}</p>}
         <label>
           表示名
           <input type="text" required value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
@@ -56,7 +57,7 @@ export function RegisterPage() {
           パスワード（確認）
           <input type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
         </label>
-        <button type="submit" className="button button-primary" disabled={submitting}>
+        <button type="submit" className="auth-button" disabled={submitting}>
           {submitting ? "登録中…" : "登録"}
         </button>
         <p className="muted">
