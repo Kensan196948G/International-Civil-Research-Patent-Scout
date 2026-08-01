@@ -11,7 +11,7 @@
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 32,
+    "test_count": 35,
     "security_critical": 0,
     "blocker_count": 0
   },

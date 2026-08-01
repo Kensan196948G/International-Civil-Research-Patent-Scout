@@ -51,6 +51,11 @@
 | PUT | `/admin/settings/ai` | ○ admin | AI 設定保存（DeepSeek / Anthropic の API キー・モデル。キーは AES-256-GCM で暗号化保存） |
 | POST | `/admin/settings/ai/test` | ○ admin | AI 接続テスト（キー未指定時は保存済みキーを使用。保存はしない） |
 | DELETE | `/admin/settings/ai/{deepseek\|anthropic}` | ○ admin | 保存済みキーの削除 |
+| GET | `/watch` | ○ | ウォッチテーマ一覧 |
+| POST | `/watch` | ○ | ウォッチテーマ登録（テーマ名・キーワード・頻度） |
+| PATCH | `/watch/{id}` | ○ | 有効/停止・キーワード更新 |
+| DELETE | `/watch/{id}` | ○ | ウォッチテーマ削除 |
+| POST | `/chat` | ○ | 保存文献ベースの AI チャット（出典付き回答・ルール応答フォールバック） |
 
 ## 検索リクエスト例
 
