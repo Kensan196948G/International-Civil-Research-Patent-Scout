@@ -685,6 +685,15 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
 
   const clearSaveMsg = useCallback(() => setSaveMsg(null), []);
 
+  const clearDocument = useCallback(() => {
+    lastDocId = null;
+    setDoc(null);
+    setSummaries([]);
+    setShowEn(false);
+    setDocActionMsg(null);
+    navigate("/documents");
+  }, [navigate]);
+
   const exportCompareCsv = useCallback(() => {
     if (!comparison) return;
     const rows = [
@@ -1456,6 +1465,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     createProject,
     projectMsg,
     docActionMsg,
+    clearDocument,
     saveOpenFor,
     saveProjectId,
     setSaveProjectId: (e: { target: { value: string } }) => setSaveProjectId(e.target.value),

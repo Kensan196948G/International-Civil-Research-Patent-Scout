@@ -23,6 +23,7 @@ export function StandaloneView({ v }: { v: any }) {
     aiEngineNote, userInitial, userName, userOrg, roleLabel,
     statProjects, statProjectsSub, statDocs, statDocsSub, statReports, statReportsSub, statWatch, statWatchSub,
     digestMeta, docVenue, docDoi, docSource, docUrl, docUrlHost, docTypeLabel, docDomain, compareHeaders,
+    clearDocument,
     isSettings, settingsDeepSeekConfigured, settingsAnthropicConfigured, settingsActiveProvider,
     dsKey, setDsKey, dsModel, setDsModel, anKey, setAnKey, anModel, setAnModel,
     dsMsg, anMsg, dsMsgStyle, anMsgStyle, dsBusy, anBusy,
@@ -498,6 +499,7 @@ export function StandaloneView({ v }: { v: any }) {
                   <span style={css("font-size:11px;font-weight:600;color:#5A6678;background:#F2F4F8;border:1px solid #E3E8EF;padding:2px 8px;border-radius:6px")}>維持管理</span>
                   <div style={css("flex:1")}></div>
                   <button onClick={toggleEn } style={css(enBtnStyle )}>{enBtnLabel}</button>
+                  <button onClick={clearDocument } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:11.5px;font-weight:600")}>画面クリア</button>
                 </div>
                 <h1 style={css("font-size:20px;font-weight:600;line-height:1.5;margin:0 0 8px;text-wrap:pretty")}>{docTitle}</h1>
                 <div style={css("font-size:12.5px;color:#8A97A8;line-height:1.7")}>{docSub}</div>

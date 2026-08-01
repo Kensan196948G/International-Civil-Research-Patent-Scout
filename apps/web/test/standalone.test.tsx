@@ -68,6 +68,7 @@ function baseVars() {
     acceptSuggest: () => undefined,
     docTitle: "文書タイトル",
     docId: null,
+    clearDocument: () => undefined,
     docSub: "原題",
     enBtnLabel: "原題（English）を表示",
     enBtnStyle: "",
@@ -276,6 +277,19 @@ describe("StandaloneView", () => {
     expect(screen.getByText("文書が選択されていません")).toBeTruthy();
     expect(screen.getByText("AI 横断検索へ")).toBeTruthy();
     expect(screen.getByText("技術文献フィードへ")).toBeTruthy();
+  });
+
+  it("clears the document detail screen", () => {
+    const v = baseVars();
+    v.isDashboard = false;
+    v.isDoc = true;
+    v.pageTitle = "文書詳細";
+    v.docId = "d1";
+    const clearDocument = vi.fn();
+    v.clearDocument = clearDocument;
+    render(<StandaloneView v={v as never} />);
+    fireEvent.click(screen.getByText("画面クリア"));
+    expect(clearDocument).toHaveBeenCalledTimes(1);
   });
 
   it("renders collected literature feed and opens document details", () => {
