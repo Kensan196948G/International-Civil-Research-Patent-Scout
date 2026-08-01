@@ -139,7 +139,8 @@ function baseVars() {
     testAnthropic: () => undefined,
     saveAnthropic: () => undefined,
     clearAnthropic: () => undefined,
-    clearAnInput: () => undefined
+    clearAnInput: () => undefined,
+    settingsAccessDenied: false
   };
 }
 
@@ -175,5 +176,14 @@ describe("StandaloneView", () => {
     expect(screen.getAllByText("設定保存").length).toBe(2);
     expect(screen.getAllByText("入力クリア").length).toBe(2);
     expect(screen.getByText("接続成功 · deepseek / deepseek-chat · 120ms")).toBeTruthy();
+  });
+
+  it("shows access denied message for non-admin users", () => {
+    const v = baseVars();
+    v.isSettings = true;
+    v.pageTitle = "システム設定";
+    v.settingsAccessDenied = true;
+    render(<StandaloneView v={v as never} />);
+    expect(screen.getByText("システム設定は管理者権限が必要です")).toBeTruthy();
   });
 });

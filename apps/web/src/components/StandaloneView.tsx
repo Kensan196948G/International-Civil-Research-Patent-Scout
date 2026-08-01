@@ -25,7 +25,7 @@ export function StandaloneView({ v }: { v: any }) {
     dsKey, setDsKey, dsModel, setDsModel, anKey, setAnKey, anModel, setAnModel,
     dsMsg, anMsg, dsMsgStyle, anMsgStyle, dsBusy, anBusy,
     testDeepSeek, saveDeepSeek, clearDeepSeek, clearDsInput,
-    testAnthropic, saveAnthropic, clearAnthropic, clearAnInput
+    testAnthropic, saveAnthropic, clearAnthropic, clearAnInput, settingsAccessDenied
   } = v as Record<string, any>;
   return (
     <>
@@ -913,6 +913,10 @@ export function StandaloneView({ v }: { v: any }) {
             </div>
           </div>
 
+          {(settingsAccessDenied ) ? (<div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:28px 22px;text-align:center")}>
+            <div style={css("font-size:13px;font-weight:600;color:#1A2433;margin-bottom:6px")}>システム設定は管理者権限が必要です</div>
+            <div style={css("font-size:12px;color:#8A97A8")}>管理者アカウントでログインすると、DeepSeek / Anthropic の API キー設定・テスト・保存が利用できます。</div>
+          </div>) : (<>
           <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px;align-items:start")}>
             <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
               <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
@@ -972,6 +976,7 @@ export function StandaloneView({ v }: { v: any }) {
           <div style={css("margin-top:16px;padding:12px 15px;border-left:3px solid #E08A2B;background:#fff;border-radius:0 8px 8px 0;font-size:11.5px;line-height:1.8;color:#5A6678")}>
             <b>セキュリティ：</b>API キーは AES-256-GCM で暗号化して保存され、画面・ログ・監査ログに出力されません。「設定テスト」は接続確認のみで保存は行いません。「入力クリア」は入力欄のみ、「設定クリア」は保存済みキーを削除します。
           </div>
+          </>)}
         </div>
       </>)}
     </div>

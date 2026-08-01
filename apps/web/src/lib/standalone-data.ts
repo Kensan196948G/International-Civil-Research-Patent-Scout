@@ -819,10 +819,10 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
           { ico: "📁", label: "プロジェクト", active: page === "projects", go: () => go("projects") },
           ...(isAdmin
             ? [
-                { ico: "⚙️", label: "管理・監査ログ", active: page === "admin", go: () => go("admin") },
-                { ico: "🧰", label: "システム設定", active: page === "settings", go: () => go("settings") }
+                { ico: "⚙️", label: "管理・監査ログ", active: page === "admin", go: () => go("admin") }
               ]
-            : [])
+            : []),
+          { ico: "🧰", label: "システム設定", active: page === "settings", go: () => go("settings") }
         ]
       }
     ],
@@ -1000,6 +1000,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     clearAnthropic,
     clearDsInput,
     clearAnInput,
+    settingsAccessDenied: !isAdmin,
     dsMsgStyle:
       dsMsg.type === "ok"
         ? "margin-top:4px;padding:10px 13px;background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"
