@@ -119,6 +119,7 @@ scripts/      migrate / smoke テスト
 | --- | --- | --- |
 | ログイン / 新規登録 | `/login` `/register` | メール+パスワード認証 |
 | ダッシュボード | `/dashboard` | 統計・最近のプロジェクト/レポート |
+| 技術文献フィード | `/feed` | 保存文献に加え、**収集文献（土木建設技術）** をタブ表示（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整の自動収集分を情報源・キーワードで絞り込み、詳細カードで閲覧） |
 | 横断検索 | `/search` | 論文・特許・Web の横断検索、保存、比較追加 |
 | 文書詳細 | `/documents/:id` | メタデータ・AI 要約・引用 |
 | プロジェクト | `/projects/:id` | 保存文献・タグ・メモ・比較/レポート導線 |
@@ -147,6 +148,7 @@ scripts/      migrate / smoke テスト
 | POST | `/api/projects/:id/reports` | レポート生成 |
 | GET/POST | `/api/reports/:id` `/export` | レポート取得・Markdown エクスポート |
 | GET | `/api/dashboard/stats` | ダッシュボード統計 |
+| GET | `/api/literature` | 収集文献一覧（情報源・キーワード・ページング。認証必須） |
 | GET/PATCH | `/api/admin/users` | ユーザー管理（admin） |
 | GET | `/api/admin/ingest/runs` | 文献収集の実行履歴（admin） |
 | POST | `/api/admin/ingest/run` | 文献収集を手動実行（admin） |

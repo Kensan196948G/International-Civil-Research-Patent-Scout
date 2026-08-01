@@ -57,6 +57,7 @@
 | POST | `/watch` | ○ | ウォッチテーマ登録（テーマ名・キーワード・頻度） |
 | PATCH | `/watch/{id}` | ○ | 有効/停止・キーワード更新 |
 | DELETE | `/watch/{id}` | ○ | ウォッチテーマ削除 |
+| GET | `/literature` | ○ | 収集文献一覧（`source`=all/jstage/pwri/itc/mlit/ktr、`q`、`limit`(最大100)、`offset`） |
 | POST | `/chat` | ○ | 保存文献ベースの AI チャット（出典付き回答・ルール応答フォールバック） |
 
 ## 検索リクエスト例

@@ -10,6 +10,8 @@ export function StandaloneView({ v }: { v: any }) {
     goFeed, goSearch, goChat, goWatch, goProjects, goCompare, goReport,
     digestText, digestBusy, regenDigest,
     domainChips, typeChips, feed, feedCount,
+    feedTab, setFeedTab, litSource, changeLitSource, litQueryInput, setLitQueryInput, applyLitSearch,
+    litRows, litTotal, litLoading, litError, hasMoreLit, loadMoreLiterature,
     q, setQ, runSearch, searchStatus, hasSteps, steps, termsReady, terms,
     resultsReady, results, resultCount, hasCompare, compareCount, toggleQueryEdit, acceptSuggest, dismissSuggest, suggestDismissed,
     docTitle, docSub, enBtnLabel, enBtnStyle, toggleEn, docTabs, docTabSummary, docTabAbstract, docTabClaims, docTabCite,
@@ -223,6 +225,14 @@ export function StandaloneView({ v }: { v: any }) {
       {/* ===================== 技術文献フィード ===================== */}
       {(isFeed ) && (<>
         <div data-screen-label="02 技術文献フィード">
+          <div style={css("display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap")}>
+            <button onClick={() => setFeedTab("saved")} style={css(feedTab === "saved" ? "cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:7px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600" : "cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>保存文献</button>
+            <button onClick={() => setFeedTab("collected")} style={css(feedTab === "collected" ? "cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:7px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600" : "cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>収集文献（土木建設技術）</button>
+            <div style={css("flex:1")}></div>
+            <span style={css("font-size:11.5px;color:#8A97A8;align-self:center")}>2時間ごとに J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整 から自動収集</span>
+          </div>
+
+          {feedTab === "saved" && (<>
           <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:11px")}>
             <div style={css("display:flex;align-items:center;gap:10px;flex-wrap:wrap")}>
               <span style={css("font-size:11.5px;font-weight:600;color:#5A6678;width:52px")}>分野</span>
@@ -276,6 +286,65 @@ export function StandaloneView({ v }: { v: any }) {
               </div>
             </>))}
           </div>
+          </>)}
+
+          {feedTab === "collected" && (<>
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap")}>
+              <span style={css("font-size:11.5px;font-weight:600;color:#5A6678")}>情報源</span>
+              <select value={litSource} onChange={(e: any) => changeLitSource(e.target.value)} style={css("font:inherit;font-size:12px;padding:7px 10px;border:1px solid #E3E8EF;border-radius:8px;outline:none;color:#1A2433;background:#fff")}>
+                <option value="all">すべて</option>
+                <option value="jstage">J-STAGE</option>
+                <option value="pwri">土木研究所</option>
+                <option value="itc">ITC Digital Library</option>
+                <option value="mlit">国土交通省</option>
+                <option value="ktr">関東地整</option>
+              </select>
+              <input value={litQueryInput} onChange={setLitQueryInput} placeholder="タイトル・著者・キーワードで検索" style={css("font:inherit;font-size:12.5px;padding:7px 11px;border:1px solid #E3E8EF;border-radius:8px;outline:none;color:#1A2433;width:240px;max-width:100%")} />
+              <button onClick={applyLitSearch } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>検索</button>
+              <div style={css("flex:1")}></div>
+              <span style={css("font-size:11.5px;color:#8A97A8")}>{litTotal} 件 · 公開日・収集日時順</span>
+            </div>
+
+            {(litError ) && (<div style={css("margin-bottom:14px;padding:10px 13px;background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F;border-radius:8px;font-size:12px;line-height:1.7")}>{litError}</div>)}
+
+            <div style={css("display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:16px;align-items:start")}>
+              {(litRows ).map((it: any) => (<>
+                <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden;display:flex;flex-direction:column;animation:icrps-in .25s ease both")}>
+                  <div style={css("padding:14px 17px 0;display:flex;align-items:center;gap:7px;flex-wrap:wrap")}>
+                    <span style={css(it.typeStyle )}>{it.typeLabel}</span>
+                    <span style={css("font-size:11px;font-weight:600;color:#2E5AAC;background:#E9F0FB;border:1px solid #C9D7EC;padding:2px 8px;border-radius:6px")}>{it.sourceLabel}</span>
+                    <div style={css("flex:1")}></div>
+                    <span style={css("font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8A97A8")}>{it.date}</span>
+                  </div>
+                  <div style={css("padding:11px 17px 0")}>
+                    <div onClick={it.goDoc } style={css("font-size:14px;font-weight:600;line-height:1.55;text-wrap:pretty;cursor:pointer;color:#1A2433")}>{it.title}</div>
+                    <div style={css("font-size:11.5px;color:#8A97A8;margin-top:5px;line-height:1.5")}>{it.original}</div>
+                    {(it.authors ) && (<div style={css("font-size:11.5px;color:#5A6678;margin-top:6px")}>著者: {it.authors}</div>)}
+                    <div style={css("font-size:11.5px;color:#5A6678;margin-top:6px;font-family:'IBM Plex Mono',monospace")}>{it.venue}{it.doi ? ` · DOI: ${it.doi}` : ""}</div>
+                  </div>
+                  <div style={css("margin:13px 17px 0;padding:12px 13px;background:#FAFBFC;border:1px solid #EEF1F5;border-radius:8px")}>
+                    <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:7px")}>
+                      <span style={css("font-size:10px;font-weight:700;color:#2E5AAC;background:#E9F0FB;padding:1px 6px;border-radius:5px")}>収集メタデータ</span>
+                      <span style={css("font-size:10.5px;color:#8A97A8")}>要旨があるもののみ表示</span>
+                    </div>
+                    <div style={css("font-size:12.5px;line-height:1.75;color:#1A2433;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden")}>{it.summary}</div>
+                  </div>
+                  <div style={css("margin-top:auto;padding:14px 17px;display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
+                    <button onClick={it.goDoc } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>詳細を開く</button>
+                    {saveOpenFor === it.documentId ? savePicker() : (<button onClick={() => startSave(it.documentId)} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>プロジェクトに保存</button>)}
+                    <div style={css("flex:1")}></div>
+                    <a href={it.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
+                  </div>
+                </div>
+              </>))}
+            </div>
+
+            {(litLoading ) && (<div style={css("text-align:center;padding:18px;font-size:12px;color:#8A97A8")}>読み込み中…</div>)}
+            {(!litLoading && litRows.length === 0 && !litError ) && (<div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:34px 22px;text-align:center;font-size:12.5px;color:#8A97A8")}>該当する収集文献はありません。情報源や検索条件を変えてお試しください。</div>)}
+            {(hasMoreLit && !litLoading ) && (<div style={css("display:flex;justify-content:center;margin-top:16px")}>
+              <button onClick={loadMoreLiterature } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:8px 16px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>さらに読み込む（残り {Math.max(litTotal - litRows.length, 0)} 件）</button>
+            </div>)}
+          </>)}
         </div>
       </>)}
 

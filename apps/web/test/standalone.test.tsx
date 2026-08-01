@@ -39,6 +39,19 @@ function baseVars() {
     typeChips: [],
     feed: [],
     feedCount: 0,
+    feedTab: "saved",
+    setFeedTab: () => undefined,
+    litSource: "all",
+    changeLitSource: () => undefined,
+    litQueryInput: "",
+    setLitQueryInput: () => undefined,
+    applyLitSearch: () => undefined,
+    litRows: [],
+    litTotal: 0,
+    litLoading: false,
+    litError: null,
+    hasMoreLit: false,
+    loadMoreLiterature: () => undefined,
     q: "",
     runSearch: () => undefined,
     searchStatus: "待機中",
@@ -263,6 +276,40 @@ describe("StandaloneView", () => {
     expect(screen.getByText("文書が選択されていません")).toBeTruthy();
     expect(screen.getByText("AI 横断検索へ")).toBeTruthy();
     expect(screen.getByText("技術文献フィードへ")).toBeTruthy();
+  });
+
+  it("renders collected literature feed and opens document details", () => {
+    const v = baseVars();
+    v.isDashboard = false;
+    v.isFeed = true;
+    v.pageTitle = "技術文献フィード";
+    v.feedTab = "collected";
+    v.litTotal = 1;
+    const goDoc = vi.fn();
+    v.litRows = [
+      {
+        id: "d1",
+        documentId: "d1",
+        title: "既設PC橋の補修技術に関する研究",
+        original: "Study on repair technology",
+        venue: "土木研究所 論文・刊行物検索 · 2026-10-01",
+        url: "https://thesis.pwri.go.jp/public_detail/122848/",
+        summary: "要旨",
+        authors: "吉田 英二",
+        doi: "",
+        sourceLabel: "土木研究所",
+        date: "2026-10-01",
+        typeStyle: "",
+        typeLabel: "論文",
+        goDoc,
+        key: "lit-0"
+      }
+    ];
+    render(<StandaloneView v={v as never} />);
+    expect(screen.getByText("収集文献（土木建設技術）")).toBeTruthy();
+    expect(screen.getByText("既設PC橋の補修技術に関する研究")).toBeTruthy();
+    fireEvent.click(screen.getByText("既設PC橋の補修技術に関する研究"));
+    expect(goDoc).toHaveBeenCalledTimes(1);
   });
 
   it("opens the correct document from a search result title", () => {

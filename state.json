@@ -11,7 +11,7 @@
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 46,
+    "test_count": 48,
     "security_critical": 0,
     "blocker_count": 0
   },
@@ -19,7 +19,7 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-08-01",
-      "summary": "土木建設技術文献の自動収集を実装・稼働開始（2時間ごと・icrps-ingest.timer）。文書詳細クリック不具合を修正し、保存フロー（検索結果/フィード/文書詳細→プロジェクト選択→保存）を実装。Cloudflare 本番へ 8eac6543 を 100% デプロイ済み（https://icrps.mirai-dx-platform.com）。ローカル :8787 も反映済み。PATENTSCOPE/J-PlatPat は対象外（後日手動取り込みUI検討）"
+      "summary": "土木建設技術文献の自動収集を実装・稼働開始（2時間ごと・icrps-ingest.timer）。文書詳細クリック不具合の修正、保存フロー実装、技術文献フィードへの収集文献掲載（タブ切替・情報源/キーワード絞り込み・詳細カード・ページング）を完了。Cloudflare 本番へ 0d1a7dd3 を 100% デプロイ済み（https://icrps.mirai-dx-platform.com）。ローカル :8787 も反映済み。PATENTSCOPE/J-PlatPat は対象外（後日手動取り込みUI検討）"
     },
     "repair_count": 0,
     "max_repair": 3,

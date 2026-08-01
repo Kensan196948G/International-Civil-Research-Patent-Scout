@@ -10,7 +10,7 @@ import type {
   User
 } from "@icrps/contracts";
 import { DISCLAIMER } from "@icrps/contracts";
-import { api } from "../api";
+import { api, type LiteratureItem } from "../api";
 import { useAuth } from "../auth";
 
 export type Page =
@@ -120,6 +120,15 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [audit, setAudit] = useState<Array<{ id: string; action: string; createdAt: string; detail: unknown }>>([]);
   const [feedDomain, setFeedDomain] = useState("すべて");
   const [feedType, setFeedType] = useState("すべて");
+  const [feedTab, setFeedTab] = useState<"saved" | "collected">("saved");
+  const [litSource, setLitSource] = useState("all");
+  const [litQueryInput, setLitQueryInput] = useState("");
+  const [litQuery, setLitQuery] = useState("");
+  const [litItems, setLitItems] = useState<LiteratureItem[]>([]);
+  const [litTotal, setLitTotal] = useState(0);
+  const [litLoading, setLitLoading] = useState(false);
+  const [litError, setLitError] = useState<string | null>(null);
+  const litOffsetRef = useRef(0);
   const [q, setQ] = useState("低炭素コンクリート 海洋環境 塩害 実証データ");
   const [phase, setPhase] = useState<"idle" | "running" | "done">("idle");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
@@ -760,6 +769,60 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       .filter((f) => feedType === "すべて" || f.type === feedType);
   }, [allDocs, feedDomain, feedType, openDoc]);
 
+  const loadLiterature = useCallback(
+    async (reset: boolean) => {
+      setLitLoading(true);
+      setLitError(null);
+      try {
+        const offset = reset ? 0 : litOffsetRef.current;
+        const res = await api.literature.list({
+          q: litQuery || undefined,
+          source: litSource,
+          limit: 50,
+          offset
+        });
+        setLitItems(reset ? res.items : (prev) => [...prev, ...res.items]);
+        setLitTotal(res.total);
+        litOffsetRef.current = offset + res.items.length;
+      } catch (err) {
+        setLitError(err instanceof Error ? err.message : "収集文献の取得に失敗しました");
+      } finally {
+        setLitLoading(false);
+      }
+    },
+    [litQuery, litSource]
+  );
+
+  useEffect(() => {
+    if (page !== "feed" || feedTab !== "collected") return;
+    void loadLiterature(true);
+  }, [page, feedTab, litQuery, litSource, loadLiterature]);
+
+  const litRows = useMemo(
+    () =>
+      litItems.map((d, i) => {
+        const type = d.sourceType === "pdf" ? "book" : d.sourceType;
+        return {
+          id: d.id,
+          documentId: d.id,
+          title: d.title,
+          original: d.originalTitle ?? "",
+          venue: [d.sourceName, d.publicationDate].filter(Boolean).join(" · "),
+          url: d.url ?? "#",
+          summary: d.abstract ?? "要旨は取得されていません（メタデータのみ・出典リンクから原典をご確認ください）",
+          authors: (d.authors ?? []).join("、"),
+          doi: d.doi ?? "",
+          sourceLabel: d.sourceLabel,
+          date: d.publicationDate ?? d.createdAt.slice(0, 10),
+          typeStyle: TYPE_STYLE[type] ?? TYPE_STYLE.web,
+          typeLabel: TYPE_LABEL[type] ?? "Web",
+          goDoc: () => openDoc(d.id),
+          key: `lit-${i}`
+        };
+      }),
+    [litItems, openDoc]
+  );
+
   const domainChips = useMemo(() => {
     const counts = new Map<string, number>();
     allDocs.forEach((d) => {
@@ -1246,6 +1309,19 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     typeChips,
     feed,
     feedCount: feed.length,
+    feedTab,
+    setFeedTab,
+    litSource,
+    changeLitSource: (v: string) => setLitSource(v),
+    litQueryInput,
+    setLitQueryInput: (e: { target: { value: string } }) => setLitQueryInput(e.target.value),
+    applyLitSearch: () => setLitQuery(litQueryInput.trim()),
+    litRows,
+    litTotal,
+    litLoading,
+    litError,
+    hasMoreLit: litItems.length < litTotal,
+    loadMoreLiterature: () => void loadLiterature(false),
     q,
     setQ: (e: { target: { value: string } }) => setQ(e.target.value),
     runSearch,
