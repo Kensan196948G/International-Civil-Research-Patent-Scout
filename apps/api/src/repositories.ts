@@ -680,6 +680,28 @@ export async function listAuditLogs(db: Db, limit = 100): Promise<AuditLog[]> {
   }));
 }
 
+// ---- app settings ----
+
+export async function getAppSetting(db: Db, key: string): Promise<Record<string, unknown> | null> {
+  const rows = await db("SELECT value FROM app_settings WHERE key = $1 LIMIT 1", [key]);
+  const row = rows[0];
+  if (!row) return null;
+  return parseJsonObject(row.value) as Record<string, unknown>;
+}
+
+export async function setAppSetting(db: Db, key: string, value: Record<string, unknown>): Promise<void> {
+  await db(
+    `INSERT INTO app_settings (key, value, updated_at)
+     VALUES ($1, $2, now())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+    [key, JSON.stringify(value)]
+  );
+}
+
+export async function deleteAppSetting(db: Db, key: string): Promise<void> {
+  await db("DELETE FROM app_settings WHERE key = $1", [key]);
+}
+
 export function newId(): string {
   return randomUUID();
 }

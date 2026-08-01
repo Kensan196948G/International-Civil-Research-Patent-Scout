@@ -11,6 +11,7 @@ import { reportRoutes } from "./routes/reports.js";
 import { adminRoutes } from "./routes/admin.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { healthRoutes } from "./routes/health.js";
+import { settingsRoutes } from "./routes/settings.js";
 import { HttpError } from "./errors.js";
 import type { ApiErrorBody } from "@icrps/contracts";
 
@@ -42,6 +43,7 @@ export function createApp(): Hono<AppBindings> {
   app.route("/api", comparisonRoutes());
   app.route("/api", reportRoutes());
   app.route("/api/admin", adminRoutes());
+  app.route("/api/admin", settingsRoutes());
   app.route("/api/dashboard", dashboardRoutes());
 
   app.onError((err, c) => {

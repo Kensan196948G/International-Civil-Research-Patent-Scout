@@ -7,6 +7,7 @@ import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAuth } from "../auth.js";
 import { generateComparison } from "../ai.js";
+import { getActiveAiProvider } from "../settings.js";
 import {
   createComparison,
   getComparison,
@@ -58,7 +59,8 @@ export function comparisonRoutes(): Hono<AppBindings> {
     const project = await assertProjectOwnership(db, c.get("userId")!, c.req.param("projectId"));
     const documents = await getDocumentsByIds(db, parsed.data.documentIds);
     if (documents.length < 2) throw new HttpError(400, "bad_request", "比較には2件以上の文書が必要です");
-    const generated = await generateComparison(documents, parsed.data.axes, env);
+    const provider = await getActiveAiProvider(db, env);
+    const generated = await generateComparison(documents, parsed.data.axes, env, provider);
     const comparison = await createComparison(db, {
       projectId: project.id,
       title: parsed.data.title ?? generated.title,

@@ -1,38 +1,73 @@
 import type { ComparisonRow, SourceDocument, SummaryType } from "@icrps/contracts";
 import type { WorkerEnv } from "./env.js";
+import type { ActiveAiProvider } from "./settings.js";
 
 type JsonObject = Record<string, unknown>;
 
 export async function callLlmJson(
   input: { system: string; user: string },
   env: WorkerEnv,
-  jsonSchema: Record<string, unknown>
+  jsonSchema: Record<string, unknown>,
+  provider: ActiveAiProvider | null = null
 ): Promise<JsonObject | null> {
-  if (!env.OPENAI_API_KEY) return null;
-  const url = `${env.OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: env.AI_MODEL,
-      temperature: 0.2,
-      messages: [
-        { role: "system", content: input.system },
-        { role: "user", content: input.user }
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: 2000
-    }),
-    signal: AbortSignal.timeout(25000)
-  });
-  if (!response.ok) throw new Error(`LLM API error ${response.status}`);
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const content = data.choices?.[0]?.message?.content;
+  const active = provider ?? (env.OPENAI_API_KEY
+    ? { provider: "openai" as const, apiKey: env.OPENAI_API_KEY, model: env.AI_MODEL, baseUrl: env.OPENAI_BASE_URL }
+    : null);
+  if (!active) return null;
+
+  let content: string;
+  if (active.provider === "anthropic") {
+    const base = active.baseUrl.replace(/\/+$/, "");
+    const response = await fetch(`${base}/v1/messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": active.apiKey,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: active.model,
+        max_tokens: 2000,
+        temperature: 0.2,
+        system: input.system,
+        messages: [{ role: "user", content: input.user }]
+      }),
+      signal: AbortSignal.timeout(25000)
+    });
+    if (!response.ok) throw new Error(`LLM API error ${response.status}`);
+    const data = (await response.json()) as {
+      content?: Array<{ type?: string; text?: string }>;
+    };
+    content = data.content?.map((c) => c.text ?? "").join("") ?? "";
+  } else {
+    const base = active.baseUrl.replace(/\/+$/, "");
+    const url = active.provider === "deepseek"
+      ? `${base.replace(/\/v1$/, "")}/chat/completions`
+      : `${base}/chat/completions`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${active.apiKey}`
+      },
+      body: JSON.stringify({
+        model: active.model,
+        temperature: 0.2,
+        messages: [
+          { role: "system", content: input.system },
+          { role: "user", content: input.user }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 2000
+      }),
+      signal: AbortSignal.timeout(25000)
+    });
+    if (!response.ok) throw new Error(`LLM API error ${response.status}`);
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    content = data.choices?.[0]?.message?.content ?? "";
+  }
   if (!content) throw new Error("LLM returned empty content");
   const parsed = JSON.parse(content) as JsonObject;
   // JSON Schema の required を軽量検証
@@ -122,9 +157,10 @@ export async function summarizeDocument(
   document: SourceDocument,
   summaryType: SummaryType,
   language: string,
-  env: WorkerEnv
+  env: WorkerEnv,
+  provider: ActiveAiProvider | null = null
 ): Promise<SummaryOutput> {
-  if (!env.OPENAI_API_KEY) return fallbackSummary(document, summaryType, language);
+  if (!env.OPENAI_API_KEY && !provider) return fallbackSummary(document, summaryType, language);
   const prompt =
     summaryType === "patent"
       ? `特許情報を調査支援用に要約してください。特許の法的有効性・侵害判断は行わない旨を明記してください。出力JSON: {summary, patentOverview, problemToSolve, solution, mainClaimsSummary, applicants, inventors, publicationNumber, filingDate, publicationDate, technologyKeywords, possibleRelevance, caution}`
@@ -143,7 +179,8 @@ export async function summarizeDocument(
         })}`
       },
       env,
-      SUMMARY_SCHEMA
+      SUMMARY_SCHEMA,
+      provider
     );
     if (!result) return fallbackSummary(document, summaryType, language);
     const arr = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
@@ -166,7 +203,7 @@ export async function summarizeDocument(
       risks: arr(result.risks),
       citations: evidence.length > 0 ? evidence : [],
       uncertainties: arr(result.uncertainties),
-      modelName: env.AI_MODEL,
+      modelName: provider?.model ?? env.AI_MODEL,
       promptVersion: "v1"
     };
   } catch {
@@ -216,10 +253,11 @@ const COMPARISON_SCHEMA = {
 export async function generateComparison(
   documents: SourceDocument[],
   requestedAxes: string[],
-  env: WorkerEnv
+  env: WorkerEnv,
+  provider: ActiveAiProvider | null = null
 ): Promise<{ title: string; axes: string[]; rows: ComparisonRow[]; notes: string[] }> {
   const fallback = fallbackComparison(documents, requestedAxes);
-  if (!env.OPENAI_API_KEY || documents.length === 0) {
+  if ((!env.OPENAI_API_KEY && !provider) || documents.length === 0) {
     return { title: "技術比較表", axes: requestedAxes, ...fallback };
   }
   try {
@@ -238,7 +276,8 @@ export async function generateComparison(
         })
       },
       env,
-      COMPARISON_SCHEMA
+      COMPARISON_SCHEMA,
+      provider
     );
     if (!result || !Array.isArray(result.rows)) return { title: "技術比較表", axes: requestedAxes, ...fallback };
     const rows = result.rows.map((r) => {
