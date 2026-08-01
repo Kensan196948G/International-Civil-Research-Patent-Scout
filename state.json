@@ -5,13 +5,13 @@
     "start_date": "2026-07-31",
     "phase_mode": "development"
   },
-  "goal": "MVP（認証・横断検索・AI要約・比較・レポート）をローカル systemd + Neon で稼働させ、Cloudflare サブドメイン決定後に移行する",
+  "goal": "v0.1.1 リリース直前準備（堅牢化・運用監視・文書化）を Draft PR まで完了させ、Cloudflare サブドメイン決定後に移行する",
   "phase": "Monitor",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 19,
+    "test_count": 35,
     "security_critical": 0,
     "blocker_count": 0
   },
@@ -19,7 +19,7 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-07-31",
-      "summary": "v0.1.0 MVP 実装・ローカル systemd 稼働開始（http://192.168.0.185:8787）+ Neon マイグレーション適用 + E2E スモーク成功。次: サブドメイン選択と Cloudflare 移行"
+      "summary": "v0.1.1 本番適用済み（2026-08-01）: WebUI standalone 100% 適用・システム設定（DeepSeek/Anthropic）・認証レート制限・監視 timer・migration 0002 適用。Draft PR #13 は merge 承認待ち"
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -37,16 +37,36 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.1.0",
-      "date": "2026-07-31",
-      "production_url": "http://192.168.0.185:8787",
-      "service": "icrps.service（enabled・active）",
+      "version": "v0.1.1（本番適用済み）",
+      "date": "2026-08-01",
+      "production_url": "https://icrps.mirai-dx-platform.com",
+      "local_fallback_url": "http://192.168.0.185:8787",
+      "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer",
+      "migration_0002": "app_settings 適用済み（2026-08-01）",
+      "migration_0003": "watch_topics 拡張 適用済み（2026-08-01）",
+      "backup_branches": [
+        "release-v0.1.1-backup（br-morning-king-azghscq7）",
+        "release-20260801-sidebar-detail（br-young-sea-azoaihau）"
+      ],
+      "pr": 13,
       "neon_project_id": "green-dawn-58312822",
       "neon_migrations_applied": [
         "0001_initial_schema.sql"
       ],
       "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
-      "cloudflare": "サブドメイン未決定（mirai-dx-platform.com 配下・候補を README に記載）"
+      "cloudflare": "icrps.mirai-dx-platform.com 稼働中（worker beb23e50・Access 有効）",
+      "domain_migration": {
+        "status": "稼働中（Access 設定待ち）",
+        "subdomain": "icrps.mirai-dx-platform.com",
+        "worker": "icrps-api デプロイ済み（beb23e50…）",
+        "secrets": "DATABASE_URL / JWT_SECRET 登録済み",
+        "observability": "Workers Logs 100%・Traces 100% 有効",
+        "verified": "https://icrps.mirai-dx-platform.com/api/health -> 200（v0.1.1・db ok）",
+        "note_apex": "Dashboard 誤操作で apex に紐付いたエントリは解除済み。apex は現在 origin 未設定（1016）のため、旧コンテンツがあれば復元確認が必要",
+        "runbook": "docs/operations/domain-migration.md",
+        "access": "有効（アプリ: icrps / セルフホスト型 / ポリシー: icrps）。未認証アクセスは 302 → Access ログイン画面",
+        "note": "ローカル監視（http://127.0.0.1:8787）は従来どおり利用可。外部からの /api/health は Access 保護のため 302 を返す"
+      }
     }
   },
   "infra": {

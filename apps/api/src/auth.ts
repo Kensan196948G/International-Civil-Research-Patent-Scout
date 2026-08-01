@@ -5,6 +5,8 @@ import type { Role } from "@icrps/contracts";
 import { resolveEnv, expiresInToSeconds } from "./env.js";
 import type { AppEnv } from "./types.js";
 import { forbidden, unauthorized } from "./errors.js";
+import { createDb } from "./db.js";
+import { findUserById } from "./repositories.js";
 
 export async function hashPassword(password: string): Promise<string> {
   return hash(password, 10);
@@ -67,8 +69,14 @@ export async function requireAuth(c: Context<AppEnv>, next: Next): Promise<Respo
 }
 
 export async function requireAdmin(c: Context<AppEnv>, next: Next): Promise<Response> {
-  const role = (c.get("role") as Role | undefined) ?? "user";
-  if (role !== "admin") throw forbidden("管理者権限が必要です");
+  const userId = c.get("userId");
+  if (!userId) throw unauthorized("認証が必要です");
+  // トークンのロールではなく DB の現在ロールで判定する（ロール変更を即時反映）
+  const env = resolveEnv(c.env);
+  const db = createDb(env);
+  const user = await findUserById(db, userId);
+  if (!user || user.role !== "admin") throw forbidden("管理者権限が必要です");
+  c.set("role", "admin");
   await next();
   return c.res;
 }

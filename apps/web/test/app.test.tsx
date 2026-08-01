@@ -15,6 +15,6 @@ describe("App", () => {
 
   it("redirects unauthenticated users to login", async () => {
     render(<App />);
-    expect(await screen.findByRole("heading", { name: "ログイン" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "ICRPS にログイン" })).toBeTruthy();
   });
 });

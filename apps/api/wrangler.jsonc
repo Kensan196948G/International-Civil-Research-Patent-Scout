@@ -5,13 +5,23 @@
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
 
-  // 本番はユーザー選択後のサブドメインで custom_domain を有効化する（承認まで DNS 変更しない）
-  // 候補: patent-scout.mirai-dx-platform.com / icrps.mirai-dx-platform.com / research-patent-scout.mirai-dx-platform.com
-  "routes": [],
+  // 本番 custom domain: icrps.mirai-dx-platform.com（ユーザー指定・承認済み 2026-08-01）
+  "routes": [
+    { "pattern": "icrps.mirai-dx-platform.com", "custom_domain": true }
+  ],
   "workers_dev": false,
 
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    }
   },
 
   "assets": {
@@ -22,7 +32,7 @@
 
   "vars": {
     "APP_ENV": "production",
-    "APP_URL": "https://patent-scout.mirai-dx-platform.com"
+    "APP_URL": "https://icrps.mirai-dx-platform.com"
   },
 
   // DATABASE_URL / JWT_SECRET / OPENAI_API_KEY 等は wrangler secret put で登録し、このファイルへ書かない

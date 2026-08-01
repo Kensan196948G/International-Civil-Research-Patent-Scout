@@ -27,6 +27,7 @@ fi
 
 echo "==> アプリをビルド"
 cd "${APP_DIR}"
+npm run clean || true   # 古い tsbuildinfo による差分ビルド不具合を防止
 npm run build
 APP_OWNER="$(stat -c '%U' "${APP_DIR}")"
 chown -R "${APP_OWNER}:${APP_OWNER}" "${APP_DIR}/apps" "${APP_DIR}/packages"
@@ -59,10 +60,16 @@ sed -e "s|__APP_DIR__|${APP_DIR}|g" -e "s|__NODE_BIN__|${NODE_BIN}|g" \
   "${APP_DIR}/deploy/systemd/icrps.service" > /etc/systemd/system/icrps.service
 chmod 644 /etc/systemd/system/icrps.service
 
+echo "==> 死活監視（healthcheck timer）をインストール"
+install -m 755 "${APP_DIR}/deploy/scripts/icrps-healthcheck.sh" /usr/local/bin/icrps-healthcheck.sh
+install -m 644 "${APP_DIR}/deploy/systemd/icrps-healthcheck.service" /etc/systemd/system/icrps-healthcheck.service
+install -m 644 "${APP_DIR}/deploy/systemd/icrps-healthcheck.timer" /etc/systemd/system/icrps-healthcheck.timer
+
 echo "==> サービスを有効化・起動"
 systemctl daemon-reload
 systemctl enable icrps
 systemctl restart icrps
+systemctl enable --now icrps-healthcheck.timer
 
 IP="$(hostname -I | awk '{print $1}')"
 echo ""
@@ -72,4 +79,5 @@ echo " WebUI/API: http://${IP}:${PORT}"
 echo " ヘルスチェック: http://${IP}:${PORT}/api/health"
 echo " ログ: journalctl -u icrps -f"
 echo " 状態: systemctl status icrps"
+echo " 死活監視: systemctl status icrps-healthcheck.timer（5分間隔）"
 echo "=============================================="

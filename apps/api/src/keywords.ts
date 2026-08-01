@@ -1,6 +1,7 @@
 import type { ExpandedKeywords, SearchParams } from "@icrps/contracts";
 import type { WorkerEnv } from "./env.js";
 import { callLlmJson } from "./ai.js";
+import type { ActiveAiProvider } from "./settings.js";
 
 // 土木分野の代表語辞書（AI 未設定時のフォールバック用）
 export const CIVIL_DICTIONARY: Array<{ ja: string; en: string[]; synonymsJa?: string[] }> = [
@@ -94,9 +95,10 @@ const EXPANSION_SCHEMA = {
 
 export async function expandKeywords(
   params: SearchParams,
-  env: WorkerEnv
+  env: WorkerEnv,
+  provider: ActiveAiProvider | null = null
 ): Promise<ExpandedKeywords> {
-  if (!env.OPENAI_API_KEY) return fallbackExpansion(params.query, params.languageMode ?? "auto");
+  if (!env.OPENAI_API_KEY && !provider) return fallbackExpansion(params.query, params.languageMode ?? "auto");
   try {
     const result = await callLlmJson(
       {
@@ -105,7 +107,8 @@ export async function expandKeywords(
         user: JSON.stringify({ query: params.query, languageMode: params.languageMode ?? "auto" })
       },
       env,
-      EXPANSION_SCHEMA
+      EXPANSION_SCHEMA,
+      provider
     );
     if (result && typeof result.originalQuery === "string") {
       return {

@@ -1,18 +1,17 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from "react-router";
 import { AuthProvider } from "./auth";
-import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { AdminPage } from "./pages/AdminPage";
-import { ComparisonPage } from "./pages/ComparisonPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { DocumentPage } from "./pages/DocumentPage";
+import { StandaloneView } from "./components/StandaloneView";
+import { useStandaloneData, type Page } from "./lib/standalone-data";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
-import { ProjectPage } from "./pages/ProjectPage";
 import { RegisterPage } from "./pages/RegisterPage";
-import { ReportNewPage } from "./pages/ReportNewPage";
-import { ReportPage } from "./pages/ReportPage";
-import { SearchPage } from "./pages/SearchPage";
+
+function StandalonePage({ page }: { page: Page }) {
+  const { documentId, reportId } = useParams<{ documentId?: string; reportId?: string }>();
+  const v = useStandaloneData({ page, documentId, reportId });
+  return <StandaloneView v={v} />;
+}
 
 export function App() {
   return (
@@ -24,19 +23,24 @@ export function App() {
           <Route
             element={
               <ProtectedRoute>
-                <Layout />
+                <Outlet />
               </ProtectedRoute>
             }
           >
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/documents/:documentId" element={<DocumentPage />} />
-            <Route path="/projects/:projectId" element={<ProjectPage />} />
-            <Route path="/projects/:projectId/comparison" element={<ComparisonPage />} />
-            <Route path="/comparisons/:comparisonId" element={<ComparisonPage />} />
-            <Route path="/projects/:projectId/reports/new" element={<ReportNewPage />} />
-            <Route path="/reports/:reportId" element={<ReportPage />} />
-            <Route path="/admin" element={<ProtectedRoute admin><AdminPage /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<StandalonePage page="dashboard" />} />
+            <Route path="/feed" element={<StandalonePage page="feed" />} />
+            <Route path="/search" element={<StandalonePage page="search" />} />
+            <Route path="/documents/:documentId" element={<StandalonePage page="document" />} />
+            <Route path="/compare" element={<StandalonePage page="compare" />} />
+            <Route path="/fit" element={<StandalonePage page="fit" />} />
+            <Route path="/report" element={<StandalonePage page="report" />} />
+            <Route path="/reports/:reportId" element={<StandalonePage page="report" />} />
+            <Route path="/chat" element={<StandalonePage page="chat" />} />
+            <Route path="/watch" element={<StandalonePage page="watch" />} />
+            <Route path="/projects" element={<StandalonePage page="projects" />} />
+            <Route path="/admin" element={<StandalonePage page="admin" />} />
+            <Route path="/settings" element={<StandalonePage page="settings" />} />
+            <Route path="/projects/:projectId" element={<StandalonePage page="projects" />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<NotFoundPage />} />

@@ -9,6 +9,7 @@ import { requireAuth } from "../auth.js";
 import { expandKeywords } from "../keywords.js";
 import { runConnectors } from "../connectors.js";
 import { dedupeAndScore } from "../scoring.js";
+import { getActiveAiProvider } from "../settings.js";
 import {
   completeSearchQuery,
   createSearchQuery,
@@ -74,7 +75,8 @@ export function searchRoutes(): Hono<AppBindings> {
       maxResults: parsed.data.maxResults
     };
 
-    const expansion = await expandKeywords(params, env);
+    const provider = await getActiveAiProvider(db, env);
+    const expansion = await expandKeywords(params, env, provider);
     const { results, failures } = await runConnectors(params, env);
     const scored = dedupeAndScore(parsed.data.query, results);
     let rank = 0;

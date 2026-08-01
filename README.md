@@ -8,12 +8,12 @@
 
 | 項目 | 状態 |
 | --- | --- |
-| 本番 URL | `http://192.168.0.185:8787`（自動割当 IP + ポート、0.0.0.0 バインド） |
+| 本番 URL | `https://icrps.mirai-dx-platform.com`（Cloudflare Workers・HTTPS）／ フォールバック: `http://192.168.0.185:8787` |
 | 稼働方式 | Node.js + systemd（`icrps.service`、起動時自動起動・異常時自動再起動） |
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
-| Cloudflare ドメイン | `mirai-dx-platform.com`（**サブドメインは後日決定**。承認まで DNS 変更なし） |
+| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-01。Access は設定待ち。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.1.0（MVP・ローカル運用開始 2026-07-31） |
+| バージョン | v0.1.1（2026-08-01 本番適用済み） |
 
 ## 🏗️ アーキテクチャ
 
@@ -62,6 +62,7 @@ sequenceDiagram
 | レイヤー | 技術 |
 | --- | --- |
 | フロントエンド | React 19 + Vite 7 + TypeScript + react-router 8 |
+| WebUI デザイン | [ICRPS WebUI (standalone).html](ICRPS%20WebUI%20(standalone).html) に 100% 準拠（サイドバー型 11 画面） |
 | API | Hono 4（Cloudflare Workers 互換・Node.js 両対応） |
 | DB | Neon PostgreSQL 17（`@neondatabase/serverless`） |
 | 認証 | bcryptjs + JWT（jose / HS256） |
@@ -69,6 +70,7 @@ sequenceDiagram
 | テスト | Vitest 3 |
 | CI/CD | GitHub Actions（将来の Cloudflare デプロイ用） |
 | 運用 | systemd（`icrps.service`）+ スモークテスト |
+| 監視 | systemd timer による 5 分間隔ヘルスチェック（失敗時自動再起動） |
 
 ## 📁 リポジトリ構成
 
@@ -102,6 +104,7 @@ scripts/      migrate / smoke テスト
 | レポート生成 | `/projects/:id/reports/new` | 5 テンプレートから Markdown 生成 |
 | レポート | `/reports/:id` | Markdown 表示・ダウンロード |
 | 管理 | `/admin` | ユーザー管理・監査ログ（admin のみ） |
+| システム設定 | `/settings` | AI プロバイダ設定（DeepSeek / Anthropic のキー・テスト・保存・クリア） |
 
 ## 🔌 API 概要
 

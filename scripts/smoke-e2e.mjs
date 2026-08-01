@@ -111,6 +111,28 @@ async function main() {
   const stats = await call("/api/dashboard/stats");
   ok("dashboard stats", JSON.stringify({ projects: stats.stats.projectCount, docs: stats.stats.savedDocumentCount, reports: stats.stats.reportCount }));
 
+  const watch = await call("/api/watch", {
+    method: "POST",
+    body: { displayName: "E2E 監視テーマ", terms: "low carbon / 海洋環境", keyword: "低炭素コンクリート", frequency: "weekly" }
+  });
+  ok("watch create", watch.topic.id);
+
+  const watchList = await call("/api/watch");
+  if (!watchList.topics.some((t) => t.id === watch.topic.id)) throw new Error("watch list missing topic");
+  ok("watch list", `${watchList.topics.length} topics`);
+
+  const watchToggle = await call(`/api/watch/${watch.topic.id}`, { method: "PATCH", body: { enabled: false } });
+  if (watchToggle.topic.enabled !== false) throw new Error("watch toggle failed");
+  ok("watch toggle", "停止");
+
+  const chat = await call("/api/chat", { method: "POST", body: { message: "低炭素コンクリートの適用条件は？" } });
+  if (!chat.reply) throw new Error("chat empty reply");
+  if (!Array.isArray(chat.cites)) throw new Error("chat cites missing");
+  ok(`chat (${chat.mode})`, `${chat.reply.slice(0, 40)}… cites=${chat.cites.length}`);
+
+  await call(`/api/watch/${watch.topic.id}`, { method: "DELETE" });
+  ok("watch delete", watch.topic.id);
+
   console.log("\nE2E smoke test: ALL PASSED");
 }
 

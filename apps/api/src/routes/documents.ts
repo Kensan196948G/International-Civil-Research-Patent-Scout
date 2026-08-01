@@ -7,6 +7,7 @@ import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAuth } from "../auth.js";
 import { summarizeDocument, toSummaryRecord } from "../ai.js";
+import { getActiveAiProvider } from "../settings.js";
 import {
   deleteProjectDocument,
   getDocumentById,
@@ -56,7 +57,8 @@ export function documentRoutes(): Hono<AppBindings> {
     if (!document) throw notFound("文書が見つかりません");
     const existing = await getSummary(db, document.id, parsed.data.summaryType, parsed.data.language);
     if (existing) return c.json({ summary: existing });
-    const output = await summarizeDocument(document, parsed.data.summaryType, parsed.data.language, env);
+    const provider = await getActiveAiProvider(db, env);
+    const output = await summarizeDocument(document, parsed.data.summaryType, parsed.data.language, env, provider);
     const summary = await insertSummary(db, {
       sourceDocumentId: document.id,
       summaryType: parsed.data.summaryType,

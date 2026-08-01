@@ -2,6 +2,8 @@
 
 正式な詳細設計は [詳細設計仕様書 PDF](../詳細設計仕様書International_Civil_Research__Patent_Scout.pdf) を参照。実装は Cloudflare Workers 互換の Hono + Neon PostgreSQL 構成を採用し、現在は Node.js + systemd でローカル稼働している。
 
+WebUI のデザイン仕様はルート直下の [ICRPS WebUI (standalone).html](../ICRPS%20WebUI%20(standalone).html)（設計成果物）を正とし、React 実装（`apps/web/src/components/StandaloneView.tsx`）は同ファイルのテンプレートを機械変換して生成している。配色・フォント・レイアウト・画面構成の変更は元テンプレートに追従する。
+
 ## 実装上の差分判断
 
 | 設計書の案 | 実装 | 理由 |

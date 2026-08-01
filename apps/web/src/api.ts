@@ -171,6 +171,21 @@ export const api = {
       request<{ report: Report }>(`/api/projects/${projectId}/reports`, { method: "POST", body: input }),
     get: (id: string) => request<{ report: Report }>(`/api/reports/${id}`)
   },
+  watch: {
+    list: () => request<{ topics: Array<{ id: string; displayName: string; terms: string | null; keyword: string; frequency: string; enabled: boolean; createdAt: string }> }>("/api/watch"),
+    create: (input: { displayName: string; terms?: string; keyword: string; frequency: string }) =>
+      request<{ topic: { id: string } }>("/api/watch", { method: "POST", body: input }),
+    update: (id: string, input: Partial<{ displayName: string; terms: string; keyword: string; frequency: string; enabled: boolean }>) =>
+      request<{ topic: { id: string; enabled: boolean } }>(`/api/watch/${id}`, { method: "PATCH", body: input }),
+    remove: (id: string) => request<void>(`/api/watch/${id}`, { method: "DELETE" })
+  },
+  chat: {
+    send: (message: string) =>
+      request<{ reply: string; cites: Array<{ n: string; title: string; url: string }>; mode: "ai" | "rule" }>("/api/chat", {
+        method: "POST",
+        body: { message }
+      })
+  },
   dashboard: {
     stats: () => request<{ stats: DashboardStats }>("/api/dashboard/stats")
   },
@@ -178,6 +193,40 @@ export const api = {
     users: () => request<{ users: User[] }>("/api/admin/users"),
     updateRole: (userId: string, role: string) =>
       request<{ user: User }>(`/api/admin/users/${userId}/role`, { method: "PATCH", body: { role } }),
-    auditLogs: () => request<{ auditLogs: Array<{ id: string; action: string; createdAt: string; detail: unknown }> }>("/api/admin/audit-logs")
+    auditLogs: () => request<{ auditLogs: Array<{ id: string; action: string; createdAt: string; detail: unknown }> }>("/api/admin/audit-logs"),
+    settings: {
+      get: () =>
+        request<{
+          ai: {
+            deepseek: { configured: boolean; model: string };
+            anthropic: { configured: boolean; model: string };
+            activeProvider: string | null;
+          };
+        }>("/api/admin/settings"),
+      saveAi: (input: {
+        deepseek?: { apiKey?: string; model?: string };
+        anthropic?: { apiKey?: string; model?: string };
+      }) =>
+        request<{
+          ai: {
+            deepseek: { configured: boolean; model: string };
+            anthropic: { configured: boolean; model: string };
+            activeProvider: string | null;
+          };
+        }>("/api/admin/settings/ai", { method: "PUT", body: input }),
+      testAi: (input: { provider: "deepseek" | "anthropic"; apiKey?: string; model?: string }) =>
+        request<{ ok: boolean; message: string; latencyMs: number }>("/api/admin/settings/ai/test", {
+          method: "POST",
+          body: input
+        }),
+      clearAi: (provider: "deepseek" | "anthropic") =>
+        request<{
+          ai: {
+            deepseek: { configured: boolean; model: string };
+            anthropic: { configured: boolean; model: string };
+            activeProvider: string | null;
+          };
+        }>(`/api/admin/settings/ai/${provider}`, { method: "DELETE" })
+    }
   }
 };
