@@ -702,6 +702,104 @@ export async function deleteAppSetting(db: Db, key: string): Promise<void> {
   await db("DELETE FROM app_settings WHERE key = $1", [key]);
 }
 
+// ---- watch topics ----
+
+export interface WatchTopicRow {
+  id: string;
+  userId: string;
+  projectId: string | null;
+  displayName: string;
+  terms: string | null;
+  keyword: string;
+  frequency: string;
+  enabled: boolean;
+  lastCheckedAt: string | null;
+  createdAt: string;
+}
+
+function mapWatchTopic(row: Record<string, unknown>): WatchTopicRow {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    projectId: row.project_id == null ? null : String(row.project_id),
+    displayName: row.display_name == null ? String(row.keyword) : String(row.display_name),
+    terms: row.terms == null ? null : String(row.terms),
+    keyword: String(row.keyword),
+    frequency: String(row.frequency),
+    enabled: row.enabled === true || row.enabled === "true" || row.enabled === 1 || row.enabled === "1",
+    lastCheckedAt: row.last_checked_at == null ? null : String(row.last_checked_at),
+    createdAt: String(row.created_at)
+  };
+}
+
+export async function listWatchTopics(db: Db, userId: string): Promise<WatchTopicRow[]> {
+  const rows = await db("SELECT * FROM watch_topics WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100", [userId]);
+  return rows.map(mapWatchTopic);
+}
+
+export async function createWatchTopic(
+  db: Db,
+  input: { userId: string; displayName: string; terms?: string; keyword: string; frequency: string }
+): Promise<WatchTopicRow> {
+  const rows = await db(
+    `INSERT INTO watch_topics (user_id, display_name, terms, keyword, frequency, enabled)
+     VALUES ($1, $2, $3, $4, $5, true) RETURNING *`,
+    [input.userId, input.displayName, input.terms ?? null, input.keyword, input.frequency]
+  );
+  return mapWatchTopic(rows[0]!);
+}
+
+export async function getWatchTopic(db: Db, id: string, userId: string): Promise<WatchTopicRow | null> {
+  const rows = await db("SELECT * FROM watch_topics WHERE id = $1 AND user_id = $2 LIMIT 1", [id, userId]);
+  return rows[0] ? mapWatchTopic(rows[0]) : null;
+}
+
+export async function updateWatchTopic(
+  db: Db,
+  id: string,
+  input: { displayName?: string; terms?: string | null; keyword?: string; frequency?: string; enabled?: boolean }
+): Promise<WatchTopicRow | null> {
+  const rows = await db(
+    `UPDATE watch_topics
+     SET display_name = COALESCE($2, display_name),
+         terms = CASE WHEN $3::boolean THEN $4 ELSE terms END,
+         keyword = COALESCE($5, keyword),
+         frequency = COALESCE($6, frequency),
+         enabled = COALESCE($7, enabled)
+     WHERE id = $1 RETURNING *`,
+    [
+      id,
+      input.displayName ?? null,
+      input.terms !== undefined,
+      input.terms ?? null,
+      input.keyword ?? null,
+      input.frequency ?? null,
+      input.enabled ?? null
+    ]
+  );
+  return rows[0] ? mapWatchTopic(rows[0]) : null;
+}
+
+export async function deleteWatchTopic(db: Db, id: string): Promise<boolean> {
+  const rows = await db("DELETE FROM watch_topics WHERE id = $1 RETURNING id", [id]);
+  return rows.length > 0;
+}
+
+// ---- chat 用: ユーザーの保存文献 ----
+
+export async function listUserDocuments(db: Db, userId: string, limit = 8): Promise<SourceDocument[]> {
+  const rows = await db(
+    `SELECT d.* FROM project_documents pd
+     JOIN research_projects p ON p.id = pd.project_id
+     JOIN source_documents d ON d.id = pd.source_document_id
+     WHERE p.owner_user_id = $1
+     ORDER BY pd.created_at DESC
+     LIMIT $2`,
+    [userId, limit]
+  );
+  return rows.map(mapDocument);
+}
+
 export function newId(): string {
   return randomUUID();
 }
