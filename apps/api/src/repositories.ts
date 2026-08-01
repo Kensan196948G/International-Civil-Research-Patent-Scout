@@ -362,6 +362,65 @@ export async function insertDocument(db: Db, result: SearchConnectorResult, cont
   return mapDocument(rows[0]!);
 }
 
+/**
+ * 文献メタデータを一括登録する（content_hash の一意制約で重複を除外）。
+ * 戻り値は新規登録件数。既存データは変更しない。
+ */
+export async function insertDocumentsBatch(db: Db, results: SearchConnectorResult[]): Promise<number> {
+  const seen = new Set<string>();
+  const rows: SearchConnectorResult[] = [];
+  for (const result of results) {
+    if (!result.title) continue;
+    const key = result.doi ?? result.url;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    rows.push(result);
+  }
+  let inserted = 0;
+  const chunkSize = 100;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const placeholders: string[] = [];
+    const values: unknown[] = [];
+    chunk.forEach((r, j) => {
+      const base = j * 16;
+      placeholders.push(
+        `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8},` +
+          `$${base + 9},$${base + 10},$${base + 11},$${base + 12},$${base + 13},$${base + 14},$${base + 15},$${base + 16})`
+      );
+      values.push(
+        r.sourceType,
+        r.title,
+        r.originalTitle ?? null,
+        r.abstract ?? r.snippet ?? null,
+        r.url ?? null,
+        r.doi ?? null,
+        r.patentNumber ?? null,
+        r.publicationNumber ?? null,
+        r.authors?.length ? JSON.stringify(r.authors) : null,
+        r.inventors?.length ? JSON.stringify(r.inventors) : null,
+        r.applicants?.length ? JSON.stringify(r.applicants) : null,
+        r.country ?? null,
+        r.publicationDate ?? null,
+        r.sourceName ?? null,
+        "公開メタデータ・要旨を中心に利用（本文は原則保存しない）",
+        r.doi ?? r.url ?? null
+      );
+    });
+    const returned = await db(
+      `INSERT INTO source_documents
+         (source_type, title, original_title, abstract, url, doi, patent_number, publication_number,
+          authors, inventors, applicants, country, publication_date, source_name, license_note, content_hash)
+       VALUES ${placeholders.join(",")}
+       ON CONFLICT (content_hash) WHERE content_hash IS NOT NULL DO NOTHING
+       RETURNING id`,
+      values
+    );
+    inserted += returned.length;
+  }
+  return inserted;
+}
+
 export async function getDocumentById(db: Db, id: string): Promise<SourceDocument | null> {
   const rows = await db("SELECT * FROM source_documents WHERE id = $1 LIMIT 1", [id]);
   return rows[0] ? mapDocument(rows[0]) : null;
@@ -802,4 +861,27 @@ export async function listUserDocuments(db: Db, userId: string, limit = 8): Prom
 
 export function newId(): string {
   return randomUUID();
+}
+
+// ---- 文献収集（ingest）履歴 ----
+
+export interface IngestRunLog {
+  id: string;
+  createdAt: string;
+  detail: Record<string, unknown> | null;
+}
+
+export async function listIngestRuns(db: Db, limit = 50): Promise<IngestRunLog[]> {
+  const rows = await db(
+    `SELECT id, created_at, detail FROM audit_logs
+     WHERE action = $1
+     ORDER BY created_at DESC
+     LIMIT $2`,
+    ["ingest.run", limit]
+  );
+  return rows.map((row) => ({
+    id: String(row.id),
+    createdAt: String(row.created_at),
+    detail: parseJsonObject(row.detail)
+  }));
 }

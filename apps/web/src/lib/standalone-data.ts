@@ -154,6 +154,9 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [digestText, setDigestText] = useState("");
   const [digestBusy, setDigestBusy] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [ingestRuns, setIngestRuns] = useState<Array<{ id: string; createdAt: string; detail: Record<string, unknown> | null }>>([]);
+  const [ingestBusy, setIngestBusy] = useState(false);
+  const [ingestMsg, setIngestMsg] = useState<{ type: "ok" | "error" | "info"; text: string }>({ type: "info", text: "" });
   const [dsConfigured, setDsConfigured] = useState(false);
   const [anConfigured, setAnConfigured] = useState(false);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
@@ -234,6 +237,37 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       })
       .catch(() => setDsMsg({ type: "error", text: "設定の取得に失敗しました" }));
   }, [page, isAdmin, settingsLoaded]);
+
+  useEffect(() => {
+    if (page !== "settings" || !isAdmin) return;
+    void api.admin
+      .ingestRuns()
+      .then((res) => setIngestRuns(res.runs))
+      .catch(() => setIngestMsg({ type: "error", text: "文献収集履歴の取得に失敗しました" }));
+  }, [page, isAdmin]);
+
+  const runIngestNow = useCallback(async () => {
+    setIngestBusy(true);
+    setIngestMsg({ type: "info", text: "文献収集を開始しました（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整）。完了まで数分かかることがあります。" });
+    try {
+      const res = await api.admin.ingestRunNow();
+      const okCount = res.results.filter((r) => r.status === "ok").length;
+      const inserted = res.results.reduce((acc, r) => acc + r.inserted, 0);
+      const failed = res.results.filter((r) => r.status === "error");
+      setIngestMsg({
+        type: failed.length ? "error" : "ok",
+        text:
+          `収集完了: ${okCount}/${res.results.length} ソース成功、新規 ${inserted} 件を登録しました。` +
+          (failed.length ? ` 失敗: ${failed.map((r) => r.source).join("、")}` : "")
+      });
+      const runs = await api.admin.ingestRuns();
+      setIngestRuns(runs.runs);
+    } catch (err) {
+      setIngestMsg({ type: "error", text: err instanceof Error ? err.message : "文献収集に失敗しました" });
+    } finally {
+      setIngestBusy(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (page !== "watch") return;
@@ -1377,6 +1411,10 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     clearDsInput,
     clearAnInput,
     settingsAccessDenied: !isAdmin,
+    ingestRuns,
+    ingestBusy,
+    ingestMsg,
+    runIngestNow,
     dsMsgStyle:
       dsMsg.type === "ok"
         ? "margin-top:4px;padding:10px 13px;background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"

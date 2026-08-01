@@ -194,6 +194,21 @@ export const api = {
     updateRole: (userId: string, role: string) =>
       request<{ user: User }>(`/api/admin/users/${userId}/role`, { method: "PATCH", body: { role } }),
     auditLogs: () => request<{ auditLogs: Array<{ id: string; action: string; createdAt: string; detail: unknown }> }>("/api/admin/audit-logs"),
+    ingestRuns: () =>
+      request<{ runs: Array<{ id: string; createdAt: string; detail: Record<string, unknown> | null }> }>(
+        "/api/admin/ingest/runs"
+      ),
+    ingestRunNow: () =>
+      request<{
+        results: Array<{
+          source: string;
+          fetched: number;
+          inserted: number;
+          skipped: number;
+          status: "ok" | "error";
+          error?: string;
+        }>;
+      }>("/api/admin/ingest/run", { method: "POST" }),
     settings: {
       get: () =>
         request<{

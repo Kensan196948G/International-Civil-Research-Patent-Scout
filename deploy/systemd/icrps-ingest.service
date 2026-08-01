@@ -1,0 +1,21 @@
+[Unit]
+Description=ICRPS literature ingest (J-STAGE / PWRI / ITC / MLIT / KTR)
+Documentation=https://github.com/Kensan196948G/International-Civil-Research-Patent-Scout
+Wants=network-online.target
+After=network-online.target icrps.service
+
+[Service]
+Type=oneshot
+User=kensan
+Group=kensan
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=/etc/icrps/icrps.env
+Environment=NODE_ENV=production
+ExecStart=__NODE_BIN__ apps/api/dist/src/ingest-cli.js
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target

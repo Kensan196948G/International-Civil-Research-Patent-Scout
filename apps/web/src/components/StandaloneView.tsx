@@ -26,6 +26,7 @@ export function StandaloneView({ v }: { v: any }) {
     dsMsg, anMsg, dsMsgStyle, anMsgStyle, dsBusy, anBusy,
     testDeepSeek, saveDeepSeek, clearDeepSeek, clearDsInput,
     testAnthropic, saveAnthropic, clearAnthropic, clearAnInput, settingsAccessDenied,
+    ingestRuns, ingestBusy, ingestMsg, runIngestNow,
     trendRows, alertRows, recentProjectRows, projectStatusCounts, projectFilter, setProjectFilter,
     newProjectTitle, setNewProjectTitle, showNewProject, setShowNewProject, createProject, projectMsg,
     watchName, setWatchName, watchTerms, setWatchTerms, watchFreq, setWatchFreq,
@@ -969,6 +970,38 @@ export function StandaloneView({ v }: { v: any }) {
                   <button onClick={clearAnthropic} style={css("cursor:pointer;border:1px solid #F5B3AD;background:#FCE9E7;color:#C5392F;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>設定クリア</button>
                 </div>
                 {(anMsg.text ) && (<div style={css(anMsgStyle )}>{anMsg.text}</div>)}
+              </div>
+            </div>
+          </div>
+
+          <div style={css("margin-top:16px;background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
+            <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
+              <span style={css("width:30px;height:30px;border-radius:8px;background:#2E5AAC;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700")}>📚</span>
+              <div style={css("flex:1")}>
+                <div style={css("font-size:14px;font-weight:600")}>文献データ連携（土木建設技術）</div>
+                <div style={css("font-size:11.5px;color:#8A97A8")}>J-STAGE / 土木研究所 / ITC Digital Library / 国交省 / 関東地整 ・ 2時間ごとに自動取得（cron 相当）</div>
+              </div>
+              <button onClick={runIngestNow} disabled={ingestBusy} style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>{ingestBusy ? "収集中…" : "今すぐ取得"}</button>
+            </div>
+            <div style={css("padding:15px 18px;display:flex;flex-direction:column;gap:8px")}>
+              {(ingestRuns ?? []).length === 0 && (<div style={css("font-size:12px;color:#8A97A8")}>実行履歴はまだありません。「今すぐ取得」または2時間ごとの自動実行で記録されます。</div>)}
+              {(ingestRuns ?? []).slice(0, 10).map((run: { id: string; createdAt: string; detail: Record<string, unknown> | null }) => {
+                const d = (run.detail ?? {}) as Record<string, unknown>;
+                const t = new Date(run.createdAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                return (
+                  <div key={run.id} style={css("display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #EEF1F5;border-radius:8px;background:#FAFBFC")}>
+                    <span style={css("width:8px;height:8px;border-radius:50%;flex:none;background:" + (d.status === "error" ? "#C5392F" : "#1F8255"))} />
+                    <span style={css("flex:1;font-size:12px;font-weight:600;color:#1A2433")}>{String(d.source ?? "")}</span>
+                    <span style={css("font-size:11px;color:#5A6678")}>取得 {String(d.fetched ?? 0)} ・ 新規 {String(d.inserted ?? 0)} ・ 重複 {String(d.skipped ?? 0)}</span>
+                    <span style={css("font-size:11px;color:#8A97A8")}>{t}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={css("padding:0 18px 15px")}>
+              {(ingestMsg?.text) && (<div style={css("margin-bottom:10px;padding:10px 13px;background:#E9F0FB;border:1px solid #C9D7EC;color:#2E5AAC;border-radius:8px;font-size:12px;line-height:1.7")}>{ingestMsg.text}</div>)}
+              <div style={css("padding:10px 13px;background:#F7F8FA;border:1px solid #EEF1F5;border-radius:8px;font-size:11.5px;line-height:1.8;color:#5A6678")}>
+                <b>運用：</b>取得データはメタデータ（タイトル・著者・要旨・DOI/URL）のみで、本文・PDFは保存しません。取得失敗時は監査ログに記録され、次回実行で自動リトライします。確実な手動実行はサーバー上で <code>sudo systemctl start icrps-ingest.service</code> をご利用ください（Cloudflare 経由の手動実行はタイムアウトする場合があります）。
               </div>
             </div>
           </div>

@@ -10,8 +10,9 @@
 | --- | --- |
 | 本番 URL | `https://icrps.mirai-dx-platform.com`（Cloudflare Workers・HTTPS）／ フォールバック: `http://192.168.0.185:8787` |
 | 稼働方式 | Node.js + systemd（`icrps.service`、起動時自動起動・異常時自動再起動） |
+| 文献データ連携 | systemd timer（`icrps-ingest.timer`）による **2時間ごとの自動収集**（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整） |
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
-| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-01。Access は設定待ち。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
+| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-01。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
 | バージョン | v0.1.1（2026-08-01 本番適用済み） |
 
@@ -27,9 +28,30 @@ flowchart LR
     A --> C2[OpenAlex]
     A --> C3[Google Patents]
     A --> C4[DuckDuckGo / SerpAPI]
+    A --> C5[J-STAGE WebAPI]
+    A --> C6[土木研究所 / ITC / 国交省 / 関東地整]
     A --> L[LLM API<br/>OpenAI 互換・未設定時はフォールバック]
+    I[icrps-ingest.timer<br/>2時間ごと] -->|CLI 収集| A
     systemd -->|起動時自動起動| N
 ```
+
+## 📚 土木建設技術文献データ連携
+
+土木建設分野の技術文献・論文・技術情報を、指定情報源から **2時間ごとに自動取得** して `source_documents` へ蓄積します（メタデータのみ・本文/PDF は保存しません）。
+
+| 情報源 | 取得方式 | 状態 |
+| --- | --- | --- |
+| J-STAGE（土木学会論文集・構造工学論文集等） | 公式 WebAPI（Atom/OpenSearch） | ✅ 稼働 |
+| 土木研究所 論文・刊行物検索（thesis.pwri.go.jp） | 新着一覧 HTML パース | ✅ 稼働 |
+| ITC Digital Library（itc.scix.net） | 年別一覧＋詳細ページ（増分・上限100件/回） | ✅ 稼働 |
+| 国土交通省 技術調査（mlit.go.jp/tec） | 記事リンク抽出 | ✅ 稼働 |
+| 関東地方整備局 技術情報（ktr.mlit.go.jp） | 記事リンク抽出 | ✅ 稼働 |
+| PATENTSCOPE / J-PlatPat | （自動取得対象外・後日手動取り込みUIを検討） | ⏸ 保留 |
+
+- 実行基盤: `icrps-ingest.timer`（cron 相当・2時間ごと・`RandomizedDelaySec=90`）
+- 手動実行: `systemctl start icrps-ingest.service`、または管理画面「システム設定 → 文献データ連携 → 今すぐ取得」
+- 実行履歴は監査ログ（`ingest.run`）に記録され、管理画面に表示されます
+- 詳細: [docs/operations/literature-ingest.md](docs/operations/literature-ingest.md)
 
 ## 🔄 データフロー
 
@@ -104,7 +126,7 @@ scripts/      migrate / smoke テスト
 | レポート生成 | `/projects/:id/reports/new` | 5 テンプレートから Markdown 生成 |
 | レポート | `/reports/:id` | Markdown 表示・ダウンロード |
 | 管理 | `/admin` | ユーザー管理・監査ログ（admin のみ） |
-| システム設定 | `/settings` | AI プロバイダ設定（DeepSeek / Anthropic のキー・テスト・保存・クリア） |
+| システム設定 | `/settings` | AI プロバイダ設定（DeepSeek / Anthropic のキー・テスト・保存・クリア）＋ 文献データ連携（取得履歴・今すぐ取得） |
 
 ## 🔌 API 概要
 
@@ -126,6 +148,8 @@ scripts/      migrate / smoke テスト
 | GET/POST | `/api/reports/:id` `/export` | レポート取得・Markdown エクスポート |
 | GET | `/api/dashboard/stats` | ダッシュボード統計 |
 | GET/PATCH | `/api/admin/users` | ユーザー管理（admin） |
+| GET | `/api/admin/ingest/runs` | 文献収集の実行履歴（admin） |
+| POST | `/api/admin/ingest/run` | 文献収集を手動実行（admin） |
 
 詳細は [docs/api.md](docs/api.md) を参照。
 
@@ -166,4 +190,5 @@ curl http://127.0.0.1:8787/api/health
 - [API 仕様](docs/api.md) / [アーキテクチャ](docs/architecture.md)
 - [デプロイ手順](docs/operations/deploy-runbook.md) / [障害対応](docs/operations/rollback.md)
 - [監視手順](docs/operations/monitoring.md) / [バックアップ・リストア](docs/operations/backup-restore.md)
-- [リリースノート](docs/release-notes/v0.1.0.md)
+- [文献データ連携の運用](docs/operations/literature-ingest.md)
+- [リリースノート](docs/release-notes/v0.1.0.md) / [v0.1.1](docs/release-notes/v0.1.1.md) / [v0.1.2](docs/release-notes/v0.1.2.md)

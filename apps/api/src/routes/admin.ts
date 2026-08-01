@@ -6,7 +6,8 @@ import { createDb } from "../db.js";
 import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAdmin, requireAuth } from "../auth.js";
-import { listAuditLogs, listUsers, updateUserRole } from "../repositories.js";
+import { listAuditLogs, listIngestRuns, listUsers, updateUserRole } from "../repositories.js";
+import { runLiteratureIngest } from "../literature/index.js";
 
 const roleSchema = z.object({
   role: z.enum(["admin", "user", "viewer"])
@@ -41,6 +42,26 @@ export function adminRoutes(): Hono<AppBindings> {
   app.get("/audit-logs", async (c) => {
     const db = createDb(resolveEnv(c.env));
     return c.json({ auditLogs: await listAuditLogs(db, 200) });
+  });
+
+  app.get("/ingest/runs", async (c) => {
+    const db = createDb(resolveEnv(c.env));
+    return c.json({ runs: await listIngestRuns(db, 50) });
+  });
+
+  app.post("/ingest/run", async (c) => {
+    const env = resolveEnv(c.env);
+    const db = createDb(env);
+    const results = await runLiteratureIngest(env);
+    await createAuditLog(db, {
+      userId: c.get("userId"),
+      action: "admin.ingest_manual",
+      resourceType: "system",
+      detail: {
+        results: results.map((r) => ({ source: r.source, status: r.status, inserted: r.inserted, skipped: r.skipped }))
+      }
+    });
+    return c.json({ results });
   });
 
   return app;

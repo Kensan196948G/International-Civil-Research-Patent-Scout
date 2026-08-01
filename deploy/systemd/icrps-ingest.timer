@@ -1,0 +1,11 @@
+[Unit]
+Description=ICRPS literature ingest every 2 hours (cron equivalent)
+
+[Timer]
+OnCalendar=*-*-* 0/2:00:00
+Persistent=true
+RandomizedDelaySec=90
+Unit=icrps-ingest.service
+
+[Install]
+WantedBy=timers.target
