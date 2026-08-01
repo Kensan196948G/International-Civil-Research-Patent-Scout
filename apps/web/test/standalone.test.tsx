@@ -113,7 +113,33 @@ function baseVars() {
     docUrl: "",
     docUrlHost: "",
     docTypeLabel: "",
-    docDomain: ""
+    docDomain: "",
+    isSettings: false,
+    settingsDeepSeekConfigured: false,
+    settingsAnthropicConfigured: false,
+    settingsActiveProvider: null,
+    dsKey: "",
+    setDsKey: () => undefined,
+    dsModel: "deepseek-chat",
+    setDsModel: () => undefined,
+    anKey: "",
+    setAnKey: () => undefined,
+    anModel: "claude-sonnet-4-5",
+    setAnModel: () => undefined,
+    dsMsg: { type: "info", text: "" },
+    anMsg: { type: "info", text: "" },
+    dsMsgStyle: "",
+    anMsgStyle: "",
+    dsBusy: false,
+    anBusy: false,
+    testDeepSeek: () => undefined,
+    saveDeepSeek: () => undefined,
+    clearDeepSeek: () => undefined,
+    clearDsInput: () => undefined,
+    testAnthropic: () => undefined,
+    saveAnthropic: () => undefined,
+    clearAnthropic: () => undefined,
+    clearAnInput: () => undefined
   };
 }
 
@@ -133,5 +159,21 @@ describe("StandaloneView", () => {
     v.pageTitle = "AI 横断検索";
     render(<StandaloneView v={v as never} />);
     expect(screen.getByText("AI 横断検索")).toBeTruthy();
+  });
+
+  it("renders system settings screen with AI provider cards", () => {
+    const v = baseVars();
+    v.isSettings = true;
+    v.pageTitle = "システム設定";
+    v.settingsDeepSeekConfigured = true;
+    v.dsMsg = { type: "ok", text: "接続成功 · deepseek / deepseek-chat · 120ms" };
+    render(<StandaloneView v={v as never} />);
+    expect(screen.getByText("システム設定")).toBeTruthy();
+    expect(screen.getByText("DeepSeek（OpenAI 互換）")).toBeTruthy();
+    expect(screen.getByText("Anthropic（Claude）")).toBeTruthy();
+    expect(screen.getAllByText("設定テスト").length).toBe(2);
+    expect(screen.getAllByText("設定保存").length).toBe(2);
+    expect(screen.getAllByText("入力クリア").length).toBe(2);
+    expect(screen.getByText("接続成功 · deepseek / deepseek-chat · 120ms")).toBeTruthy();
   });
 });

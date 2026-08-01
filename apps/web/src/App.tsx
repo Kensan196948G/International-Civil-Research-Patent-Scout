@@ -39,6 +39,7 @@ export function App() {
             <Route path="/watch" element={<StandalonePage page="watch" />} />
             <Route path="/projects" element={<StandalonePage page="projects" />} />
             <Route path="/admin" element={<StandalonePage page="admin" />} />
+            <Route path="/settings" element={<StandalonePage page="settings" />} />
             <Route path="/projects/:projectId" element={<StandalonePage page="projects" />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

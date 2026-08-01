@@ -20,7 +20,12 @@ export function StandaloneView({ v }: { v: any }) {
     topics, projects, audit, fitReady, fitResults, runFit,
     aiEngineNote, userInitial, userName, userOrg, roleLabel,
     statProjects, statProjectsSub, statDocs, statDocsSub, statReports, statReportsSub, statWatch, statWatchSub,
-    digestMeta, docVenue, docDoi, docSource, docUrl, docUrlHost, docTypeLabel, docDomain, compareHeaders
+    digestMeta, docVenue, docDoi, docSource, docUrl, docUrlHost, docTypeLabel, docDomain, compareHeaders,
+    isSettings, settingsDeepSeekConfigured, settingsAnthropicConfigured, settingsActiveProvider,
+    dsKey, setDsKey, dsModel, setDsModel, anKey, setAnKey, anModel, setAnModel,
+    dsMsg, anMsg, dsMsgStyle, anMsgStyle, dsBusy, anBusy,
+    testDeepSeek, saveDeepSeek, clearDeepSeek, clearDsInput,
+    testAnthropic, saveAnthropic, clearAnthropic, clearAnInput
   } = v as Record<string, any>;
   return (
     <>
@@ -892,6 +897,81 @@ export function StandaloneView({ v }: { v: any }) {
       {(showDisclaimer ) && (<>
         <div style={css("margin-top:22px;padding:12px 15px;border-left:3px solid #E08A2B;background:#fff;border-radius:0 8px 8px 0;font-size:11.5px;line-height:1.8;color:#5A6678")}>
           本システムの AI 要約・比較・判定結果は、公開情報に基づく<b>調査支援情報</b>です。特許の権利判断、設計判断、施工可否、安全性判断を保証するものではありません。重要な判断には、原典確認および専門家確認を行ってください。
+        </div>
+      </>)}
+
+      {/* ===================== システム設定 ===================== */}
+      {(isSettings ) && (<>
+        <div data-screen-label="12 システム設定">
+          <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px")}>
+            <span style={css("width:22px;height:22px;border-radius:6px;background:#FDEFE0;color:#B5701A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700")}>⚙</span>
+            <div style={css("flex:1")}>
+              <div style={css("font-size:14px;font-weight:600")}>AI プロバイダ設定</div>
+              <div style={css("font-size:11.5px;color:#8A97A8")}>
+                アクティブ: {settingsActiveProvider ?? "未設定（ルール応答）"} · DeepSeek {settingsDeepSeekConfigured ? "設定済み" : "未設定"} · Anthropic {settingsAnthropicConfigured ? "設定済み" : "未設定"}
+              </div>
+            </div>
+          </div>
+
+          <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px;align-items:start")}>
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
+              <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
+                <span style={css("width:30px;height:30px;border-radius:8px;background:#141C29;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700")}>DS</span>
+                <div style={css("flex:1")}>
+                  <div style={css("font-size:14px;font-weight:600")}>DeepSeek（OpenAI 互換）</div>
+                  <div style={css("font-size:11.5px;color:#8A97A8")}>ステータス: {settingsDeepSeekConfigured ? "設定済み" : "未設定"} · モデル {dsModel}</div>
+                </div>
+              </div>
+              <div style={css("padding:15px 18px;display:flex;flex-direction:column;gap:11px")}>
+                <label style={css("font-size:11.5px;font-weight:600;color:#5A6678;display:block")}>
+                  API キー
+                  <input type="password" value={dsKey} onChange={setDsKey} placeholder="sk-…（保存済みキーは表示されません）" autoComplete="off" style={css("display:block;width:100%;margin-top:5px;padding:8px 11px;border:1px solid #E3E8EF;border-radius:8px;font:inherit;font-size:12.5px;color:#1A2433;outline:none")} />
+                </label>
+                <label style={css("font-size:11.5px;font-weight:600;color:#5A6678;display:block")}>
+                  モデル名
+                  <input value={dsModel} onChange={setDsModel} placeholder="deepseek-chat" style={css("display:block;width:100%;margin-top:5px;padding:8px 11px;border:1px solid #E3E8EF;border-radius:8px;font:inherit;font-size:12.5px;color:#1A2433;outline:none")} />
+                </label>
+                <div style={css("display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
+                  <button onClick={testDeepSeek} disabled={dsBusy} style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>{dsBusy ? "テスト中…" : "設定テスト"}</button>
+                  <button onClick={saveDeepSeek} disabled={dsBusy} style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>設定保存</button>
+                  <button onClick={clearDsInput} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>入力クリア</button>
+                  <button onClick={clearDeepSeek} style={css("cursor:pointer;border:1px solid #F5B3AD;background:#FCE9E7;color:#C5392F;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>設定クリア</button>
+                </div>
+                {(dsMsg.text ) && (<div style={css(dsMsgStyle )}>{dsMsg.text}</div>)}
+              </div>
+            </div>
+
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
+              <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
+                <span style={css("width:30px;height:30px;border-radius:8px;background:#B5701A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700")}>AN</span>
+                <div style={css("flex:1")}>
+                  <div style={css("font-size:14px;font-weight:600")}>Anthropic（Claude）</div>
+                  <div style={css("font-size:11.5px;color:#8A97A8")}>ステータス: {settingsAnthropicConfigured ? "設定済み" : "未設定"} · モデル {anModel}</div>
+                </div>
+              </div>
+              <div style={css("padding:15px 18px;display:flex;flex-direction:column;gap:11px")}>
+                <label style={css("font-size:11.5px;font-weight:600;color:#5A6678;display:block")}>
+                  API キー
+                  <input type="password" value={anKey} onChange={setAnKey} placeholder="sk-ant-…（保存済みキーは表示されません）" autoComplete="off" style={css("display:block;width:100%;margin-top:5px;padding:8px 11px;border:1px solid #E3E8EF;border-radius:8px;font:inherit;font-size:12.5px;color:#1A2433;outline:none")} />
+                </label>
+                <label style={css("font-size:11.5px;font-weight:600;color:#5A6678;display:block")}>
+                  モデル名
+                  <input value={anModel} onChange={setAnModel} placeholder="claude-sonnet-4-5" style={css("display:block;width:100%;margin-top:5px;padding:8px 11px;border:1px solid #E3E8EF;border-radius:8px;font:inherit;font-size:12.5px;color:#1A2433;outline:none")} />
+                </label>
+                <div style={css("display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
+                  <button onClick={testAnthropic} disabled={anBusy} style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>{anBusy ? "テスト中…" : "設定テスト"}</button>
+                  <button onClick={saveAnthropic} disabled={anBusy} style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>設定保存</button>
+                  <button onClick={clearAnInput} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>入力クリア</button>
+                  <button onClick={clearAnthropic} style={css("cursor:pointer;border:1px solid #F5B3AD;background:#FCE9E7;color:#C5392F;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>設定クリア</button>
+                </div>
+                {(anMsg.text ) && (<div style={css(anMsgStyle )}>{anMsg.text}</div>)}
+              </div>
+            </div>
+          </div>
+
+          <div style={css("margin-top:16px;padding:12px 15px;border-left:3px solid #E08A2B;background:#fff;border-radius:0 8px 8px 0;font-size:11.5px;line-height:1.8;color:#5A6678")}>
+            <b>セキュリティ：</b>API キーは AES-256-GCM で暗号化して保存され、画面・ログ・監査ログに出力されません。「設定テスト」は接続確認のみで保存は行いません。「入力クリア」は入力欄のみ、「設定クリア」は保存済みキーを削除します。
+          </div>
         </div>
       </>)}
     </div>

@@ -23,7 +23,8 @@ export type Page =
   | "chat"
   | "watch"
   | "projects"
-  | "admin";
+  | "admin"
+  | "settings";
 
 export interface StandaloneDataArgs {
   page: Page;
@@ -65,6 +66,8 @@ const TITLES: Record<Page, [string, string]> = {
   watch: ["更新監視・通知", "テーマ登録と AI ダイジェスト配信"],
   projects: ["プロジェクト", "調査テーマの一覧と進捗"],
   admin: ["管理・監査ログ", "ユーザー · コスト · AI 操作履歴"]
+  ,
+  settings: ["システム設定", "AI プロバイダ・API キー・動作確認"]
 };
 
 const STEP_DEFS = [
@@ -109,6 +112,7 @@ function relTime(iso: string): string {
 export function useStandaloneData({ page, documentId, reportId }: StandaloneDataArgs) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [projects, setProjects] = useState<ResearchProject[]>([]);
   const [projectDocs, setProjectDocs] = useState<Record<string, Array<ProjectDocument & { document: SourceDocument | null }>>>({});
   const [stats, setStats] = useState<{ projectCount: number; savedDocumentCount: number; reportCount: number; searchCount: number } | null>(null);
@@ -148,6 +152,18 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [fitReady, setFitReady] = useState(true);
   const [digestText, setDigestText] = useState("");
   const [digestBusy, setDigestBusy] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [dsConfigured, setDsConfigured] = useState(false);
+  const [anConfigured, setAnConfigured] = useState(false);
+  const [activeProvider, setActiveProvider] = useState<string | null>(null);
+  const [dsKey, setDsKey] = useState("");
+  const [dsModel, setDsModel] = useState("deepseek-chat");
+  const [anKey, setAnKey] = useState("");
+  const [anModel, setAnModel] = useState("claude-sonnet-4-5");
+  const [dsMsg, setDsMsg] = useState<{ type: "ok" | "error" | "info"; text: string }>({ type: "info", text: "" });
+  const [anMsg, setAnMsg] = useState<{ type: "ok" | "error" | "info"; text: string }>({ type: "info", text: "" });
+  const [dsBusy, setDsBusy] = useState(false);
+  const [anBusy, setAnBusy] = useState(false);
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -178,6 +194,21 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       }
     })();
   }, [user]);
+
+  useEffect(() => {
+    if (page !== "settings" || !isAdmin || settingsLoaded) return;
+    setSettingsLoaded(true);
+    void api.admin.settings
+      .get()
+      .then((res) => {
+        setDsConfigured(res.ai.deepseek.configured);
+        setAnConfigured(res.ai.anthropic.configured);
+        setActiveProvider(res.ai.activeProvider);
+        setDsModel(res.ai.deepseek.model);
+        setAnModel(res.ai.anthropic.model);
+      })
+      .catch(() => setDsMsg({ type: "error", text: "設定の取得に失敗しました" }));
+  }, [page, isAdmin, settingsLoaded]);
 
   // 文書詳細の読み込み
   useEffect(() => {
@@ -222,7 +253,8 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       chat: "/chat",
       watch: "/watch",
       projects: "/projects",
-      admin: "/admin"
+      admin: "/admin",
+      settings: "/settings"
     };
     navigate(path[p] ?? "/dashboard");
   }, [navigate]);
@@ -340,6 +372,124 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       setDigestBusy(false);
     }, 800);
   }, [projects, projectDocs]);
+
+  const refreshSettings = useCallback(async () => {
+    try {
+      const res = await api.admin.settings.get();
+      setDsConfigured(res.ai.deepseek.configured);
+      setAnConfigured(res.ai.anthropic.configured);
+      setActiveProvider(res.ai.activeProvider);
+      setDsModel(res.ai.deepseek.model);
+      setAnModel(res.ai.anthropic.model);
+      return res.ai;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const testDeepSeek = useCallback(async () => {
+    setDsBusy(true);
+    setDsMsg({ type: "info", text: "DeepSeek への接続をテスト中…" });
+    try {
+      const res = await api.admin.settings.testAi({ provider: "deepseek", apiKey: dsKey.trim() || undefined, model: dsModel.trim() || undefined });
+      setDsMsg({ type: res.ok ? "ok" : "error", text: res.message });
+    } catch (err) {
+      setDsMsg({ type: "error", text: err instanceof Error ? err.message : "テストに失敗しました" });
+    } finally {
+      setDsBusy(false);
+    }
+  }, [dsKey, dsModel]);
+
+  const saveDeepSeek = useCallback(async () => {
+    if (!dsKey.trim()) {
+      setDsMsg({ type: "error", text: "API キーを入力してください（クリアする場合は「入力クリア」→ 保存済み設定は「設定クリア」をご利用ください）" });
+      return;
+    }
+    setDsBusy(true);
+    setDsMsg({ type: "info", text: "DeepSeek 設定を保存中…" });
+    try {
+      await api.admin.settings.saveAi({ deepseek: { apiKey: dsKey.trim(), model: dsModel.trim() || undefined } });
+      setDsKey("");
+      await refreshSettings();
+      setDsMsg({ type: "ok", text: "DeepSeek の API キーを保存しました（暗号化保存・再表示されません）" });
+    } catch (err) {
+      setDsMsg({ type: "error", text: err instanceof Error ? err.message : "保存に失敗しました" });
+    } finally {
+      setDsBusy(false);
+    }
+  }, [dsKey, dsModel, refreshSettings]);
+
+  const clearDeepSeek = useCallback(async () => {
+    setDsBusy(true);
+    setDsMsg({ type: "info", text: "DeepSeek 設定をクリア中…" });
+    try {
+      await api.admin.settings.clearAi("deepseek");
+      setDsKey("");
+      await refreshSettings();
+      setDsMsg({ type: "ok", text: "DeepSeek の API キーをクリアしました" });
+    } catch (err) {
+      setDsMsg({ type: "error", text: err instanceof Error ? err.message : "クリアに失敗しました" });
+    } finally {
+      setDsBusy(false);
+    }
+  }, [refreshSettings]);
+
+  const testAnthropic = useCallback(async () => {
+    setAnBusy(true);
+    setAnMsg({ type: "info", text: "Anthropic への接続をテスト中…" });
+    try {
+      const res = await api.admin.settings.testAi({ provider: "anthropic", apiKey: anKey.trim() || undefined, model: anModel.trim() || undefined });
+      setAnMsg({ type: res.ok ? "ok" : "error", text: res.message });
+    } catch (err) {
+      setAnMsg({ type: "error", text: err instanceof Error ? err.message : "テストに失敗しました" });
+    } finally {
+      setAnBusy(false);
+    }
+  }, [anKey, anModel]);
+
+  const saveAnthropic = useCallback(async () => {
+    if (!anKey.trim()) {
+      setAnMsg({ type: "error", text: "API キーを入力してください（クリアする場合は「入力クリア」→ 保存済み設定は「設定クリア」をご利用ください）" });
+      return;
+    }
+    setAnBusy(true);
+    setAnMsg({ type: "info", text: "Anthropic 設定を保存中…" });
+    try {
+      await api.admin.settings.saveAi({ anthropic: { apiKey: anKey.trim(), model: anModel.trim() || undefined } });
+      setAnKey("");
+      await refreshSettings();
+      setAnMsg({ type: "ok", text: "Anthropic の API キーを保存しました（暗号化保存・再表示されません）" });
+    } catch (err) {
+      setAnMsg({ type: "error", text: err instanceof Error ? err.message : "保存に失敗しました" });
+    } finally {
+      setAnBusy(false);
+    }
+  }, [anKey, anModel, refreshSettings]);
+
+  const clearAnthropic = useCallback(async () => {
+    setAnBusy(true);
+    setAnMsg({ type: "info", text: "Anthropic 設定をクリア中…" });
+    try {
+      await api.admin.settings.clearAi("anthropic");
+      setAnKey("");
+      await refreshSettings();
+      setAnMsg({ type: "ok", text: "Anthropic の API キーをクリアしました" });
+    } catch (err) {
+      setAnMsg({ type: "error", text: err instanceof Error ? err.message : "クリアに失敗しました" });
+    } finally {
+      setAnBusy(false);
+    }
+  }, [refreshSettings]);
+
+  const clearDsInput = useCallback(() => {
+    setDsKey("");
+    setDsMsg({ type: "info", text: "DeepSeek の入力欄をクリアしました" });
+  }, []);
+
+  const clearAnInput = useCallback(() => {
+    setAnKey("");
+    setAnMsg({ type: "info", text: "Anthropic の入力欄をクリアしました" });
+  }, []);
 
   const allDocs = useMemo(
     () => Object.values(projectDocs).flat().map((x) => x.document).filter((d): d is SourceDocument => !!d),
@@ -631,8 +781,6 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       .filter((x): x is NonNullable<typeof x> => x !== null);
   }, [fitReady, allDocs]);
 
-  const isAdmin = user?.role === "admin";
-
   const statProjects = String(projects.length);
   const statProjectsSub = `保存文献 ${allDocs.length} 件`;
   const statDocs = String(allDocs.length);
@@ -667,9 +815,14 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       {
         label: "管理",
         items: [
-          { ico: "🔔", label: "更新監視", badge: Object.keys(projectDocs).length ? "12" : null, active: page === "watch", go: () => go("watch") },
+          { ico: "🔔", label: "更新監視", badge: null, active: page === "watch", go: () => go("watch") },
           { ico: "📁", label: "プロジェクト", active: page === "projects", go: () => go("projects") },
-          { ico: "⚙️", label: "管理・監査ログ", active: page === "admin", go: () => go("admin") }
+          ...(isAdmin
+            ? [
+                { ico: "⚙️", label: "管理・監査ログ", active: page === "admin", go: () => go("admin") },
+                { ico: "🧰", label: "システム設定", active: page === "settings", go: () => go("settings") }
+              ]
+            : [])
         ]
       }
     ],
@@ -686,6 +839,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     isWatch: page === "watch",
     isProjects: page === "projects",
     isAdmin: page === "admin",
+    isSettings: page === "settings",
     goFeed: () => go("feed"),
     goSearch: () => go("search"),
     goChat: () => go("chat"),
@@ -822,7 +976,42 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     docUrlHost: doc?.url ? new URL(doc.url).hostname : "出典なし",
     docTypeLabel: doc ? (TYPE_LABEL[doc.sourceType === "pdf" ? "book" : doc.sourceType] ?? doc.sourceType) : "文書",
     docDomain: doc?.sourceType === "patent" ? "特許" : "保存文献",
-    compareHeaders: comparison ? comparison.rows.slice(0, 4).map((r) => r.technologyName) : []
+    compareHeaders: comparison ? comparison.rows.slice(0, 4).map((r) => r.technologyName) : [],
+    settingsDeepSeekConfigured: dsConfigured,
+    settingsAnthropicConfigured: anConfigured,
+    settingsActiveProvider: activeProvider,
+    dsKey,
+    setDsKey: (e: { target: { value: string } }) => setDsKey(e.target.value),
+    dsModel,
+    setDsModel: (e: { target: { value: string } }) => setDsModel(e.target.value),
+    anKey,
+    setAnKey: (e: { target: { value: string } }) => setAnKey(e.target.value),
+    anModel,
+    setAnModel: (e: { target: { value: string } }) => setAnModel(e.target.value),
+    dsMsg,
+    anMsg,
+    dsBusy,
+    anBusy,
+    testDeepSeek,
+    saveDeepSeek,
+    clearDeepSeek,
+    testAnthropic,
+    saveAnthropic,
+    clearAnthropic,
+    clearDsInput,
+    clearAnInput,
+    dsMsgStyle:
+      dsMsg.type === "ok"
+        ? "margin-top:4px;padding:10px 13px;background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"
+        : dsMsg.type === "error"
+          ? "margin-top:4px;padding:10px 13px;background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"
+          : "margin-top:4px;padding:10px 13px;background:#E9F0FB;border:1px solid #C9D7EC;color:#2E5AAC;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap",
+    anMsgStyle:
+      anMsg.type === "ok"
+        ? "margin-top:4px;padding:10px 13px;background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"
+        : anMsg.type === "error"
+          ? "margin-top:4px;padding:10px 13px;background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"
+          : "margin-top:4px;padding:10px 13px;background:#E9F0FB;border:1px solid #C9D7EC;color:#2E5AAC;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"
   };
 }
 
