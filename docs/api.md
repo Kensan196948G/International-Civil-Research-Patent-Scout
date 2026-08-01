@@ -47,6 +47,10 @@
 | GET | `/admin/users` | ○ admin | ユーザー一覧 |
 | PATCH | `/admin/users/{id}/role` | ○ admin | ロール変更 |
 | GET | `/admin/audit-logs` | ○ admin | 監査ログ |
+| GET | `/admin/settings` | ○ admin | システム設定（AI プロバイダの設定状態・モデル。キー値は返さない） |
+| PUT | `/admin/settings/ai` | ○ admin | AI 設定保存（DeepSeek / Anthropic の API キー・モデル。キーは AES-256-GCM で暗号化保存） |
+| POST | `/admin/settings/ai/test` | ○ admin | AI 接続テスト（キー未指定時は保存済みキーを使用。保存はしない） |
+| DELETE | `/admin/settings/ai/{deepseek\|anthropic}` | ○ admin | 保存済みキーの削除 |
 
 ## 検索リクエスト例
 

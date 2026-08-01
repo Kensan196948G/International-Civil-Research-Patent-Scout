@@ -104,6 +104,7 @@ scripts/      migrate / smoke テスト
 | レポート生成 | `/projects/:id/reports/new` | 5 テンプレートから Markdown 生成 |
 | レポート | `/reports/:id` | Markdown 表示・ダウンロード |
 | 管理 | `/admin` | ユーザー管理・監査ログ（admin のみ） |
+| システム設定 | `/settings` | AI プロバイダ設定（DeepSeek / Anthropic のキー・テスト・保存・クリア） |
 
 ## 🔌 API 概要
 
