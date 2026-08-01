@@ -55,9 +55,13 @@
       "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
       "cloudflare": "サブドメイン指定待ち（mirai-dx-platform.com 配下・候補を README に記載・DNS 変更なし）",
       "domain_migration": {
-        "status": "指定待ち",
+        "status": "進行中（custom domain ルート追加待ち）",
+        "subdomain": "icrps.mirai-dx-platform.com",
+        "worker": "icrps-api デプロイ済み（03bd3d46…）",
+        "secrets": "DATABASE_URL / JWT_SECRET 登録済み",
+        "blocker": "API トークンに Zone（Workers Routes / DNS）権限がないためルート未設定。Dashboard での追加またはトークン権限更新が必要",
         "runbook": "docs/operations/domain-migration.md",
-        "note": "ドメイン名・サブドメイン名の指定後に、承認済み手順で Cloudflare Workers + custom domain 移行を実施"
+        "note": "Access 設定はユーザーが後日実施（通知待ち）。それまでは URL が公開状態のため、早めの Access 有効化を推奨"
       }
     }
   },

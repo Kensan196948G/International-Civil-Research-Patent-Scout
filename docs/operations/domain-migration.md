@@ -1,6 +1,30 @@
 # ドメイン移行手順（サブドメイン指定待ち）
 
-> ステータス: **指定待ち**（2026-08-01）。ドメイン名・サブドメイン名の指定を受けてから、以下の手順を実行する。DNS・custom domain・Cloudflare Access の変更は**指定＋承認後**のみ。
+> ステータス: **進行中（カスタムドメインのルート追加待ち）**
+> - ドメイン名・サブドメイン名: `icrps.mirai-dx-platform.com`（ユーザー指定・承認済み 2026-08-01）
+> - Worker `icrps-api` はデプロイ済み・Secrets（DATABASE_URL / JWT_SECRET）登録済み
+> - **カスタムドメインのルート追加が未完了**（API トークンに Zone 権限がないため）
+
+## 実行状況（2026-08-01）
+
+| 項目 | 状態 |
+| --- | --- |
+| wrangler.jsonc の routes 設定 | ✅ `icrps.mirai-dx-platform.com` custom_domain を設定済み |
+| Worker アップロード | ✅ `icrps-api`（version 03bd3d46…） |
+| Secrets | ✅ DATABASE_URL / JWT_SECRET |
+| カスタムドメインルート | ⛔ **未設定**（トークン権限不足） |
+| Cloudflare Access | ⏳ ユーザーが後日設定（通知待ち） |
+
+### ルート追加の方法（どちらか）
+
+**A. Cloudflare ダッシュボード（推奨・即時）**
+1. Cloudflare Dashboard → Workers & Pages → `icrps-api`
+2. Settings → Domains & Routes → **Add Custom Domain** → `icrps.mirai-dx-platform.com`
+3. 追加後、自動で DNS レコード（CNAME）と TLS 証明書が構成される
+
+**B. API トークンへ権限追加**
+1. API トークンに以下を追加: Zone → Workers Routes → Edit、Zone → DNS → Edit（対象ゾーン `mirai-dx-platform.com`）
+2. 権限更新後に本手順書の「指定後の実行手順」を再実行（`npx wrangler deploy` でルートが自動追加される）
 
 ## 現在の状態
 
