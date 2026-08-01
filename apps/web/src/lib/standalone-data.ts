@@ -10,7 +10,7 @@ import type {
   User
 } from "@icrps/contracts";
 import { DISCLAIMER } from "@icrps/contracts";
-import { api } from "../api";
+import { api, type LiteratureItem } from "../api";
 import { useAuth } from "../auth";
 
 export type Page =
@@ -120,6 +120,15 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [audit, setAudit] = useState<Array<{ id: string; action: string; createdAt: string; detail: unknown }>>([]);
   const [feedDomain, setFeedDomain] = useState("すべて");
   const [feedType, setFeedType] = useState("すべて");
+  const [feedTab, setFeedTab] = useState<"saved" | "collected">("saved");
+  const [litSource, setLitSource] = useState("all");
+  const [litQueryInput, setLitQueryInput] = useState("");
+  const [litQuery, setLitQuery] = useState("");
+  const [litItems, setLitItems] = useState<LiteratureItem[]>([]);
+  const [litTotal, setLitTotal] = useState(0);
+  const [litLoading, setLitLoading] = useState(false);
+  const [litError, setLitError] = useState<string | null>(null);
+  const litOffsetRef = useRef(0);
   const [q, setQ] = useState("低炭素コンクリート 海洋環境 塩害 実証データ");
   const [phase, setPhase] = useState<"idle" | "running" | "done">("idle");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
@@ -154,6 +163,9 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [digestText, setDigestText] = useState("");
   const [digestBusy, setDigestBusy] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [ingestRuns, setIngestRuns] = useState<Array<{ id: string; createdAt: string; detail: Record<string, unknown> | null }>>([]);
+  const [ingestBusy, setIngestBusy] = useState(false);
+  const [ingestMsg, setIngestMsg] = useState<{ type: "ok" | "error" | "info"; text: string }>({ type: "info", text: "" });
   const [dsConfigured, setDsConfigured] = useState(false);
   const [anConfigured, setAnConfigured] = useState(false);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
@@ -184,6 +196,10 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [showNewProject, setShowNewProject] = useState(false);
   const [projectMsg, setProjectMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [saveOpenFor, setSaveOpenFor] = useState<string | null>(null);
+  const [saveProjectId, setSaveProjectId] = useState("");
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [projectFilter, setProjectFilter] = useState("すべて");
   const [suggestDismissed, setSuggestDismissed] = useState(false);
   const [docActionMsg, setDocActionMsg] = useState<string | null>(null);
@@ -236,6 +252,37 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   }, [page, isAdmin, settingsLoaded]);
 
   useEffect(() => {
+    if (page !== "settings" || !isAdmin) return;
+    void api.admin
+      .ingestRuns()
+      .then((res) => setIngestRuns(res.runs))
+      .catch(() => setIngestMsg({ type: "error", text: "文献収集履歴の取得に失敗しました" }));
+  }, [page, isAdmin]);
+
+  const runIngestNow = useCallback(async () => {
+    setIngestBusy(true);
+    setIngestMsg({ type: "info", text: "文献収集を開始しました（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整）。完了まで数分かかることがあります。" });
+    try {
+      const res = await api.admin.ingestRunNow();
+      const okCount = res.results.filter((r) => r.status === "ok").length;
+      const inserted = res.results.reduce((acc, r) => acc + r.inserted, 0);
+      const failed = res.results.filter((r) => r.status === "error");
+      setIngestMsg({
+        type: failed.length ? "error" : "ok",
+        text:
+          `収集完了: ${okCount}/${res.results.length} ソース成功、新規 ${inserted} 件を登録しました。` +
+          (failed.length ? ` 失敗: ${failed.map((r) => r.source).join("、")}` : "")
+      });
+      const runs = await api.admin.ingestRuns();
+      setIngestRuns(runs.runs);
+    } catch (err) {
+      setIngestMsg({ type: "error", text: err instanceof Error ? err.message : "文献収集に失敗しました" });
+    } finally {
+      setIngestBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
     if (page !== "watch") return;
     void api.watch
       .list()
@@ -279,7 +326,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       dashboard: "/dashboard",
       feed: "/feed",
       search: "/search",
-      document: lastDocId ? `/documents/${lastDocId}` : "/search",
+      document: "/documents",
       compare: "/compare",
       fit: "/fit",
       report: "/report",
@@ -602,6 +649,51 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     }
   }, [newProjectTitle]);
 
+  const startSave = useCallback((documentId: string | null) => {
+    if (!documentId) return;
+    if (projects.length === 0) {
+      setSaveMsg({ type: "error", text: "保存先のプロジェクトがありません。先に「プロジェクト」画面で作成してください。" });
+      return;
+    }
+    setSaveMsg(null);
+    setSaveProjectId(projects[0]!.id);
+    setSaveOpenFor(documentId);
+  }, [projects]);
+
+  const confirmSave = useCallback(async () => {
+    if (!saveOpenFor || !saveProjectId) return;
+    setSaveBusy(true);
+    setSaveMsg(null);
+    try {
+      await api.projects.documents.save(saveProjectId, { documentId: saveOpenFor });
+      const res = await api.projects.documents.list(saveProjectId);
+      setProjectDocs((prev) => ({ ...prev, [saveProjectId]: res.projectDocuments }));
+      const projectName = projects.find((p) => p.id === saveProjectId)?.title ?? "";
+      setSaveMsg({ type: "ok", text: `「${projectName}」に保存しました。` });
+      setSaveOpenFor(null);
+    } catch (err) {
+      setSaveMsg({ type: "error", text: err instanceof Error ? err.message : "保存に失敗しました" });
+    } finally {
+      setSaveBusy(false);
+    }
+  }, [saveOpenFor, saveProjectId, projects]);
+
+  const cancelSave = useCallback(() => {
+    setSaveOpenFor(null);
+    setSaveMsg(null);
+  }, []);
+
+  const clearSaveMsg = useCallback(() => setSaveMsg(null), []);
+
+  const clearDocument = useCallback(() => {
+    lastDocId = null;
+    setDoc(null);
+    setSummaries([]);
+    setShowEn(false);
+    setDocActionMsg(null);
+    navigate("/documents");
+  }, [navigate]);
+
   const exportCompareCsv = useCallback(() => {
     if (!comparison) return;
     const rows = [
@@ -685,6 +777,60 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       .filter((f) => feedDomain === "すべて" || f.domain === feedDomain)
       .filter((f) => feedType === "すべて" || f.type === feedType);
   }, [allDocs, feedDomain, feedType, openDoc]);
+
+  const loadLiterature = useCallback(
+    async (reset: boolean) => {
+      setLitLoading(true);
+      setLitError(null);
+      try {
+        const offset = reset ? 0 : litOffsetRef.current;
+        const res = await api.literature.list({
+          q: litQuery || undefined,
+          source: litSource,
+          limit: 50,
+          offset
+        });
+        setLitItems(reset ? res.items : (prev) => [...prev, ...res.items]);
+        setLitTotal(res.total);
+        litOffsetRef.current = offset + res.items.length;
+      } catch (err) {
+        setLitError(err instanceof Error ? err.message : "収集文献の取得に失敗しました");
+      } finally {
+        setLitLoading(false);
+      }
+    },
+    [litQuery, litSource]
+  );
+
+  useEffect(() => {
+    if (page !== "feed" || feedTab !== "collected") return;
+    void loadLiterature(true);
+  }, [page, feedTab, litQuery, litSource, loadLiterature]);
+
+  const litRows = useMemo(
+    () =>
+      litItems.map((d, i) => {
+        const type = d.sourceType === "pdf" ? "book" : d.sourceType;
+        return {
+          id: d.id,
+          documentId: d.id,
+          title: d.title,
+          original: d.originalTitle ?? "",
+          venue: [d.sourceName, d.publicationDate].filter(Boolean).join(" · "),
+          url: d.url ?? "#",
+          summary: d.abstract ?? "要旨は取得されていません（メタデータのみ・出典リンクから原典をご確認ください）",
+          authors: (d.authors ?? []).join("、"),
+          doi: d.doi ?? "",
+          sourceLabel: d.sourceLabel,
+          date: d.publicationDate ?? d.createdAt.slice(0, 10),
+          typeStyle: TYPE_STYLE[type] ?? TYPE_STYLE.web,
+          typeLabel: TYPE_LABEL[type] ?? "Web",
+          goDoc: () => openDoc(d.id),
+          key: `lit-${i}`
+        };
+      }),
+    [litItems, openDoc]
+  );
 
   const domainChips = useMemo(() => {
     const counts = new Map<string, number>();
@@ -1172,6 +1318,19 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     typeChips,
     feed,
     feedCount: feed.length,
+    feedTab,
+    setFeedTab,
+    litSource,
+    changeLitSource: (v: string) => setLitSource(v),
+    litQueryInput,
+    setLitQueryInput: (e: { target: { value: string } }) => setLitQueryInput(e.target.value),
+    applyLitSearch: () => setLitQuery(litQueryInput.trim()),
+    litRows,
+    litTotal,
+    litLoading,
+    litError,
+    hasMoreLit: litItems.length < litTotal,
+    loadMoreLiterature: () => void loadLiterature(false),
     q,
     setQ: (e: { target: { value: string } }) => setQ(e.target.value),
     runSearch,
@@ -1306,6 +1465,16 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     createProject,
     projectMsg,
     docActionMsg,
+    clearDocument,
+    saveOpenFor,
+    saveProjectId,
+    setSaveProjectId: (e: { target: { value: string } }) => setSaveProjectId(e.target.value),
+    saveBusy,
+    saveMsg,
+    startSave,
+    confirmSave,
+    cancelSave,
+    clearSaveMsg,
     adoptSummary,
     discardSummary,
     editSummary,
@@ -1348,6 +1517,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     docVenue: doc?.sourceName ?? "—",
     docDoi: doc?.doi ?? doc?.patentNumber ?? "—",
     docSource: doc?.sourceType === "patent" ? "Google Patents" : "Crossref / OpenAlex",
+    docId: doc?.id ?? null,
     docUrl: doc?.url ?? "#",
     docUrlHost: doc?.url ? new URL(doc.url).hostname : "出典なし",
     docTypeLabel: doc ? (TYPE_LABEL[doc.sourceType === "pdf" ? "book" : doc.sourceType] ?? doc.sourceType) : "文書",
@@ -1377,6 +1547,10 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     clearDsInput,
     clearAnInput,
     settingsAccessDenied: !isAdmin,
+    ingestRuns,
+    ingestBusy,
+    ingestMsg,
+    runIngestNow,
     dsMsgStyle:
       dsMsg.type === "ok"
         ? "margin-top:4px;padding:10px 13px;background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"

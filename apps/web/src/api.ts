@@ -12,6 +12,21 @@ import type {
 
 const TOKEN_KEY = "icrps_token";
 
+export interface LiteratureItem {
+  id: string;
+  sourceType: string;
+  title: string;
+  originalTitle: string | null;
+  abstract: string | null;
+  url: string | null;
+  doi: string | null;
+  authors: string[];
+  publicationDate: string | null;
+  sourceName: string | null;
+  sourceLabel: string;
+  createdAt: string;
+}
+
 function createTokenStore() {
   try {
     const ls = globalThis.localStorage;
@@ -189,11 +204,39 @@ export const api = {
   dashboard: {
     stats: () => request<{ stats: DashboardStats }>("/api/dashboard/stats")
   },
+  literature: {
+    list: (input: { q?: string; source?: string; sourceType?: string; limit?: number; offset?: number }) => {
+      const params = new URLSearchParams();
+      if (input.q) params.set("q", input.q);
+      if (input.source && input.source !== "all") params.set("source", input.source);
+      if (input.sourceType && input.sourceType !== "all") params.set("sourceType", input.sourceType);
+      params.set("limit", String(input.limit ?? 50));
+      params.set("offset", String(input.offset ?? 0));
+      return request<{ items: LiteratureItem[]; total: number; limit: number; offset: number }>(
+        `/api/literature?${params.toString()}`
+      );
+    }
+  },
   admin: {
     users: () => request<{ users: User[] }>("/api/admin/users"),
     updateRole: (userId: string, role: string) =>
       request<{ user: User }>(`/api/admin/users/${userId}/role`, { method: "PATCH", body: { role } }),
     auditLogs: () => request<{ auditLogs: Array<{ id: string; action: string; createdAt: string; detail: unknown }> }>("/api/admin/audit-logs"),
+    ingestRuns: () =>
+      request<{ runs: Array<{ id: string; createdAt: string; detail: Record<string, unknown> | null }> }>(
+        "/api/admin/ingest/runs"
+      ),
+    ingestRunNow: () =>
+      request<{
+        results: Array<{
+          source: string;
+          fetched: number;
+          inserted: number;
+          skipped: number;
+          status: "ok" | "error";
+          error?: string;
+        }>;
+      }>("/api/admin/ingest/run", { method: "POST" }),
     settings: {
       get: () =>
         request<{

@@ -6,20 +6,20 @@
     "phase_mode": "development"
   },
   "goal": "v0.1.1 リリース直前準備（堅牢化・運用監視・文書化）を Draft PR まで完了させ、Cloudflare サブドメイン決定後に移行する",
-  "phase": "Monitor",
+  "phase": "Improvement",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 35,
+    "test_count": 48,
     "security_critical": 0,
     "blocker_count": 0
   },
   "execution": {
     "max_duration_minutes": 300,
     "last_session": {
-      "date": "2026-07-31",
-      "summary": "v0.1.1 本番適用済み（2026-08-01）: WebUI standalone 100% 適用・システム設定（DeepSeek/Anthropic）・認証レート制限・監視 timer・migration 0002 適用。Draft PR #13 は merge 承認待ち"
+      "date": "2026-08-01",
+      "summary": "土木建設技術文献の自動収集を実装・稼働開始（2時間ごと・icrps-ingest.timer）。文書詳細クリック不具合の修正、保存フロー実装、技術文献フィードへの収集文献掲載（タブ切替・情報源/キーワード絞り込み・詳細カード・ページング）を完了。Cloudflare 本番へ 0d1a7dd3 を 100% デプロイ済み（https://icrps.mirai-dx-platform.com）。ローカル :8787 も反映済み。PATENTSCOPE/J-PlatPat は対象外（後日手動取り込みUI検討）"
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -44,6 +44,15 @@
       "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer",
       "migration_0002": "app_settings 適用済み（2026-08-01）",
       "migration_0003": "watch_topics 拡張 適用済み（2026-08-01）",
+      "literature_ingest": {
+        "status": "稼働中",
+        "schedule": "2時間ごと（icrps-ingest.timer・cron 相当）",
+        "sources": ["J-STAGE", "土木研究所", "ITC Digital Library", "国土交通省 技術調査", "関東地整 技術情報"],
+        "first_run": "2026-08-01（J-STAGE 1,538・PWRI 10・ITC 100・MLIT 40・KTR 55 を新規登録）",
+        "manual": "管理画面 /settings → 文献データ連携 → 今すぐ取得、または systemctl start icrps-ingest.service",
+        "runbook": "docs/operations/literature-ingest.md",
+        "excluded": "PATENTSCOPE / J-PlatPat（自動取得対象外・後日手動取り込みUI検討）"
+      },
       "backup_branches": [
         "release-v0.1.1-backup（br-morning-king-azghscq7）",
         "release-20260801-sidebar-detail（br-young-sea-azoaihau）"
@@ -93,7 +102,9 @@
     "success_patterns": [
       "E2E スモークスクリプト（登録→検索→保存→要約→比較→レポート）でリリース可否を一括判定",
       "npm audit は eslint 10 + react-router 8 へ更新して 0 件に到達",
-      "systemd + EnvironmentFile（0600）でシークレットをリポジトリ外に分離"
+      "systemd + EnvironmentFile（0600）でシークレットをリポジトリ外に分離",
+      "Neon への大量登録は一括 INSERT（ON CONFLICT DO NOTHING）で高速化。1件ずつの SELECT/INSERT はネックになるため、既知 URL は ANY($1) で一括照会",
+      "J-STAGE WebAPI（api.jstage.jst.go.jp/searchapi/do?service=3）は公式・無料で土木学会論文集等のメタデータを Atom/XML で取得可能"
     ]
   }
 }

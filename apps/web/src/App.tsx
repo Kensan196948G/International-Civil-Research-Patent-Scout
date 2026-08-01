@@ -30,6 +30,7 @@ export function App() {
             <Route path="/dashboard" element={<StandalonePage page="dashboard" />} />
             <Route path="/feed" element={<StandalonePage page="feed" />} />
             <Route path="/search" element={<StandalonePage page="search" />} />
+            <Route path="/documents" element={<StandalonePage page="document" />} />
             <Route path="/documents/:documentId" element={<StandalonePage page="document" />} />
             <Route path="/compare" element={<StandalonePage page="compare" />} />
             <Route path="/fit" element={<StandalonePage page="fit" />} />

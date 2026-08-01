@@ -7,9 +7,11 @@ export function StandaloneView({ v }: { v: any }) {
   const {
     showDisclaimer, navGroups, pageTitle, pageSub,
     isDashboard, isFeed, isSearch, isDoc, isCompare, isFit, isReport, isChat, isWatch, isProjects, isAdmin,
-    goFeed, goSearch, goChat, goWatch, goProjects, goDoc, goCompare, goReport,
+    goFeed, goSearch, goChat, goWatch, goProjects, goCompare, goReport,
     digestText, digestBusy, regenDigest,
     domainChips, typeChips, feed, feedCount,
+    feedTab, setFeedTab, litSource, changeLitSource, litQueryInput, setLitQueryInput, applyLitSearch,
+    litRows, litTotal, litLoading, litError, hasMoreLit, loadMoreLiterature,
     q, setQ, runSearch, searchStatus, hasSteps, steps, termsReady, terms,
     resultsReady, results, resultCount, hasCompare, compareCount, toggleQueryEdit, acceptSuggest, dismissSuggest, suggestDismissed,
     docTitle, docSub, enBtnLabel, enBtnStyle, toggleEn, docTabs, docTabSummary, docTabAbstract, docTabClaims, docTabCite,
@@ -21,11 +23,14 @@ export function StandaloneView({ v }: { v: any }) {
     aiEngineNote, userInitial, userName, userOrg, roleLabel,
     statProjects, statProjectsSub, statDocs, statDocsSub, statReports, statReportsSub, statWatch, statWatchSub,
     digestMeta, docVenue, docDoi, docSource, docUrl, docUrlHost, docTypeLabel, docDomain, compareHeaders,
+    clearDocument,
     isSettings, settingsDeepSeekConfigured, settingsAnthropicConfigured, settingsActiveProvider,
     dsKey, setDsKey, dsModel, setDsModel, anKey, setAnKey, anModel, setAnModel,
     dsMsg, anMsg, dsMsgStyle, anMsgStyle, dsBusy, anBusy,
     testDeepSeek, saveDeepSeek, clearDeepSeek, clearDsInput,
     testAnthropic, saveAnthropic, clearAnthropic, clearAnInput, settingsAccessDenied,
+    ingestRuns, ingestBusy, ingestMsg, runIngestNow,
+    docId, saveOpenFor, saveProjectId, setSaveProjectId, saveBusy, saveMsg, startSave, confirmSave, cancelSave, clearSaveMsg,
     trendRows, alertRows, recentProjectRows, projectStatusCounts, projectFilter, setProjectFilter,
     newProjectTitle, setNewProjectTitle, showNewProject, setShowNewProject, createProject, projectMsg,
     watchName, setWatchName, watchTerms, setWatchTerms, watchFreq, setWatchFreq,
@@ -36,6 +41,16 @@ export function StandaloneView({ v }: { v: any }) {
     exportCompareCsv, compareSummary, adminTotalUsers, adminAdmins, adminCostLabel,
     adminConnectorLabel, adminRejectLabel, adminAccessDenied
   } = v as Record<string, any>;
+
+  const savePicker = () => (
+    <span style={css("display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap")}>
+      <select value={saveProjectId} onChange={setSaveProjectId} style={css("font:inherit;font-size:12px;padding:6px 9px;border:1px solid #E3E8EF;border-radius:8px;outline:none;color:#1A2433;max-width:230px;background:#fff")}>
+        {projects.map((p: any) => (<option key={p.id} value={p.id}>{p.title}</option>))}
+      </select>
+      <button onClick={confirmSave} disabled={saveBusy} style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>{saveBusy ? "保存中…" : "保存する"}</button>
+      <button onClick={cancelSave} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>取消</button>
+    </span>
+  );
   return (
     <>
 
@@ -107,6 +122,11 @@ export function StandaloneView({ v }: { v: any }) {
     </header>
 
     <div style={css("flex:1;overflow:auto;padding:20px 22px 40px")}>
+
+      {(saveMsg) && (<div style={css("margin-bottom:14px;padding:10px 13px;border-radius:8px;font-size:12px;line-height:1.7;display:flex;align-items:center;gap:10px;" + (saveMsg.type === "ok" ? "background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255" : "background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F"))}>
+        <span style={css("flex:1")}>{saveMsg.text}</span>
+        <button onClick={clearSaveMsg} style={css("cursor:pointer;border:none;background:none;color:inherit;font:inherit;font-size:14px;font-weight:700")}>×</button>
+      </div>)}
 
       {/* ===================== ダッシュボード ===================== */}
       {(isDashboard ) && (<>
@@ -206,6 +226,14 @@ export function StandaloneView({ v }: { v: any }) {
       {/* ===================== 技術文献フィード ===================== */}
       {(isFeed ) && (<>
         <div data-screen-label="02 技術文献フィード">
+          <div style={css("display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap")}>
+            <button onClick={() => setFeedTab("saved")} style={css(feedTab === "saved" ? "cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:7px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600" : "cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>保存文献</button>
+            <button onClick={() => setFeedTab("collected")} style={css(feedTab === "collected" ? "cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:7px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600" : "cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>収集文献（土木建設技術）</button>
+            <div style={css("flex:1")}></div>
+            <span style={css("font-size:11.5px;color:#8A97A8;align-self:center")}>2時間ごとに J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整 から自動収集</span>
+          </div>
+
+          {feedTab === "saved" && (<>
           <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:11px")}>
             <div style={css("display:flex;align-items:center;gap:10px;flex-wrap:wrap")}>
               <span style={css("font-size:11.5px;font-weight:600;color:#5A6678;width:52px")}>分野</span>
@@ -251,14 +279,73 @@ export function StandaloneView({ v }: { v: any }) {
                   </>))}
                 </div>
                 <div style={css("margin-top:auto;padding:14px 17px;display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
-                  <button onClick={goDoc } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>詳細と全文要約</button>
-                  <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>保存</button>
+                  <button onClick={it.goDoc } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>詳細と全文要約</button>
+                  {saveOpenFor === it.id ? savePicker() : (<button onClick={() => startSave(it.id)} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>保存</button>)}
                   <div style={css("flex:1")}></div>
                   <a href={it.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
                 </div>
               </div>
             </>))}
           </div>
+          </>)}
+
+          {feedTab === "collected" && (<>
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap")}>
+              <span style={css("font-size:11.5px;font-weight:600;color:#5A6678")}>情報源</span>
+              <select value={litSource} onChange={(e: any) => changeLitSource(e.target.value)} style={css("font:inherit;font-size:12px;padding:7px 10px;border:1px solid #E3E8EF;border-radius:8px;outline:none;color:#1A2433;background:#fff")}>
+                <option value="all">すべて</option>
+                <option value="jstage">J-STAGE</option>
+                <option value="pwri">土木研究所</option>
+                <option value="itc">ITC Digital Library</option>
+                <option value="mlit">国土交通省</option>
+                <option value="ktr">関東地整</option>
+              </select>
+              <input value={litQueryInput} onChange={setLitQueryInput} placeholder="タイトル・著者・キーワードで検索" style={css("font:inherit;font-size:12.5px;padding:7px 11px;border:1px solid #E3E8EF;border-radius:8px;outline:none;color:#1A2433;width:240px;max-width:100%")} />
+              <button onClick={applyLitSearch } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>検索</button>
+              <div style={css("flex:1")}></div>
+              <span style={css("font-size:11.5px;color:#8A97A8")}>{litTotal} 件 · 公開日・収集日時順</span>
+            </div>
+
+            {(litError ) && (<div style={css("margin-bottom:14px;padding:10px 13px;background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F;border-radius:8px;font-size:12px;line-height:1.7")}>{litError}</div>)}
+
+            <div style={css("display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:16px;align-items:start")}>
+              {(litRows ).map((it: any) => (<>
+                <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden;display:flex;flex-direction:column;animation:icrps-in .25s ease both")}>
+                  <div style={css("padding:14px 17px 0;display:flex;align-items:center;gap:7px;flex-wrap:wrap")}>
+                    <span style={css(it.typeStyle )}>{it.typeLabel}</span>
+                    <span style={css("font-size:11px;font-weight:600;color:#2E5AAC;background:#E9F0FB;border:1px solid #C9D7EC;padding:2px 8px;border-radius:6px")}>{it.sourceLabel}</span>
+                    <div style={css("flex:1")}></div>
+                    <span style={css("font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8A97A8")}>{it.date}</span>
+                  </div>
+                  <div style={css("padding:11px 17px 0")}>
+                    <div onClick={it.goDoc } style={css("font-size:14px;font-weight:600;line-height:1.55;text-wrap:pretty;cursor:pointer;color:#1A2433")}>{it.title}</div>
+                    <div style={css("font-size:11.5px;color:#8A97A8;margin-top:5px;line-height:1.5")}>{it.original}</div>
+                    {(it.authors ) && (<div style={css("font-size:11.5px;color:#5A6678;margin-top:6px")}>著者: {it.authors}</div>)}
+                    <div style={css("font-size:11.5px;color:#5A6678;margin-top:6px;font-family:'IBM Plex Mono',monospace")}>{it.venue}{it.doi ? ` · DOI: ${it.doi}` : ""}</div>
+                  </div>
+                  <div style={css("margin:13px 17px 0;padding:12px 13px;background:#FAFBFC;border:1px solid #EEF1F5;border-radius:8px")}>
+                    <div style={css("display:flex;align-items:center;gap:6px;margin-bottom:7px")}>
+                      <span style={css("font-size:10px;font-weight:700;color:#2E5AAC;background:#E9F0FB;padding:1px 6px;border-radius:5px")}>収集メタデータ</span>
+                      <span style={css("font-size:10.5px;color:#8A97A8")}>要旨があるもののみ表示</span>
+                    </div>
+                    <div style={css("font-size:12.5px;line-height:1.75;color:#1A2433;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden")}>{it.summary}</div>
+                  </div>
+                  <div style={css("margin-top:auto;padding:14px 17px;display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
+                    <button onClick={it.goDoc } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>詳細を開く</button>
+                    {saveOpenFor === it.documentId ? savePicker() : (<button onClick={() => startSave(it.documentId)} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>プロジェクトに保存</button>)}
+                    <div style={css("flex:1")}></div>
+                    <a href={it.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
+                  </div>
+                </div>
+              </>))}
+            </div>
+
+            {(litLoading ) && (<div style={css("text-align:center;padding:18px;font-size:12px;color:#8A97A8")}>読み込み中…</div>)}
+            {(!litLoading && litRows.length === 0 && !litError ) && (<div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:34px 22px;text-align:center;font-size:12.5px;color:#8A97A8")}>該当する収集文献はありません。情報源や検索条件を変えてお試しください。</div>)}
+            {(hasMoreLit && !litLoading ) && (<div style={css("display:flex;justify-content:center;margin-top:16px")}>
+              <button onClick={loadMoreLiterature } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:8px 16px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>さらに読み込む（残り {Math.max(litTotal - litRows.length, 0)} 件）</button>
+            </div>)}
+          </>)}
         </div>
       </>)}
 
@@ -325,13 +412,13 @@ export function StandaloneView({ v }: { v: any }) {
                       <span style={css("font-size:11px;color:#8A97A8")}>関連度</span>
                       <span style={css("font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#1F8255")}>{r.score}</span>
                     </div>
-                    <div onClick={goDoc } style={css("font-size:14.5px;font-weight:600;line-height:1.55;cursor:pointer;color:#1A2433;text-wrap:pretty")}>{r.title}</div>
+                    <div onClick={r.goDoc } style={css("font-size:14.5px;font-weight:600;line-height:1.55;cursor:pointer;color:#1A2433;text-wrap:pretty")}>{r.title}</div>
                     <div style={css("font-size:11.5px;color:#8A97A8;margin-top:5px;line-height:1.5")}>{r.original}</div>
                     <div style={css("font-size:12.5px;line-height:1.75;color:#5A6678;margin-top:9px")}>{r.summary}</div>
                     <div style={css("font-size:11.5px;color:#8A97A8;margin-top:9px;font-family:'IBM Plex Mono',monospace")}>{r.venue}</div>
                     <div style={css("display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center")}>
                       <button onClick={r.toggle } style={css(r.pickStyle )}>{r.pickLabel}</button>
-                      <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>プロジェクトに保存</button>
+                      {saveOpenFor === r.documentId ? savePicker() : (<button onClick={() => startSave(r.documentId)} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>プロジェクトに保存</button>)}
                       <div style={css("flex:1")}></div>
                       <a href={r.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
                     </div>
@@ -393,6 +480,15 @@ export function StandaloneView({ v }: { v: any }) {
       {/* ===================== 文書詳細 ===================== */}
       {(isDoc ) && (<>
         <div data-screen-label="04 文書詳細">
+          {(!docId ) ? (<div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:46px 24px;text-align:center")}>
+            <div style={css("font-size:28px;margin-bottom:10px")}>📄</div>
+            <div style={css("font-size:14.5px;font-weight:600;color:#1A2433;margin-bottom:6px")}>文書が選択されていません</div>
+            <div style={css("font-size:12px;color:#8A97A8;line-height:1.8;margin-bottom:18px")}>検索結果または技術文献フィードで文書タイトルをクリックすると、この画面に詳細が表示されます。</div>
+            <div style={css("display:flex;gap:8px;justify-content:center;flex-wrap:wrap")}>
+              <button onClick={goSearch } style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:8px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>AI 横断検索へ</button>
+              <button onClick={goFeed } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:8px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>技術文献フィードへ</button>
+            </div>
+          </div>) : (<>
           <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-items:start")}>
             <div style={css("display:flex;flex-direction:column;gap:16px;min-width:0")}>
 
@@ -403,6 +499,7 @@ export function StandaloneView({ v }: { v: any }) {
                   <span style={css("font-size:11px;font-weight:600;color:#5A6678;background:#F2F4F8;border:1px solid #E3E8EF;padding:2px 8px;border-radius:6px")}>維持管理</span>
                   <div style={css("flex:1")}></div>
                   <button onClick={toggleEn } style={css(enBtnStyle )}>{enBtnLabel}</button>
+                  <button onClick={clearDocument } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:11.5px;font-weight:600")}>画面クリア</button>
                 </div>
                 <h1 style={css("font-size:20px;font-weight:600;line-height:1.5;margin:0 0 8px;text-wrap:pretty")}>{docTitle}</h1>
                 <div style={css("font-size:12.5px;color:#8A97A8;line-height:1.7")}>{docSub}</div>
@@ -517,12 +614,13 @@ export function StandaloneView({ v }: { v: any }) {
               </div>
 
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 17px;display:flex;flex-direction:column;gap:8px")}>
-                <button style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:9px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>プロジェクトに保存</button>
+                {saveOpenFor === docId ? savePicker() : (<button onClick={() => startSave(docId)} style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:9px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>プロジェクトに保存</button>)}
                 <button onClick={goCompare } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:9px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>比較表に追加</button>
                 <button onClick={goWatch } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:9px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>著者・主題をウォッチ</button>
               </div>
             </div>
           </div>
+          </>)}
         </div>
       </>)}
 
@@ -969,6 +1067,38 @@ export function StandaloneView({ v }: { v: any }) {
                   <button onClick={clearAnthropic} style={css("cursor:pointer;border:1px solid #F5B3AD;background:#FCE9E7;color:#C5392F;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>設定クリア</button>
                 </div>
                 {(anMsg.text ) && (<div style={css(anMsgStyle )}>{anMsg.text}</div>)}
+              </div>
+            </div>
+          </div>
+
+          <div style={css("margin-top:16px;background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
+            <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
+              <span style={css("width:30px;height:30px;border-radius:8px;background:#2E5AAC;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700")}>📚</span>
+              <div style={css("flex:1")}>
+                <div style={css("font-size:14px;font-weight:600")}>文献データ連携（土木建設技術）</div>
+                <div style={css("font-size:11.5px;color:#8A97A8")}>J-STAGE / 土木研究所 / ITC Digital Library / 国交省 / 関東地整 ・ 2時間ごとに自動取得（cron 相当）</div>
+              </div>
+              <button onClick={runIngestNow} disabled={ingestBusy} style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>{ingestBusy ? "収集中…" : "今すぐ取得"}</button>
+            </div>
+            <div style={css("padding:15px 18px;display:flex;flex-direction:column;gap:8px")}>
+              {(ingestRuns ?? []).length === 0 && (<div style={css("font-size:12px;color:#8A97A8")}>実行履歴はまだありません。「今すぐ取得」または2時間ごとの自動実行で記録されます。</div>)}
+              {(ingestRuns ?? []).slice(0, 10).map((run: { id: string; createdAt: string; detail: Record<string, unknown> | null }) => {
+                const d = (run.detail ?? {}) as Record<string, unknown>;
+                const t = new Date(run.createdAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                return (
+                  <div key={run.id} style={css("display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #EEF1F5;border-radius:8px;background:#FAFBFC")}>
+                    <span style={css("width:8px;height:8px;border-radius:50%;flex:none;background:" + (d.status === "error" ? "#C5392F" : "#1F8255"))} />
+                    <span style={css("flex:1;font-size:12px;font-weight:600;color:#1A2433")}>{String(d.source ?? "")}</span>
+                    <span style={css("font-size:11px;color:#5A6678")}>取得 {String(d.fetched ?? 0)} ・ 新規 {String(d.inserted ?? 0)} ・ 重複 {String(d.skipped ?? 0)}</span>
+                    <span style={css("font-size:11px;color:#8A97A8")}>{t}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={css("padding:0 18px 15px")}>
+              {(ingestMsg?.text) && (<div style={css("margin-bottom:10px;padding:10px 13px;background:#E9F0FB;border:1px solid #C9D7EC;color:#2E5AAC;border-radius:8px;font-size:12px;line-height:1.7")}>{ingestMsg.text}</div>)}
+              <div style={css("padding:10px 13px;background:#F7F8FA;border:1px solid #EEF1F5;border-radius:8px;font-size:11.5px;line-height:1.8;color:#5A6678")}>
+                <b>運用：</b>取得データはメタデータ（タイトル・著者・要旨・DOI/URL）のみで、本文・PDFは保存しません。取得失敗時は監査ログに記録され、次回実行で自動リトライします。確実な手動実行はサーバー上で <code>sudo systemctl start icrps-ingest.service</code> をご利用ください（Cloudflare 経由の手動実行はタイムアウトする場合があります）。
               </div>
             </div>
           </div>
