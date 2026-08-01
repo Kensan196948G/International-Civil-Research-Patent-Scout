@@ -8,10 +8,10 @@
 
 | 項目 | 状態 |
 | --- | --- |
-| 本番 URL | `http://192.168.0.185:8787`（自動割当 IP + ポート、0.0.0.0 バインド） |
+| 本番 URL | `https://icrps.mirai-dx-platform.com`（Cloudflare Workers・HTTPS）／ フォールバック: `http://192.168.0.185:8787` |
 | 稼働方式 | Node.js + systemd（`icrps.service`、起動時自動起動・異常時自動再起動） |
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
-| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（Worker デプロイ済み・custom domain ルート追加待ち。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
+| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-01。Access は設定待ち。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
 | バージョン | v0.1.1（2026-08-01 本番適用済み） |
 

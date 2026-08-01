@@ -1,19 +1,25 @@
 # ドメイン移行手順（サブドメイン指定待ち）
 
-> ステータス: **進行中（カスタムドメインのルート追加待ち）**
+> ステータス: **稼働中（Cloudflare Access 設定待ち）**
 > - ドメイン名・サブドメイン名: `icrps.mirai-dx-platform.com`（ユーザー指定・承認済み 2026-08-01）
-> - Worker `icrps-api` はデプロイ済み・Secrets（DATABASE_URL / JWT_SECRET）登録済み
-> - **カスタムドメインのルート追加が未完了**（API トークンに Zone 権限がないため）
+> - Worker `icrps-api` デプロイ済み・Secrets 登録済み・custom domain 稼働中
+> - Access（アプリケーション制御）はユーザーが後日設定（通知待ち）
 
 ## 実行状況（2026-08-01）
 
 | 項目 | 状態 |
 | --- | --- |
 | wrangler.jsonc の routes 設定 | ✅ `icrps.mirai-dx-platform.com` custom_domain を設定済み |
-| Worker アップロード | ✅ `icrps-api`（version 03bd3d46…） |
+| Worker アップロード | ✅ `icrps-api`（version 653b5b8e…） |
 | Secrets | ✅ DATABASE_URL / JWT_SECRET |
-| カスタムドメインルート | ⛔ **未設定**（トークン権限不足） |
+| カスタムドメインルート | ✅ `icrps.mirai-dx-platform.com` 稼働中 |
+| HTTPS 検証 | ✅ `https://icrps.mirai-dx-platform.com/api/health` → 200（v0.1.1・db ok） |
 | Cloudflare Access | ⏳ ユーザーが後日設定（通知待ち） |
+
+### 設定経緯メモ（2026-08-01）
+
+- Dashboard での手動追加時に apex（`mirai-dx-platform.com`）へ誤紐付けされたため、API で apex を解除し、`wrangler deploy` で `icrps.mirai-dx-platform.com` を custom domain として再設定
+- apex は現在 origin 未設定（Cloudflare 1016）。apex に元々コンテンツがあった場合はユーザー側で復元確認が必要
 
 ### ルート追加の方法（どちらか）
 

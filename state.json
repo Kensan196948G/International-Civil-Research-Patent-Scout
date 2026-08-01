@@ -39,7 +39,8 @@
     "released": {
       "version": "v0.1.1（本番適用済み）",
       "date": "2026-08-01",
-      "production_url": "http://192.168.0.185:8787",
+      "production_url": "https://icrps.mirai-dx-platform.com",
+      "local_fallback_url": "http://192.168.0.185:8787",
       "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer",
       "migration_0002": "app_settings 適用済み（2026-08-01）",
       "migration_0003": "watch_topics 拡張 適用済み（2026-08-01）",
@@ -53,13 +54,14 @@
         "0001_initial_schema.sql"
       ],
       "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
-      "cloudflare": "サブドメイン指定待ち（mirai-dx-platform.com 配下・候補を README に記載・DNS 変更なし）",
+      "cloudflare": "icrps.mirai-dx-platform.com 稼働中（worker 653b5b8e・Access 設定待ち）",
       "domain_migration": {
-        "status": "進行中（custom domain ルート追加待ち）",
+        "status": "稼働中（Access 設定待ち）",
         "subdomain": "icrps.mirai-dx-platform.com",
-        "worker": "icrps-api デプロイ済み（03bd3d46…）",
+        "worker": "icrps-api デプロイ済み（653b5b8e…）",
         "secrets": "DATABASE_URL / JWT_SECRET 登録済み",
-        "blocker": "API トークンに Zone（Workers Routes / DNS）権限がないためルート未設定。Dashboard での追加またはトークン権限更新が必要",
+        "verified": "https://icrps.mirai-dx-platform.com/api/health -> 200（v0.1.1・db ok）",
+        "note_apex": "Dashboard 誤操作で apex に紐付いたエントリは解除済み。apex は現在 origin 未設定（1016）のため、旧コンテンツがあれば復元確認が必要",
         "runbook": "docs/operations/domain-migration.md",
         "note": "Access 設定はユーザーが後日実施（通知待ち）。それまでは URL が公開状態のため、早めの Access 有効化を推奨"
       }
