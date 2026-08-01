@@ -54,7 +54,7 @@
         "0001_initial_schema.sql"
       ],
       "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
-      "cloudflare": "icrps.mirai-dx-platform.com 稼働中（worker 653b5b8e・Access 設定待ち）",
+      "cloudflare": "icrps.mirai-dx-platform.com 稼働中（worker beb23e50・Access 有効）",
       "domain_migration": {
         "status": "稼働中（Access 設定待ち）",
         "subdomain": "icrps.mirai-dx-platform.com",
@@ -64,7 +64,8 @@
         "verified": "https://icrps.mirai-dx-platform.com/api/health -> 200（v0.1.1・db ok）",
         "note_apex": "Dashboard 誤操作で apex に紐付いたエントリは解除済み。apex は現在 origin 未設定（1016）のため、旧コンテンツがあれば復元確認が必要",
         "runbook": "docs/operations/domain-migration.md",
-        "note": "Access 設定はユーザーが後日実施（通知待ち）。それまでは URL が公開状態のため、早めの Access 有効化を推奨"
+        "access": "有効（アプリ: icrps / セルフホスト型 / ポリシー: icrps）。未認証アクセスは 302 → Access ログイン画面",
+        "note": "ローカル監視（http://127.0.0.1:8787）は従来どおり利用可。外部からの /api/health は Access 保護のため 302 を返す"
       }
     }
   },

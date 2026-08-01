@@ -9,6 +9,8 @@ curl -fsS http://127.0.0.1:8787/api/health
 
 `/api/health` は `{ "ok": true, "db": "ok" }` を返す。DB 接続不可時は `db: "degraded"`。
 
+> 注意: 外部 URL（`https://icrps.mirai-dx-platform.com/api/health`）は Cloudflare Access 保護のため、未認証では 302 を返す。死活監視はローカル（127.0.0.1:8787）または Access サービストークン経由で実施する。
+
 ## ログ
 
 ```bash

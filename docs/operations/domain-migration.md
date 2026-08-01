@@ -1,6 +1,6 @@
 # ドメイン移行手順（サブドメイン指定待ち）
 
-> ステータス: **稼働中（Cloudflare Access 設定待ち）**
+> ステータス: **稼働中（Cloudflare Access 有効）**
 > - ドメイン名・サブドメイン名: `icrps.mirai-dx-platform.com`（ユーザー指定・承認済み 2026-08-01）
 > - Worker `icrps-api` デプロイ済み・Secrets 登録済み・custom domain 稼働中
 > - Access（アプリケーション制御）はユーザーが後日設定（通知待ち）
@@ -15,12 +15,13 @@
 | カスタムドメインルート | ✅ `icrps.mirai-dx-platform.com` 稼働中 |
 | HTTPS 検証 | ✅ `https://icrps.mirai-dx-platform.com/api/health` → 200（v0.1.1・db ok） |
 | 監視 | ✅ Workers Logs 100%・Workers Traces 100%（observability） |
-| Cloudflare Access | ⏳ ユーザーが後日設定（通知待ち） |
+| Cloudflare Access | ✅ 有効（アプリ: `icrps`・セルフホスト型・ポリシー: `icrps`）。未認証アクセスは 302 → Access ログイン画面を確認 |
 
 ### 設定経緯メモ（2026-08-01）
 
 - Dashboard での手動追加時に apex（`mirai-dx-platform.com`）へ誤紐付けされたため、API で apex を解除し、`wrangler deploy` で `icrps.mirai-dx-platform.com` を custom domain として再設定
 - apex は現在 origin 未設定（Cloudflare 1016）。apex に元々コンテンツがあった場合はユーザー側で復元確認が必要
+- Access 有効化後、キャッシュ済みページが 200 を返す場合があるため、ブラウザのハードリロードまたは Cloudflare キャッシュパージを推奨
 
 ### ルート追加の方法（どちらか）
 
