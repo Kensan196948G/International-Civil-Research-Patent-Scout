@@ -171,6 +171,21 @@ export const api = {
       request<{ report: Report }>(`/api/projects/${projectId}/reports`, { method: "POST", body: input }),
     get: (id: string) => request<{ report: Report }>(`/api/reports/${id}`)
   },
+  watch: {
+    list: () => request<{ topics: Array<{ id: string; displayName: string; terms: string | null; keyword: string; frequency: string; enabled: boolean; createdAt: string }> }>("/api/watch"),
+    create: (input: { displayName: string; terms?: string; keyword: string; frequency: string }) =>
+      request<{ topic: { id: string } }>("/api/watch", { method: "POST", body: input }),
+    update: (id: string, input: Partial<{ displayName: string; terms: string; keyword: string; frequency: string; enabled: boolean }>) =>
+      request<{ topic: { id: string; enabled: boolean } }>(`/api/watch/${id}`, { method: "PATCH", body: input }),
+    remove: (id: string) => request<void>(`/api/watch/${id}`, { method: "DELETE" })
+  },
+  chat: {
+    send: (message: string) =>
+      request<{ reply: string; cites: Array<{ n: string; title: string; url: string }>; mode: "ai" | "rule" }>("/api/chat", {
+        method: "POST",
+        body: { message }
+      })
+  },
   dashboard: {
     stats: () => request<{ stats: DashboardStats }>("/api/dashboard/stats")
   },

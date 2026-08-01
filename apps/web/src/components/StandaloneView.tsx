@@ -10,13 +10,13 @@ export function StandaloneView({ v }: { v: any }) {
     goFeed, goSearch, goChat, goWatch, goProjects, goDoc, goCompare, goReport,
     digestText, digestBusy, regenDigest,
     domainChips, typeChips, feed, feedCount,
-    q, runSearch, searchStatus, hasSteps, steps, termsReady, terms,
-    resultsReady, results, resultCount, hasCompare, compareCount, toggleQueryEdit, acceptSuggest,
+    q, setQ, runSearch, searchStatus, hasSteps, steps, termsReady, terms,
+    resultsReady, results, resultCount, hasCompare, compareCount, toggleQueryEdit, acceptSuggest, dismissSuggest, suggestDismissed,
     docTitle, docSub, enBtnLabel, enBtnStyle, toggleEn, docTabs, docTabSummary, docTabAbstract, docTabClaims, docTabCite,
     sumLevels, sumText, sumBusy, regenSum, abstractEn, abstractJa, related,
     axes, axesOnCount, buildCompare, compareBuilt, compareStatus, compareRows,
-    outline, genReport, reportText, reportBusy, reportStatus,
-    chat, chatBusy, chatInput, chatSuggests, sendChat,
+    outline, genReport, reportText, reportBusy, reportStatus, setReportText, reportEdit, setReportEdit, toggleReportEdit, exportReportMd,
+    chat, chatBusy, chatInput, setChatInput, chatSuggests, sendChat,
     topics, projects, audit, fitReady, fitResults, runFit,
     aiEngineNote, userInitial, userName, userOrg, roleLabel,
     statProjects, statProjectsSub, statDocs, statDocsSub, statReports, statReportsSub, statWatch, statWatchSub,
@@ -25,7 +25,16 @@ export function StandaloneView({ v }: { v: any }) {
     dsKey, setDsKey, dsModel, setDsModel, anKey, setAnKey, anModel, setAnModel,
     dsMsg, anMsg, dsMsgStyle, anMsgStyle, dsBusy, anBusy,
     testDeepSeek, saveDeepSeek, clearDeepSeek, clearDsInput,
-    testAnthropic, saveAnthropic, clearAnthropic, clearAnInput, settingsAccessDenied
+    testAnthropic, saveAnthropic, clearAnthropic, clearAnInput, settingsAccessDenied,
+    trendRows, alertRows, recentProjectRows, projectStatusCounts, projectFilter, setProjectFilter,
+    newProjectTitle, setNewProjectTitle, showNewProject, setShowNewProject, createProject, projectMsg,
+    watchName, setWatchName, watchTerms, setWatchTerms, watchFreq, setWatchFreq,
+    showWatchForm, setShowWatchForm, createWatchTopic, watchMsg, watchMsgStyle, watchNotices,
+    digestFreq, setDigestFreq, chatPaperCount, chatPatentCount, chatBookCount, chatDocCount, chatBusyText,
+    docActionMsg, adoptSummary, discardSummary, editSummary,
+    claimsNote, claimsText,
+    exportCompareCsv, compareSummary, adminTotalUsers, adminAdmins, adminCostLabel,
+    adminConnectorLabel, adminRejectLabel, adminAccessDenied
   } = v as Record<string, any>;
   return (
     <>
@@ -154,36 +163,13 @@ export function StandaloneView({ v }: { v: any }) {
                   <span style={css("font-size:11px;font-weight:600;color:#1F8255;background:#E4F3EC;padding:2px 8px;border-radius:6px")}>自動更新</span>
                 </div>
                 <div style={css("padding:16px 18px;display:flex;flex-direction:column;gap:13px")}>
-                  <div style={css("display:flex;align-items:center;gap:12px")}>
-                    <span style={css("width:150px;flex-shrink:0;font-size:12.5px;color:#5A6678")}>低炭素コンクリート</span>
-                    <span style={css("flex:1;height:8px;background:#EEF1F5;border-radius:4px;overflow:hidden;display:block")}><span style={css("display:block;height:100%;width:92%;background:#E08A2B;border-radius:4px")}></span></span>
-                    <span style={css("width:86px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#1F8255;font-weight:600")}>+38% ↑</span>
-                  </div>
-                  <div style={css("display:flex;align-items:center;gap:12px")}>
-                    <span style={css("width:150px;flex-shrink:0;font-size:12.5px;color:#5A6678")}>UAV 点検・画像診断</span>
-                    <span style={css("flex:1;height:8px;background:#EEF1F5;border-radius:4px;overflow:hidden;display:block")}><span style={css("display:block;height:100%;width:81%;background:#E08A2B;border-radius:4px")}></span></span>
-                    <span style={css("width:86px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#1F8255;font-weight:600")}>+31% ↑</span>
-                  </div>
-                  <div style={css("display:flex;align-items:center;gap:12px")}>
-                    <span style={css("width:150px;flex-shrink:0;font-size:12.5px;color:#5A6678")}>デジタルツイン／TBM</span>
-                    <span style={css("flex:1;height:8px;background:#EEF1F5;border-radius:4px;overflow:hidden;display:block")}><span style={css("display:block;height:100%;width:74%;background:#2E5AAC;border-radius:4px")}></span></span>
-                    <span style={css("width:86px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#1F8255;font-weight:600")}>+27% ↑</span>
-                  </div>
-                  <div style={css("display:flex;align-items:center;gap:12px")}>
-                    <span style={css("width:150px;flex-shrink:0;font-size:12.5px;color:#5A6678")}>ジオポリマー</span>
-                    <span style={css("flex:1;height:8px;background:#EEF1F5;border-radius:4px;overflow:hidden;display:block")}><span style={css("display:block;height:100%;width:58%;background:#2E5AAC;border-radius:4px")}></span></span>
-                    <span style={css("width:86px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#1F8255;font-weight:600")}>+19% ↑</span>
-                  </div>
-                  <div style={css("display:flex;align-items:center;gap:12px")}>
-                    <span style={css("width:150px;flex-shrink:0;font-size:12.5px;color:#5A6678")}>鋼床版疲労・床版取替</span>
-                    <span style={css("flex:1;height:8px;background:#EEF1F5;border-radius:4px;overflow:hidden;display:block")}><span style={css("display:block;height:100%;width:44%;background:#8A97A8;border-radius:4px")}></span></span>
-                    <span style={css("width:86px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5A6678;font-weight:600")}>+4%</span>
-                  </div>
-                  <div style={css("display:flex;align-items:center;gap:12px")}>
-                    <span style={css("width:150px;flex-shrink:0;font-size:12.5px;color:#5A6678")}>3D プリント型枠</span>
-                    <span style={css("flex:1;height:8px;background:#EEF1F5;border-radius:4px;overflow:hidden;display:block")}><span style={css("display:block;height:100%;width:33%;background:#8A97A8;border-radius:4px")}></span></span>
-                    <span style={css("width:86px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5A6678;font-weight:600")}>+2%</span>
-                  </div>
+                  {(trendRows ).map((t: any) => (<>
+                    <div style={css("display:flex;align-items:center;gap:12px")}>
+                      <span style={css("width:150px;flex-shrink:0;font-size:12.5px;color:#5A6678")}>{t.label}</span>
+                      <span style={css("flex:1;height:8px;background:#EEF1F5;border-radius:4px;overflow:hidden;display:block")}><span style={css("display:block;height:100%;width:" + t.width + "%;background:" + t.color + ";border-radius:4px")}></span></span>
+                      <span style={css("width:110px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#1F8255;font-weight:600")}>{t.value}</span>
+                    </div>
+                  </>))}
                   <div style={css("margin-top:4px;padding:11px 13px;background:#FDEFE0;border-radius:8px;font-size:12px;line-height:1.7;color:#7A4B10")}>
                     <b>AI の所見：</b>低炭素系（LC3・ジオポリマー）と UAV 画像診断の 2 領域が同時に加速しています。当社の重点テーマ「海洋環境下の低炭素コンクリート」は前者の伸びの中で相対的に手薄で、参入余地があります。
                     <a onClick={goSearch } style={css("cursor:pointer;font-weight:600;white-space:nowrap")}>→ この観点で検索</a>
@@ -194,35 +180,23 @@ export function StandaloneView({ v }: { v: any }) {
 
             <div style={css("display:flex;flex-direction:column;gap:16px;min-width:0")}>
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
-                <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center")}><span style={css("flex:1;font-size:14px;font-weight:600")}>要確認のアラート</span><span style={css("font-size:11px;font-weight:600;color:#C5392F;background:#FCE9E7;padding:2px 8px;border-radius:6px")}>3</span></div>
-                <div style={css("padding:13px 18px;border-bottom:1px solid #EEF1F5;display:flex;gap:11px")}>
-                  <span style={css("width:8px;height:8px;border-radius:50%;background:#C5392F;margin-top:5px;flex-shrink:0")}></span>
-                  <div style={css("min-width:0")}><div style={css("font-size:12.5px;font-weight:600;line-height:1.5")}>類似特許アラート：自社出願「高炉スラグ高置換モルタル」と請求項の重なり</div><div style={css("font-size:11.5px;color:#8A97A8;margin-top:3px")}>類似度 0.87 · 要 知財レビュー</div></div>
-                </div>
-                <div style={css("padding:13px 18px;border-bottom:1px solid #EEF1F5;display:flex;gap:11px")}>
-                  <span style={css("width:8px;height:8px;border-radius:50%;background:#B5701A;margin-top:5px;flex-shrink:0")}></span>
-                  <div style={css("min-width:0")}><div style={css("font-size:12.5px;font-weight:600;line-height:1.5")}>示方書改定：2025年制定 鋼・合成構造標準示方書［維持管理編］</div><div style={css("font-size:11.5px;color:#8A97A8;margin-top:3px")}>保存文献 7 件が旧版参照のまま</div></div>
-                </div>
-                <div style={css("padding:13px 18px;display:flex;gap:11px")}>
-                  <span style={css("width:8px;height:8px;border-radius:50%;background:#B5701A;margin-top:5px;flex-shrink:0")}></span>
-                  <div style={css("min-width:0")}><div style={css("font-size:12.5px;font-weight:600;line-height:1.5")}>Crossref コネクタが 2 回連続タイムアウト</div><div style={css("font-size:11.5px;color:#8A97A8;margin-top:3px")}>OpenAlex へフォールバック中</div></div>
-                </div>
+                <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center")}><span style={css("flex:1;font-size:14px;font-weight:600")}>要確認のアラート</span><span style={css("font-size:11px;font-weight:600;color:#C5392F;background:#FCE9E7;padding:2px 8px;border-radius:6px")}>{alertRows.length}</span></div>
+                {(alertRows ).map((a: any, idx: number) => (<>
+                  <div style={css("padding:13px 18px;" + (idx < alertRows.length - 1 ? "border-bottom:1px solid #EEF1F5;" : "") + "display:flex;gap:11px")}>
+                    <span style={css("width:8px;height:8px;border-radius:50%;background:" + a.color + ";margin-top:5px;flex-shrink:0")}></span>
+                    <div style={css("min-width:0")}><div style={css("font-size:12.5px;font-weight:600;line-height:1.5")}>{a.title}</div><div style={css("font-size:11.5px;color:#8A97A8;margin-top:3px")}>{a.sub}</div></div>
+                  </div>
+                </>))}
               </div>
 
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
                 <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center")}><span style={css("flex:1;font-size:14px;font-weight:600")}>最近の調査プロジェクト</span><a onClick={goProjects } style={css("cursor:pointer;font-size:11.5px")}>すべて</a></div>
-                <div style={css("padding:12px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
-                  <div style={css("flex:1;min-width:0")}><div style={css("font-size:12.5px;font-weight:500;color:#1A2433")}>海洋環境下の低炭素コンクリート適用検討</div><div style={css("font-size:11px;color:#8A97A8;margin-top:2px")}>文献 48 · 比較表 3 · 更新 2 時間前</div></div>
-                  <span style={css("font-size:11px;font-weight:600;color:#6B45B0;background:#EDE7F6;padding:2px 8px;border-radius:6px")}>進行中</span>
-                </div>
-                <div style={css("padding:12px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
-                  <div style={css("flex:1;min-width:0")}><div style={css("font-size:12.5px;font-weight:500;color:#1A2433")}>UAV 桁下点検の自動化技術サーベイ</div><div style={css("font-size:11px;color:#8A97A8;margin-top:2px")}>文献 63 · 比較表 2 · 更新 昨日</div></div>
-                  <span style={css("font-size:11px;font-weight:600;color:#6B45B0;background:#EDE7F6;padding:2px 8px;border-radius:6px")}>進行中</span>
-                </div>
-                <div style={css("padding:12px 18px;display:flex;align-items:center;gap:10px")}>
-                  <div style={css("flex:1;min-width:0")}><div style={css("font-size:12.5px;font-weight:500;color:#1A2433")}>シールド TBM デジタルツイン動向</div><div style={css("font-size:11px;color:#8A97A8;margin-top:2px")}>文献 31 · レポート 1 · 更新 3 日前</div></div>
-                  <span style={css("font-size:11px;font-weight:600;color:#1F8255;background:#E4F3EC;padding:2px 8px;border-radius:6px")}>報告済</span>
-                </div>
+                {(recentProjectRows ).map((p: any, idx: number) => (<>
+                  <div style={css("padding:12px 18px;" + (idx < recentProjectRows.length - 1 ? "border-bottom:1px solid #EEF1F5;" : "") + "display:flex;align-items:center;gap:10px")}>
+                    <div style={css("flex:1;min-width:0")}><div style={css("font-size:12.5px;font-weight:500;color:#1A2433")}>{p.title}</div><div style={css("font-size:11px;color:#8A97A8;margin-top:2px")}>{p.meta}</div></div>
+                    <span style={css(p.statusStyle )}>{p.status}</span>
+                  </div>
+                </>))}
               </div>
             </div>
           </div>
@@ -293,7 +267,7 @@ export function StandaloneView({ v }: { v: any }) {
         <div data-screen-label="03 AI横断検索">
           <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:18px;margin-bottom:16px")}>
             <label style={css("font-size:12px;font-weight:600;color:#5A6678;display:block;margin-bottom:6px")}>調べたいことを、そのまま日本語で書いてください</label>
-            <textarea value={q} rows={2} placeholder="例：海洋環境の飛沫帯で使える低炭素コンクリート。塩害に対する耐久性の実証データがあるものを中心に。" style={css("font:inherit;font-size:14px;padding:11px 13px;border:1px solid #E3E8EF;border-radius:8px;background:#fff;color:#1A2433;width:100%;outline:none;resize:vertical;line-height:1.7")}></textarea>
+            <textarea value={q} onChange={setQ} rows={2} placeholder="例：海洋環境の飛沫帯で使える低炭素コンクリート。塩害に対する耐久性の実証データがあるものを中心に。" style={css("font:inherit;font-size:14px;padding:11px 13px;border:1px solid #E3E8EF;border-radius:8px;background:#fff;color:#1A2433;width:100%;outline:none;resize:vertical;line-height:1.7")}></textarea>
             <div style={css("display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px")}>
               <button onClick={runSearch } style={css("display:inline-flex;align-items:center;gap:7px;cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:9px 16px;border-radius:8px;font:inherit;font-size:13px;font-weight:600")}>AI に解釈させて検索</button>
               <span style={css("font-size:11.5px;color:#8A97A8")}>論文 · 特許 · 技術書 · Web を横断／日英自動展開</span>
@@ -398,6 +372,7 @@ export function StandaloneView({ v }: { v: any }) {
                   </div>
                 </div>
 
+                {(suggestDismissed ) ? null : (<>
                 <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
                   <div style={css("padding:14px 17px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:8px")}><span style={css("font-size:10px;font-weight:700;color:#B5701A;background:#FDEFE0;padding:1px 6px;border-radius:5px")}>AI</span><span style={css("font-size:13.5px;font-weight:600")}>次の一手</span></div>
                   <div style={css("padding:13px 17px;font-size:12.5px;line-height:1.8;color:#5A6678")}>
@@ -405,9 +380,10 @@ export function StandaloneView({ v }: { v: any }) {
                   </div>
                   <div style={css("padding:0 17px 15px;display:flex;gap:7px;flex-wrap:wrap")}>
                     <button onClick={acceptSuggest } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>条件に追加</button>
-                    <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#8A97A8;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>却下</button>
+                    <button onClick={dismissSuggest } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#8A97A8;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>却下</button>
                   </div>
                 </div>
+                </>)}
               </div>
             </div>
           </>)}
@@ -459,12 +435,12 @@ export function StandaloneView({ v }: { v: any }) {
                     </div>
                     <div style={css("font-size:13.5px;line-height:1.95;color:#1A2433;min-height:150px;white-space:pre-wrap")}><span data-stream="sumText">{sumText}</span>{(sumBusy ) && (<><span style={css("display:inline-block;width:7px;height:16px;background:#E08A2B;vertical-align:-3px;margin-left:2px;animation:icrps-blink 1s steps(1) infinite")}></span></>)}</div>
                     <div style={css("margin-top:18px;padding-top:15px;border-top:1px solid #EEF1F5;display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
-                      <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#1F8255;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>この要約を採用</button>
+                      <button onClick={adoptSummary } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#1F8255;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>この要約を採用</button>
                       <button onClick={regenSum } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>再生成</button>
-                      <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>手で編集</button>
-                      <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#8A97A8;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>却下</button>
+                      <button onClick={editSummary } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>手で編集</button>
+                      <button onClick={discardSummary } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#8A97A8;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>却下</button>
                       <div style={css("flex:1")}></div>
-                      <span style={css("font-size:11px;color:#8A97A8")}>根拠：本文 §3.2 / §4.1 / Table 5</span>
+                      <span style={css("font-size:11px;color:#8A97A8")}>{docActionMsg ?? "根拠：要約の引用・出典に基づきます"}</span>
                     </div>
                   </div>
                 </>)}
@@ -485,18 +461,18 @@ export function StandaloneView({ v }: { v: any }) {
 
                 {(docTabClaims ) && (<>
                   <div style={css("padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px")}>
-                    <div style={css("padding:10px 13px;background:#FCE9E7;border-radius:8px;font-size:11.5px;line-height:1.7;color:#8E2B23")}>この文献は論文のため請求項はありません。下記は<b>特許を選択したときの表示例（デモ用サンプル）</b>です。実データではありません。</div>
-                    <div style={css("display:flex;flex-direction:column;gap:11px")}>
+                    <div style={css("padding:10px 13px;background:#FCE9E7;border-radius:8px;font-size:11.5px;line-height:1.7;color:#8E2B23")}>{claimsNote}</div>
+                    {(claimsText ) && (<div style={css("display:flex;flex-direction:column;gap:11px")}>
                       <div style={css("border:1px solid #E3E8EF;border-radius:8px;overflow:hidden")}>
                         <div style={css("padding:9px 13px;background:#FAFBFC;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:8px")}><span style={css("font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600")}>請求項 1（独立項）</span><span style={css("font-size:10.5px;font-weight:600;color:#C5392F;background:#FCE9E7;padding:1px 7px;border-radius:5px")}>要注意</span></div>
-                        <div style={css("padding:13px;font-size:12.5px;line-height:1.9;color:#5A6678")}>高炉スラグ微粉末を結合材全体の 60〜80 質量％含み、アルカリ刺激剤としてけい酸ナトリウムを添加した、塩化物イオン拡散係数が 0.3 cm²/年 以下であることを特徴とするコンクリート組成物。</div>
+                        <div style={css("padding:13px;font-size:12.5px;line-height:1.9;color:#5A6678")}>{claimsText}</div>
                         <div style={css("padding:12px 13px;border-top:1px solid #EEF1F5;background:#FAFBFC")}>
                           <div style={css("font-size:11px;font-weight:700;color:#B5701A;margin-bottom:6px")}>AI 読み解き</div>
-                          <div style={css("font-size:12.5px;line-height:1.85;color:#1A2433")}>構成要件は ①スラグ置換率 60〜80%、②アルカリ刺激剤としてけい酸ナトリウム、③拡散係数 0.3 cm²/年 以下 の 3 点。自社検討中の配合は①②に該当し、③も試験値 0.24 で範囲内のため<b style={css("color:#C5392F")}>抵触リスクが高い</b>と判定しました。回避には刺激剤の種類変更が有効な可能性があります。</div>
+                          <div style={css("font-size:12.5px;line-height:1.85;color:#1A2433")}>特許要約・クレーム関連情報は AI 要約タブの「特許要約」で再生成できます。特許の法的有効性・侵害判断は行いません。</div>
                         </div>
                       </div>
-                    </div>
-                    <div style={css("display:flex;gap:8px;flex-wrap:wrap")}><button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>知財部にエスカレーション</button><button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>類似特許を再検索</button></div>
+                    </div>)}
+                    <div style={css("display:flex;gap:8px;flex-wrap:wrap")}><button onClick={goSearch } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>類似特許を再検索</button></div>
                   </div>
                 </>)}
 
@@ -580,7 +556,7 @@ export function StandaloneView({ v }: { v: any }) {
             <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden;animation:icrps-in .3s ease both")}>
               <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
                 <div style={css("flex:1")}><div style={css("font-size:14px;font-weight:600")}>技術比較表：UAV／画像診断による構造物点検</div><div style={css("font-size:11.5px;color:#8A97A8")}>セルは AI 生成。セルをクリックすると根拠箇所と原典リンクが開きます。</div></div>
-                <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>Excel 出力</button>
+                <button onClick={exportCompareCsv } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>Excel 出力（CSV）</button>
                 <button onClick={goReport } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>レポートへ</button>
               </div>
               <div style={css("overflow-x:auto")}>
@@ -609,7 +585,7 @@ export function StandaloneView({ v }: { v: any }) {
               </div>
               <div style={css("padding:15px 18px;border-top:1px solid #EEF1F5;background:#FAFBFC")}>
                 <div style={css("font-size:11px;font-weight:700;color:#B5701A;margin-bottom:7px")}>AI の総括（信頼度 0.78）</div>
-                <div style={css("font-size:12.5px;line-height:1.9;color:#1A2433")}>4 件はいずれも検出精度では実用域に達していますが、<b>現場実装の記述があるのは 2 件のみ</b>です。当社が短期に着手するなら、撮影計画から帳票出力までを一体化した ASCE JBE 31-9 の枠組みが最も参考になります。一方、定量化の対象が線状ひび割れに限られる点は共通の制約で、網目状ひび割れは別手法が必要です。</div>
+                <div style={css("font-size:12.5px;line-height:1.9;color:#1A2433")}>{compareSummary}</div>
               </div>
             </div>
           </>)}
@@ -698,11 +674,11 @@ export function StandaloneView({ v }: { v: any }) {
               <div style={css("padding:14px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px;flex-wrap:wrap")}>
                 <span style={css("flex:1 1 auto;min-width:150px;font-size:14px;font-weight:600")}>ドラフト（Markdown）</span>
                 <span style={css("font-size:11.5px;color:#8A97A8;font-family:'IBM Plex Mono',monospace;white-space:nowrap")}>{reportStatus}</span>
-                <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>編集</button>
-                <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>.md 出力</button>
-                <button style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>PDF</button>
+                <button onClick={toggleReportEdit } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>{reportEdit ? "プレビューに戻る" : "編集"}</button>
+                <button onClick={exportReportMd } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>.md 出力</button>
+                <button onClick={() => setReportEdit(false)} style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>PDF（Phase 2）</button>
               </div>
-              <div style={css("flex:1;padding:20px 24px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:2;color:#1A2433;white-space:pre-wrap;overflow:auto")}><span data-stream="reportText">{reportText}</span>{(reportBusy ) && (<><span style={css("display:inline-block;width:7px;height:14px;background:#E08A2B;vertical-align:-2px;margin-left:2px;animation:icrps-blink 1s steps(1) infinite")}></span></>)}</div>
+              {(reportEdit ) ? (<textarea value={reportText} onChange={(e) => setReportText(e.target.value)} style={css("flex:1;padding:20px 24px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:2;color:#1A2433;border:none;outline:none;resize:none;white-space:pre-wrap;overflow:auto")}></textarea>) : (<div style={css("flex:1;padding:20px 24px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:2;color:#1A2433;white-space:pre-wrap;overflow:auto")}><span data-stream="reportText">{reportText}</span>{(reportBusy ) && (<><span style={css("display:inline-block;width:7px;height:14px;background:#E08A2B;vertical-align:-2px;margin-left:2px;animation:icrps-blink 1s steps(1) infinite")}></span></>)}</div>)}
             </div>
           </div>
         </div>
@@ -713,7 +689,7 @@ export function StandaloneView({ v }: { v: any }) {
         <div data-screen-label="08 AIアシスタント" style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start")}>
           <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;min-height:560px;max-height:calc(100vh - 124px);overflow:hidden")}>
             <div style={css("padding:14px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:10px")}>
-              <div style={css("flex:1")}><div style={css("font-size:14px;font-weight:600")}>リサーチアシスタント</div><div style={css("font-size:11.5px;color:#8A97A8")}>対象：プロジェクト「UAV 桁下点検の自動化技術サーベイ」の保存文献 63 件</div></div>
+              <div style={css("flex:1")}><div style={css("font-size:14px;font-weight:600")}>リサーチアシスタント</div><div style={css("font-size:11.5px;color:#8A97A8")}>対象：保存文献 {chatDocCount} 件</div></div>
               <span style={css("font-size:11px;font-weight:600;color:#1F8255;background:#E4F3EC;padding:3px 9px;border-radius:6px")}>出典付き回答</span>
             </div>
 
@@ -736,7 +712,7 @@ export function StandaloneView({ v }: { v: any }) {
                 </div>
               </>))}
               {(chatBusy ) && (<>
-                <div style={css("display:flex;gap:6px;align-items:center;color:#8A97A8;font-size:12px")}><span style={css("width:6px;height:6px;border-radius:50%;background:#E08A2B;animation:icrps-pulse 1.1s infinite")}></span>63 件の文献から根拠を探しています…</div>
+                <div style={css("display:flex;gap:6px;align-items:center;color:#8A97A8;font-size:12px")}><span style={css("width:6px;height:6px;border-radius:50%;background:#E08A2B;animation:icrps-pulse 1.1s infinite")}></span>{chatBusyText}</div>
               </>)}
             </div>
 
@@ -747,7 +723,7 @@ export function StandaloneView({ v }: { v: any }) {
                 </>))}
               </div>
               <div style={css("display:flex;gap:9px;align-items:flex-end")}>
-                <textarea value={chatInput} rows={1} placeholder="保存文献に対して質問してください（例：室内試験と実構造物試験の結果が食い違う点は？）" style={css("font:inherit;font-size:13px;padding:10px 12px;border:1px solid #E3E8EF;border-radius:8px;width:100%;outline:none;resize:none;line-height:1.6")}></textarea>
+                <textarea value={chatInput} onChange={setChatInput} rows={1} placeholder="保存文献に対して質問してください（例：室内試験と実構造物試験の結果が食い違う点は？）" style={css("font:inherit;font-size:13px;padding:10px 12px;border:1px solid #E3E8EF;border-radius:8px;width:100%;outline:none;resize:none;line-height:1.6")}></textarea>
                 <button onClick={sendChat } style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:10px 17px;border-radius:8px;font:inherit;font-size:13px;font-weight:600;flex-shrink:0")}>送信</button>
               </div>
               <div style={css("font-size:10.5px;color:#8A97A8;line-height:1.6")}>回答は保存文献の範囲内で生成され、出典のない主張は表示しません。重要な判断には原典確認を行ってください。</div>
@@ -758,9 +734,9 @@ export function StandaloneView({ v }: { v: any }) {
             <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
               <div style={css("padding:14px 17px;border-bottom:1px solid #EEF1F5;font-size:13.5px;font-weight:600")}>参照範囲</div>
               <div style={css("padding:14px 17px;display:flex;flex-direction:column;gap:10px")}>
-                <div style={css("display:flex;justify-content:space-between;font-size:12.5px")}><span style={css("color:#8A97A8")}>論文</span><span style={css("font-family:'IBM Plex Mono',monospace;font-weight:600")}>48</span></div>
-                <div style={css("display:flex;justify-content:space-between;font-size:12.5px")}><span style={css("color:#8A97A8")}>特許</span><span style={css("font-family:'IBM Plex Mono',monospace;font-weight:600")}>11</span></div>
-                <div style={css("display:flex;justify-content:space-between;font-size:12.5px")}><span style={css("color:#8A97A8")}>技術書・示方書</span><span style={css("font-family:'IBM Plex Mono',monospace;font-weight:600")}>4</span></div>
+                <div style={css("display:flex;justify-content:space-between;font-size:12.5px")}><span style={css("color:#8A97A8")}>論文</span><span style={css("font-family:'IBM Plex Mono',monospace;font-weight:600")}>{chatPaperCount}</span></div>
+                <div style={css("display:flex;justify-content:space-between;font-size:12.5px")}><span style={css("color:#8A97A8")}>特許</span><span style={css("font-family:'IBM Plex Mono',monospace;font-weight:600")}>{chatPatentCount}</span></div>
+                <div style={css("display:flex;justify-content:space-between;font-size:12.5px")}><span style={css("color:#8A97A8")}>技術書・示方書</span><span style={css("font-family:'IBM Plex Mono',monospace;font-weight:600")}>{chatBookCount}</span></div>
                 <div style={css("padding-top:10px;border-top:1px solid #EEF1F5;font-size:11px;color:#8A97A8;line-height:1.7")}>参照範囲外の一般知識で答えた場合は、その旨を明示します。</div>
               </div>
             </div>
@@ -781,7 +757,20 @@ export function StandaloneView({ v }: { v: any }) {
         <div data-screen-label="09 更新監視">
           <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-items:start")}>
             <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
-              <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center")}><span style={css("flex:1;font-size:14px;font-weight:600")}>ウォッチしているテーマ</span><button style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:6px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>＋ 追加</button></div>
+              <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center")}><span style={css("flex:1;font-size:14px;font-weight:600")}>ウォッチしているテーマ</span><button onClick={() => setShowWatchForm(!showWatchForm)} style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:6px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>＋ 追加</button></div>
+              {(showWatchForm ) && (<>
+                <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;flex-direction:column;gap:10px;background:#FAFBFC")}>
+                  <div style={css("font-size:12px;font-weight:700;color:#5A6678")}>新しいウォッチテーマ</div>
+                  <input value={watchName} onChange={setWatchName} placeholder="テーマ名（例: 低炭素コンクリート（海洋環境））" style={css("font:inherit;font-size:12.5px;padding:8px 11px;border:1px solid #E3E8EF;border-radius:8px;outline:none")} />
+                  <input value={watchTerms} onChange={setWatchTerms} placeholder="キーワード（例: 低炭素コンクリート / low-carbon / GGBS / splash zone）" style={css("font:inherit;font-size:12.5px;padding:8px 11px;border:1px solid #E3E8EF;border-radius:8px;outline:none")} />
+                  <div style={css("display:flex;gap:8px;align-items:center;flex-wrap:wrap")}>
+                    <select value={watchFreq} onChange={setWatchFreq} style={css("font:inherit;font-size:12.5px;padding:6px 10px;border:1px solid #E3E8EF;border-radius:8px;outline:none")}><option value="daily">毎日</option><option value="weekly">毎週</option><option value="monthly">毎月</option></select>
+                    <button onClick={createWatchTopic } style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>登録</button>
+                    <button onClick={() => setShowWatchForm(false)} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:7px 13px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>キャンセル</button>
+                  </div>
+                  {(watchMsg.text ) && (<div style={css(watchMsgStyle )}>{watchMsg.text}</div>)}
+                </div>
+              </>)}
               {(topics ).map((t: any) => (<>
                 <div style={css("padding:14px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:14px")}>
                   <div style={css("flex:1;min-width:0")}>
@@ -791,13 +780,13 @@ export function StandaloneView({ v }: { v: any }) {
                   </div>
                   <div style={css("display:flex;flex-direction:column;gap:5px;align-items:flex-end")}>
                     <button onClick={t.toggle } style={css(t.style )}>{t.label}</button>
-                    <span style={css("font-size:10.5px;color:#8A97A8")}>{t.freq}</span>
+                    <span style={css("font-size:10.5px;color:#8A97A8")}>{t.freq} · <a onClick={t.remove } style={css("cursor:pointer;color:#C5392F")}>削除</a></span>
                   </div>
                 </div>
               </>))}
               <div style={css("padding:15px 18px;background:#FAFBFC")}>
                 <div style={css("font-size:11px;font-weight:700;color:#B5701A;margin-bottom:7px")}>AI 選別ルール</div>
-                <div style={css("font-size:12.5px;line-height:1.9;color:#5A6678")}>新着のうち「実構造物データを含む」「示方書・基準に関係する」「自社出願と請求項が重なる」いずれかに該当するものだけを通知します。過去 30 日の選別率は <b style={css("color:#1A2433")}>138 件 → 11 件（8.0%）</b>、誤検知として却下されたのは 1 件でした。</div>
+                <div style={css("font-size:12.5px;line-height:1.9;color:#5A6678")}>新着のうち「実構造物データを含む」「示方書・基準に関係する」「自社出願と請求項が重なる」いずれかに該当するものだけを通知します。新着監視ジョブは <b style={css("color:#1A2433")}>Phase 2</b> で有効化予定です（テーマ登録は即時反映されます）。</div>
               </div>
             </div>
 
@@ -805,19 +794,15 @@ export function StandaloneView({ v }: { v: any }) {
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
                 <div style={css("padding:14px 17px;border-bottom:1px solid #EEF1F5;font-size:13.5px;font-weight:600")}>ダイジェスト配信</div>
                 <div style={css("padding:14px 17px;display:flex;flex-direction:column;gap:12px")}>
-                  <div style={css("display:flex;align-items:center;gap:10px")}><span style={css("flex:1;font-size:12.5px;color:#5A6678")}>配信頻度</span><select style={css("font:inherit;font-size:12.5px;padding:6px 10px;border:1px solid #E3E8EF;border-radius:8px;width:auto;outline:none")}><option>毎朝 6:00</option><option>週 1（月曜）</option><option>即時</option></select></div>
-                  <div style={css("display:flex;align-items:center;gap:10px")}><span style={css("flex:1;font-size:12.5px;color:#5A6678")}>宛先</span><span style={css("font-size:12px;font-family:'IBM Plex Mono',monospace;color:#5A6678")}>材料G ML</span></div>
+                  <div style={css("display:flex;align-items:center;gap:10px")}><span style={css("flex:1;font-size:12.5px;color:#5A6678")}>配信頻度</span><select value={digestFreq} onChange={setDigestFreq} style={css("font:inherit;font-size:12.5px;padding:6px 10px;border:1px solid #E3E8EF;border-radius:8px;width:auto;outline:none")}><option>毎朝 6:00</option><option>週 1（月曜）</option><option>即時</option></select></div>
+                  <div style={css("display:flex;align-items:center;gap:10px")}><span style={css("flex:1;font-size:12.5px;color:#5A6678")}>宛先</span><span style={css("font-size:12px;font-family:'IBM Plex Mono',monospace;color:#5A6678")}>{userOrg}</span></div>
                   <div style={css("display:flex;align-items:center;gap:10px")}><span style={css("flex:1;font-size:12.5px;color:#5A6678")}>要約の粒度</span><span style={css("font-size:12px;color:#5A6678")}>短文（3 行）</span></div>
                   <div style={css("display:flex;align-items:center;gap:10px")}><span style={css("flex:1;font-size:12.5px;color:#5A6678")}>上限件数</span><span style={css("font-size:12px;font-family:'IBM Plex Mono',monospace;color:#5A6678")}>5 件/回</span></div>
                 </div>
               </div>
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
                 <div style={css("padding:14px 17px;border-bottom:1px solid #EEF1F5;font-size:13.5px;font-weight:600")}>直近の通知</div>
-                <div style={css("padding:13px 17px;display:flex;flex-direction:column;gap:13px")}>
-                  <div style={css("display:flex;gap:11px")}><span style={css("width:8px;height:8px;border-radius:50%;background:#C5392F;margin-top:5px;flex-shrink:0")}></span><div><div style={css("font-size:12.5px;line-height:1.6;font-weight:500")}>類似特許アラート（類似度 0.87）</div><div style={css("font-size:11px;color:#8A97A8;margin-top:3px")}>2 時間前 · 知財レビュー待ち</div></div></div>
-                  <div style={css("display:flex;gap:11px")}><span style={css("width:8px;height:8px;border-radius:50%;background:#2E5AAC;margin-top:5px;flex-shrink:0")}></span><div><div style={css("font-size:12.5px;line-height:1.6;font-weight:500")}>低炭素コンクリートに新着 4 件</div><div style={css("font-size:11px;color:#8A97A8;margin-top:3px")}>今朝 6:00 · ダイジェスト送信済</div></div></div>
-                  <div style={css("display:flex;gap:11px")}><span style={css("width:8px;height:8px;border-radius:50%;background:#B5701A;margin-top:5px;flex-shrink:0")}></span><div><div style={css("font-size:12.5px;line-height:1.6;font-weight:500")}>示方書改定を検知（鋼・合成構造 維持管理編）</div><div style={css("font-size:11px;color:#8A97A8;margin-top:3px")}>3 日前 · 影響文献 7 件</div></div></div>
-                </div>
+                <div style={css("padding:13px 17px;font-size:12px;line-height:1.8;color:#8A97A8")}>{watchNotices}</div>
               </div>
             </div>
           </div>
@@ -828,11 +813,20 @@ export function StandaloneView({ v }: { v: any }) {
       {(isProjects ) && (<>
         <div data-screen-label="10 プロジェクト">
           <div style={css("display:flex;gap:9px;align-items:center;margin-bottom:14px;flex-wrap:wrap")}>
-            <button style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:8px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>＋ 新規プロジェクト</button>
-            <span style={css("font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;border:1px solid #E08A2B;background:#FDEFE0;color:#B5701A")}>進行中 6</span>
-            <span style={css("font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:8px;border:1px solid #E3E8EF;background:#fff;color:#5A6678")}>報告済 5</span>
-            <span style={css("font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:8px;border:1px solid #E3E8EF;background:#fff;color:#5A6678")}>アーカイブ 3</span>
+            <button onClick={() => setShowNewProject(!showNewProject)} style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:8px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>＋ 新規プロジェクト</button>
+            <button onClick={() => setProjectFilter("すべて")} style={css("font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;border:1px solid " + (projectFilter === "すべて" ? "#E08A2B" : "#E3E8EF") + ";background:" + (projectFilter === "すべて" ? "#FDEFE0" : "#fff") + ";color:" + (projectFilter === "すべて" ? "#B5701A" : "#5A6678") + ";cursor:pointer")}>すべて</button>
+            <button onClick={() => setProjectFilter("進行中")} style={css("font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;border:1px solid " + (projectFilter === "進行中" ? "#E08A2B" : "#E3E8EF") + ";background:" + (projectFilter === "進行中" ? "#FDEFE0" : "#fff") + ";color:" + (projectFilter === "進行中" ? "#B5701A" : "#5A6678") + ";cursor:pointer")}>進行中 {projectStatusCounts["進行中"]}</button>
+            <button onClick={() => setProjectFilter("報告済")} style={css("font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;border:1px solid " + (projectFilter === "報告済" ? "#E08A2B" : "#E3E8EF") + ";background:" + (projectFilter === "報告済" ? "#FDEFE0" : "#fff") + ";color:" + (projectFilter === "報告済" ? "#B5701A" : "#5A6678") + ";cursor:pointer")}>報告済 {projectStatusCounts["報告済"]}</button>
+            <button onClick={() => setProjectFilter("アーカイブ")} style={css("font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;border:1px solid " + (projectFilter === "アーカイブ" ? "#E08A2B" : "#E3E8EF") + ";background:" + (projectFilter === "アーカイブ" ? "#FDEFE0" : "#fff") + ";color:" + (projectFilter === "アーカイブ" ? "#B5701A" : "#5A6678") + ";cursor:pointer")}>アーカイブ {projectStatusCounts["アーカイブ"]}</button>
           </div>
+          {(showNewProject ) && (<>
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 18px;margin-bottom:14px;display:flex;gap:9px;align-items:center;flex-wrap:wrap")}>
+              <input value={newProjectTitle} onChange={setNewProjectTitle} placeholder="新しい調査テーマの名前" style={css("flex:1;min-width:220px;font:inherit;font-size:13px;padding:9px 12px;border:1px solid #E3E8EF;border-radius:8px;outline:none")} />
+              <button onClick={createProject } style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:8px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>作成</button>
+              <button onClick={() => setShowNewProject(false)} style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:8px 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>キャンセル</button>
+              {(projectMsg ) && (<span style={css("font-size:12px;font-weight:600;color:" + (projectMsg.type === "ok" ? "#1F8255" : "#C5392F") + ")")}>{projectMsg.text}</span>)}
+            </div>
+          </>)}
           <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
             <table style={css("border-collapse:collapse;width:100%;font-size:12.5px")}>
               <thead><tr>
@@ -861,13 +855,19 @@ export function StandaloneView({ v }: { v: any }) {
       </>)}
 
       {/* ===================== 管理・監査ログ ===================== */}
+      {(adminAccessDenied ) && (<>
+        <div data-screen-label="11b 管理・監査ログ（権限なし）" style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:28px 22px;text-align:center")}>
+          <div style={css("font-size:13px;font-weight:600;color:#1A2433;margin-bottom:6px")}>管理・監査ログは管理者権限が必要です</div>
+          <div style={css("font-size:12px;color:#8A97A8")}>管理者アカウントでログインすると、ユーザー管理・監査ログ・システム設定を利用できます。</div>
+        </div>
+      </>)}
       {(isAdmin ) && (<>
         <div data-screen-label="11 管理・監査ログ">
           <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px")}>
-            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:16px 17px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:7px")}><span style={css("font-size:11.5px;color:#8A97A8;font-weight:500")}>利用ユーザー</span><span style={css("font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums")}>37</span><span style={css("font-size:11px;color:#5A6678")}>admin 3 · user 34</span></div>
-            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:16px 17px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:7px")}><span style={css("font-size:11.5px;color:#8A97A8;font-weight:500")}>今月の LLM コスト</span><span style={css("font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums")}>¥24,180</span><span style={css("font-size:11px;color:#1F8255")}>予算内（上限 ¥60,000）</span></div>
-            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:16px 17px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:7px")}><span style={css("font-size:11.5px;color:#8A97A8;font-weight:500")}>コネクタ稼働</span><span style={css("font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums")}>4/5</span><span style={css("font-size:11px;color:#B5701A")}>Crossref 不安定</span></div>
-            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:16px 17px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:7px")}><span style={css("font-size:11.5px;color:#8A97A8;font-weight:500")}>AI 出力の却下率</span><span style={css("font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums")}>4.1%</span><span style={css("font-size:11px;color:#5A6678")}>直近 30 日 · 162/3,907</span></div>
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:16px 17px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:7px")}><span style={css("font-size:11.5px;color:#8A97A8;font-weight:500")}>利用ユーザー</span><span style={css("font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums")}>{adminTotalUsers}</span><span style={css("font-size:11px;color:#5A6678")}>admin {adminAdmins} · user {Math.max(0, adminTotalUsers - adminAdmins)}</span></div>
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:16px 17px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:7px")}><span style={css("font-size:11.5px;color:#8A97A8;font-weight:500")}>LLM コスト</span><span style={css("font-size:18px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums;color:#5A6678")}>{adminCostLabel}</span><span style={css("font-size:11px;color:#5A6678")}>コスト連携は Phase 2</span></div>
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:16px 17px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:7px")}><span style={css("font-size:11.5px;color:#8A97A8;font-weight:500")}>AI プロバイダ</span><span style={css("font-size:18px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums;color:#5A6678")}>{adminConnectorLabel}</span><span style={css("font-size:11px;color:#B5701A")}>システム設定から変更可能</span></div>
+            <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:16px 17px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:7px")}><span style={css("font-size:11.5px;color:#8A97A8;font-weight:500")}>AI 出力の却下率</span><span style={css("font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:#8A97A8")}>—</span><span style={css("font-size:11px;color:#5A6678")}>{adminRejectLabel}</span></div>
           </div>
 
           <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
