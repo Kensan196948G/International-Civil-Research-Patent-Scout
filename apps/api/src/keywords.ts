@@ -104,7 +104,8 @@ export async function expandKeywords(
       {
         system:
           "あなたは土木技術分野の検索キーワード展開エンジニアです。与えられたキーワードに対し、日本語・英語の翻訳、専門用語の同義語、推奨検索クエリをJSONで出力してください。推測は含めず、実在する用語のみ出力してください。",
-        user: JSON.stringify({ query: params.query, languageMode: params.languageMode ?? "auto" })
+        user: JSON.stringify({ query: params.query, languageMode: params.languageMode ?? "auto" }),
+        meta: { action: "keyword.expand" }
       },
       env,
       EXPANSION_SCHEMA,

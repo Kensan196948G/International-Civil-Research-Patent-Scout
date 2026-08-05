@@ -6,6 +6,7 @@ import { createDb } from "../db.js";
 import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAuth } from "../auth.js";
+import { requireProjectAccess } from "../access.js";
 import { expandKeywords } from "../keywords.js";
 import { runConnectors } from "../connectors.js";
 import { dedupeAndScore } from "../scoring.js";
@@ -14,11 +15,13 @@ import {
   completeSearchQuery,
   createSearchQuery,
   findDocumentByKey,
-  getProject,
   getSearchQuery,
   insertDocument,
   insertSearchResult,
+  listBookmarkedSearches,
+  listRecentSearches,
   listSearchResults,
+  setSearchBookmark,
   setSearchQueryRunning
 } from "../repositories.js";
 
@@ -46,8 +49,7 @@ export function searchRoutes(): Hono<AppBindings> {
     const db = createDb(env);
     const userId = c.get("userId")!;
     if (parsed.data.projectId) {
-      const project = await getProject(db, userId, parsed.data.projectId);
-      if (!project) throw notFound("プロジェクトが見つかりません");
+      await requireProjectAccess(db, userId, parsed.data.projectId, "viewer");
     }
     const query = await createSearchQuery(db, {
       userId,
@@ -77,7 +79,28 @@ export function searchRoutes(): Hono<AppBindings> {
 
     const provider = await getActiveAiProvider(db, env);
     const expansion = await expandKeywords(params, env, provider);
-    const { results, failures } = await runConnectors(params, env);
+    // 展開キーワードを実際の検索クエリへ反映する（最大 3 クエリ・1 クエリあたり件数を分散）
+    const queriesToRun = Array.from(
+      new Set([
+        parsed.data.query,
+        ...(expansion.translatedQueries ?? []),
+        ...(expansion.synonymsJa ?? []),
+        ...(expansion.synonymsEn ?? [])
+      ])
+    )
+      .map((q) => q.trim())
+      .filter((q) => q.length > 0)
+      .slice(0, 3);
+    const perQueryMax = Math.max(5, Math.ceil((parsed.data.maxResults ?? 20) / queriesToRun.length));
+    const allResults: Awaited<ReturnType<typeof runConnectors>>["results"] = [];
+    const allFailures: Awaited<ReturnType<typeof runConnectors>>["failures"] = [];
+    for (const query of queriesToRun) {
+      const { results, failures } = await runConnectors({ ...params, query, maxResults: perQueryMax }, env);
+      allResults.push(...results);
+      allFailures.push(...failures);
+    }
+    const results = allResults;
+    const failures = allFailures;
     const scored = dedupeAndScore(parsed.data.query, results);
     let rank = 0;
     for (const item of scored) {
@@ -109,6 +132,29 @@ export function searchRoutes(): Hono<AppBindings> {
       detail: { query: parsed.data.query, sourceTypes: parsed.data.sourceTypes, resultCount: scored.length, failures: failures.map((f) => f.name) }
     });
     return c.json({ searchQueryId: query.id, status: "completed", partialFailures: failures.length > 0 }, 201);
+  });
+
+  app.get("/history", async (c) => {
+    const db = createDb(resolveEnv(c.env));
+    const limit = Math.min(Math.max(Number(c.req.query("limit") ?? 20), 1), 100);
+    const history = await listRecentSearches(db, c.get("userId")!, limit);
+    return c.json({ history });
+  });
+
+  app.get("/bookmarks", async (c) => {
+    const db = createDb(resolveEnv(c.env));
+    const limit = Math.min(Math.max(Number(c.req.query("limit") ?? 50), 1), 100);
+    const bookmarks = await listBookmarkedSearches(db, c.get("userId")!, limit);
+    return c.json({ bookmarks });
+  });
+
+  app.patch("/:searchQueryId/bookmark", async (c) => {
+    const parsed = z.object({ bookmarked: z.boolean() }).safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) throw new HttpError(400, "bad_request", "ブックマーク指定が不正です");
+    const db = createDb(resolveEnv(c.env));
+    const updated = await setSearchBookmark(db, c.req.param("searchQueryId"), c.get("userId")!, parsed.data.bookmarked);
+    if (!updated) throw notFound("検索履歴が見つかりません");
+    return c.json({ ok: true, bookmarked: parsed.data.bookmarked });
   });
 
   app.get("/:searchQueryId", async (c) => {

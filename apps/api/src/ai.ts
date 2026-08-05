@@ -1,11 +1,13 @@
 import type { ComparisonRow, SourceDocument, SummaryType } from "@icrps/contracts";
+import { createDb } from "./db.js";
 import type { WorkerEnv } from "./env.js";
 import type { ActiveAiProvider } from "./settings.js";
+import { extractLlmUsage, recordLlmUsage } from "./usage.js";
 
 type JsonObject = Record<string, unknown>;
 
 export async function callLlmJson(
-  input: { system: string; user: string },
+  input: { system: string; user: string; meta?: { action?: string } },
   env: WorkerEnv,
   jsonSchema: Record<string, unknown>,
   provider: ActiveAiProvider | null = null
@@ -37,8 +39,19 @@ export async function callLlmJson(
     if (!response.ok) throw new Error(`LLM API error ${response.status}`);
     const data = (await response.json()) as {
       content?: Array<{ type?: string; text?: string }>;
+      usage?: { input_tokens?: number; output_tokens?: number };
     };
     content = data.content?.map((c) => c.text ?? "").join("") ?? "";
+    const usage = extractLlmUsage(data, "anthropic");
+    if (usage.inputTokens > 0 || usage.outputTokens > 0) {
+      await recordLlmUsage(createDb(env), {
+        action: input.meta?.action ?? "llm.call",
+        provider: "anthropic",
+        model: active.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens
+      });
+    }
   } else {
     const base = active.baseUrl.replace(/\/+$/, "");
     const url = active.provider === "deepseek"
@@ -65,8 +78,19 @@ export async function callLlmJson(
     if (!response.ok) throw new Error(`LLM API error ${response.status}`);
     const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
     content = data.choices?.[0]?.message?.content ?? "";
+    const usage = extractLlmUsage(data, active.provider);
+    if (usage.inputTokens > 0 || usage.outputTokens > 0) {
+      await recordLlmUsage(createDb(env), {
+        action: input.meta?.action ?? "llm.call",
+        provider: active.provider,
+        model: active.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens
+      });
+    }
   }
   if (!content) throw new Error("LLM returned empty content");
   const parsed = JSON.parse(content) as JsonObject;
@@ -176,7 +200,8 @@ export async function summarizeDocument(
           doi: document.doi,
           patentNumber: document.patentNumber,
           publicationDate: document.publicationDate
-        })}`
+        })}`,
+        meta: { action: "summary.generate" }
       },
       env,
       SUMMARY_SCHEMA,
@@ -273,7 +298,8 @@ export async function generateComparison(
             abstract: d.abstract,
             url: d.url
           }))
-        })
+        }),
+        meta: { action: "comparison.generate" }
       },
       env,
       COMPARISON_SCHEMA,

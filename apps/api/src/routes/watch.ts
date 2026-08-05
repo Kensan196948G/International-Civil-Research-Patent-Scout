@@ -6,6 +6,7 @@ import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAuth } from "../auth.js";
 import { resolveEnv } from "../env.js";
+import { runWatchTopic } from "../watch-runner.js";
 import {
   createWatchTopic,
   deleteWatchTopic,
@@ -79,6 +80,27 @@ export function watchRoutes(): Hono<AppBindings> {
       resourceId: existing.id
     });
     return c.body(null, 204);
+  });
+
+  app.post("/watch/run", async (c) => {
+    const env = resolveEnv(c.env);
+    const db = createDb(env);
+    const topics = (await listWatchTopics(db, c.get("userId")!)).filter((t) => t.enabled).slice(0, 10);
+    if (topics.length === 0) {
+      return c.json({ results: [], message: "有効なウォッチテーマがありません" });
+    }
+    const results = [];
+    for (const topic of topics) {
+      results.push(await runWatchTopic(db, topic, env));
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    }
+    await createAuditLog(db, {
+      userId: c.get("userId"),
+      action: "watch.run_manual",
+      resourceType: "watch_topic",
+      detail: { topicCount: topics.length, results: results.map((r) => ({ topicId: r.topicId, notified: r.notified })) }
+    });
+    return c.json({ results });
   });
 
   return app;

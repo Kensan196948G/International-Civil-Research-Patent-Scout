@@ -3,6 +3,8 @@ import type {
   AuditLog,
   Comparison,
   ProjectDocument,
+  ProjectMember,
+  ProjectMemberRole,
   Report,
   ResearchProject,
   Role,
@@ -10,11 +12,15 @@ import type {
   SearchQuery,
   SearchResultItem,
   SourceDocument,
+  Team,
+  TeamMember,
+  TeamMemberRole,
   User
 } from "@icrps/contracts";
 import { randomUUID } from "node:crypto";
 import type { Db } from "./db.js";
 import { parseJsonArray, parseJsonObject } from "./db.js";
+import { normalizeClassifications } from "./classification.js";
 
 // ---- row mappers ----
 
@@ -38,7 +44,8 @@ function mapProject(row: Record<string, unknown>): ResearchProject {
     status: String(row.status) as ResearchProject["status"],
     tags: parseJsonArray(row.tags) as string[],
     createdAt: String(row.created_at),
-    updatedAt: String(row.updated_at)
+    updatedAt: String(row.updated_at),
+    teamId: row.team_id == null ? null : String(row.team_id)
   };
 }
 
@@ -54,6 +61,8 @@ function mapDocument(row: Record<string, unknown>): SourceDocument {
     doi: row.doi == null ? null : String(row.doi),
     patentNumber: row.patent_number == null ? null : String(row.patent_number),
     publicationNumber: row.publication_number == null ? null : String(row.publication_number),
+    patentStatus: row.patent_status == null ? null : String(row.patent_status),
+    classifications: parseJsonArray(row.classifications) as string[] | null,
     authors: parseJsonArray(row.authors) as string[] | null,
     inventors: parseJsonArray(row.inventors) as string[] | null,
     applicants: parseJsonArray(row.applicants) as string[] | null,
@@ -160,12 +169,31 @@ export async function updateUserRole(db: Db, id: string, role: Role): Promise<Us
   return rows[0] ? mapUser(rows[0]) : null;
 }
 
+export async function updateUserPassword(db: Db, id: string, passwordHash: string): Promise<User | null> {
+  const rows = await db("UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING *", [passwordHash, id]);
+  return rows[0] ? mapUser(rows[0]) : null;
+}
+
 // ---- projects ----
 
 export async function listProjects(db: Db, ownerUserId: string): Promise<ResearchProject[]> {
   const rows = await db(
     "SELECT * FROM research_projects WHERE owner_user_id = $1 ORDER BY created_at DESC LIMIT 200",
     [ownerUserId]
+  );
+  return rows.map(mapProject);
+}
+
+export async function listProjectsForUser(db: Db, userId: string): Promise<ResearchProject[]> {
+  const rows = await db(
+    `SELECT DISTINCT p.*
+     FROM research_projects p
+     LEFT JOIN project_members pm ON pm.project_id = p.id
+     LEFT JOIN team_members tm ON tm.team_id = p.team_id
+     WHERE p.owner_user_id = $1 OR pm.user_id = $1 OR tm.user_id = $1
+     ORDER BY p.created_at DESC
+     LIMIT 200`,
+    [userId]
   );
   return rows.map(mapProject);
 }
@@ -187,6 +215,11 @@ export async function getProject(db: Db, ownerUserId: string, projectId: string)
     "SELECT * FROM research_projects WHERE id = $1 AND owner_user_id = $2 LIMIT 1",
     [projectId, ownerUserId]
   );
+  return rows[0] ? mapProject(rows[0]) : null;
+}
+
+export async function getProjectById(db: Db, projectId: string): Promise<ResearchProject | null> {
+  const rows = await db("SELECT * FROM research_projects WHERE id = $1 LIMIT 1", [projectId]);
   return rows[0] ? mapProject(rows[0]) : null;
 }
 
@@ -220,6 +253,319 @@ export async function archiveProject(db: Db, projectId: string): Promise<Researc
     [projectId]
   );
   return rows[0] ? mapProject(rows[0]) : null;
+}
+
+// ---- project members ----
+
+function mapProjectMember(row: Record<string, unknown>): ProjectMember {
+  return {
+    id: String(row.id),
+    projectId: String(row.project_id),
+    userId: String(row.user_id),
+    role: String(row.role) as ProjectMemberRole,
+    createdAt: String(row.created_at),
+    user: row.user_id
+      ? {
+          id: String(row.user_id),
+          email: row.email == null ? "" : String(row.email),
+          name: row.name == null ? "" : String(row.name)
+        }
+      : null
+  };
+}
+
+export async function listProjectMembers(db: Db, projectId: string): Promise<ProjectMember[]> {
+  const rows = await db(
+    `SELECT pm.*, u.email, u.name
+     FROM project_members pm
+     JOIN users u ON u.id = pm.user_id
+     WHERE pm.project_id = $1
+     ORDER BY pm.created_at ASC`,
+    [projectId]
+  );
+  return rows.map(mapProjectMember);
+}
+
+export async function getProjectMembership(
+  db: Db,
+  projectId: string,
+  userId: string
+): Promise<ProjectMember | null> {
+  const rows = await db(
+    `SELECT pm.*, u.email, u.name
+     FROM project_members pm
+     JOIN users u ON u.id = pm.user_id
+     WHERE pm.project_id = $1 AND pm.user_id = $2 LIMIT 1`,
+    [projectId, userId]
+  );
+  return rows[0] ? mapProjectMember(rows[0]) : null;
+}
+
+export async function addProjectMember(
+  db: Db,
+  projectId: string,
+  userId: string,
+  role: ProjectMemberRole
+): Promise<ProjectMember> {
+  const rows = await db(
+    `INSERT INTO project_members (project_id, user_id, role)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role, created_at = project_members.created_at
+     RETURNING *`,
+    [projectId, userId, role]
+  );
+  return mapProjectMember(rows[0]!);
+}
+
+export async function updateProjectMemberRole(
+  db: Db,
+  projectId: string,
+  userId: string,
+  role: ProjectMemberRole
+): Promise<ProjectMember | null> {
+  const rows = await db(
+    "UPDATE project_members SET role = $3 WHERE project_id = $1 AND user_id = $2 RETURNING *",
+    [projectId, userId, role]
+  );
+  return rows[0] ? mapProjectMember(rows[0]) : null;
+}
+
+export async function removeProjectMember(db: Db, projectId: string, userId: string): Promise<boolean> {
+  const rows = await db(
+    "DELETE FROM project_members WHERE project_id = $1 AND user_id = $2 RETURNING id",
+    [projectId, userId]
+  );
+  return rows.length > 0;
+}
+
+export async function getProjectAccess(
+  db: Db,
+  userId: string,
+  projectId: string
+): Promise<{ project: ResearchProject; role: ProjectMemberRole; isOwner: boolean } | null> {
+  const owned = await getProject(db, userId, projectId);
+  if (owned) return { project: owned, role: "admin", isOwner: true };
+  const member = await getProjectMembership(db, projectId, userId);
+  const project = await getProjectById(db, projectId);
+  if (!project) return null;
+  if (member) return { project, role: member.role, isOwner: false };
+  if (project.teamId) {
+    const teamMember = await getTeamMembership(db, project.teamId, userId);
+    if (teamMember) return { project, role: teamMember.role, isOwner: false };
+  }
+  return null;
+}
+
+// ---- teams ----
+
+function mapTeam(row: Record<string, unknown>): Team {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    createdBy: String(row.created_by),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at)
+  };
+}
+
+function mapTeamMember(row: Record<string, unknown>): TeamMember {
+  return {
+    id: String(row.id),
+    teamId: String(row.team_id),
+    userId: String(row.user_id),
+    role: String(row.role) as TeamMemberRole,
+    createdAt: String(row.created_at),
+    user: row.user_id
+      ? {
+          id: String(row.user_id),
+          email: row.email == null ? "" : String(row.email),
+          name: row.name == null ? "" : String(row.name)
+        }
+      : null
+  };
+}
+
+export async function createTeam(db: Db, name: string, createdBy: string): Promise<Team> {
+  const rows = await db(
+    "INSERT INTO teams (name, created_by) VALUES ($1, $2) RETURNING *",
+    [name, createdBy]
+  );
+  return mapTeam(rows[0]!);
+}
+
+export async function getTeamById(db: Db, teamId: string): Promise<Team | null> {
+  const rows = await db("SELECT * FROM teams WHERE id = $1 LIMIT 1", [teamId]);
+  return rows[0] ? mapTeam(rows[0]) : null;
+}
+
+export async function listTeamsForUser(db: Db, userId: string): Promise<Team[]> {
+  const rows = await db(
+    `SELECT DISTINCT t.*
+     FROM teams t
+     LEFT JOIN team_members tm ON tm.team_id = t.id
+     WHERE t.created_by = $1 OR tm.user_id = $1
+     ORDER BY t.created_at DESC
+     LIMIT 100`,
+    [userId]
+  );
+  return rows.map(mapTeam);
+}
+
+export async function getTeamAccess(
+  db: Db,
+  teamId: string,
+  userId: string
+): Promise<{ team: Team; role: TeamMemberRole; isOwner: boolean } | null> {
+  const team = await getTeamById(db, teamId);
+  if (!team) return null;
+  if (team.createdBy === userId) return { team, role: "admin", isOwner: true };
+  const member = await getTeamMembership(db, teamId, userId);
+  if (!member) return null;
+  return { team, role: member.role, isOwner: false };
+}
+
+export async function getTeamMembership(db: Db, teamId: string, userId: string): Promise<TeamMember | null> {
+  const rows = await db(
+    "SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 LIMIT 1",
+    [teamId, userId]
+  );
+  return rows[0] ? mapTeamMember(rows[0]) : null;
+}
+
+export async function listTeamMembers(db: Db, teamId: string): Promise<TeamMember[]> {
+  const rows = await db(
+    `SELECT tm.*, u.email, u.name
+     FROM team_members tm
+     JOIN users u ON u.id = tm.user_id
+     WHERE tm.team_id = $1
+     ORDER BY tm.created_at ASC`,
+    [teamId]
+  );
+  return rows.map(mapTeamMember);
+}
+
+export async function addTeamMember(
+  db: Db,
+  teamId: string,
+  userId: string,
+  role: TeamMemberRole
+): Promise<TeamMember> {
+  const rows = await db(
+    `INSERT INTO team_members (team_id, user_id, role)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role, created_at = team_members.created_at
+     RETURNING *`,
+    [teamId, userId, role]
+  );
+  return mapTeamMember(rows[0]!);
+}
+
+export async function updateTeamMemberRole(
+  db: Db,
+  teamId: string,
+  userId: string,
+  role: TeamMemberRole
+): Promise<TeamMember | null> {
+  const rows = await db(
+    "UPDATE team_members SET role = $3 WHERE team_id = $1 AND user_id = $2 RETURNING *",
+    [teamId, userId, role]
+  );
+  return rows[0] ? mapTeamMember(rows[0]) : null;
+}
+
+export async function removeTeamMember(db: Db, teamId: string, userId: string): Promise<boolean> {
+  const rows = await db(
+    "DELETE FROM team_members WHERE team_id = $1 AND user_id = $2 RETURNING id",
+    [teamId, userId]
+  );
+  return rows.length > 0;
+}
+
+export async function updateTeamName(db: Db, teamId: string, name: string): Promise<Team | null> {
+  const rows = await db("UPDATE teams SET name = $2, updated_at = now() WHERE id = $1 RETURNING *", [
+    teamId,
+    name
+  ]);
+  return rows[0] ? mapTeam(rows[0]) : null;
+}
+
+export interface TeamStats {
+  memberCount: number;
+  projectCount: number;
+  documentCount: number;
+  reportCount: number;
+  comparisonCount: number;
+}
+
+export async function getTeamStats(db: Db, teamId: string): Promise<TeamStats> {
+  const [members, projects, docs, reports, comparisons] = await Promise.all([
+    db("SELECT count(*)::int AS c FROM team_members WHERE team_id = $1", [teamId]),
+    db("SELECT count(*)::int AS c FROM research_projects WHERE team_id = $1", [teamId]),
+    db(
+      `SELECT count(*)::int AS c FROM project_documents pd
+       JOIN research_projects p ON p.id = pd.project_id
+       WHERE p.team_id = $1`,
+      [teamId]
+    ),
+    db(
+      `SELECT count(*)::int AS c FROM reports r
+       JOIN research_projects p ON p.id = r.project_id
+       WHERE p.team_id = $1`,
+      [teamId]
+    ),
+    db(
+      `SELECT count(*)::int AS c FROM comparisons cm
+       JOIN research_projects p ON p.id = cm.project_id
+       WHERE p.team_id = $1`,
+      [teamId]
+    )
+  ]);
+  return {
+    memberCount: Number(members[0]?.c ?? 0),
+    projectCount: Number(projects[0]?.c ?? 0),
+    documentCount: Number(docs[0]?.c ?? 0),
+    reportCount: Number(reports[0]?.c ?? 0),
+    comparisonCount: Number(comparisons[0]?.c ?? 0)
+  };
+}
+
+export async function setProjectTeam(
+  db: Db,
+  projectId: string,
+  teamId: string | null
+): Promise<ResearchProject | null> {
+  const rows = await db(
+    "UPDATE research_projects SET team_id = $2, updated_at = now() WHERE id = $1 RETURNING *",
+    [projectId, teamId]
+  );
+  return rows[0] ? mapProject(rows[0]) : null;
+}
+
+export async function transferProjectOwnership(
+  db: Db,
+  projectId: string,
+  oldOwnerUserId: string,
+  newOwnerUserId: string
+): Promise<ResearchProject | null> {
+  await addProjectMember(db, projectId, oldOwnerUserId, "admin");
+  await removeProjectMember(db, projectId, newOwnerUserId);
+  const rows = await db(
+    "UPDATE research_projects SET owner_user_id = $2, updated_at = now() WHERE id = $1 RETURNING *",
+    [projectId, newOwnerUserId]
+  );
+  return rows[0] ? mapProject(rows[0]) : null;
+}
+
+export async function searchDocumentsByText(db: Db, query: string, limit = 20): Promise<SourceDocument[]> {
+  const pattern = `%${query}%`;
+  const rows = await db(
+    `SELECT * FROM source_documents
+     WHERE title ILIKE $1 OR original_title ILIKE $1 OR abstract ILIKE $1 OR source_name ILIKE $1
+     ORDER BY similarity(coalesce(title, ''), $2) DESC NULLS LAST, created_at DESC
+     LIMIT $3`,
+    [pattern, query, limit]
+  );
+  return rows.map(mapDocument);
 }
 
 // ---- search queries ----
@@ -285,7 +631,7 @@ export async function failSearchQuery(db: Db, id: string, failureSources: string
 export async function listSearchResults(db: Db, searchQueryId: string): Promise<SearchResultItem[]> {
   const rows = await db(
     `SELECT d.id AS document_id, d.source_type, d.title, d.original_title, d.abstract,
-            d.url, d.publication_date, d.doi, d.patent_number, d.source_name,
+            d.url, d.publication_date, d.doi, d.patent_number, d.patent_status, d.country, d.inventors, d.applicants, d.source_name,
             sr.relevance_score
      FROM search_results sr
      JOIN source_documents d ON d.id = sr.source_document_id
@@ -304,8 +650,169 @@ export async function listSearchResults(db: Db, searchQueryId: string): Promise<
     relevanceScore: r.relevance_score == null ? null : Number(r.relevance_score),
     doi: r.doi == null ? null : String(r.doi),
     patentNumber: r.patent_number == null ? null : String(r.patent_number),
+    patentStatus: r.patent_status == null ? null : String(r.patent_status),
+    country: r.country == null ? null : String(r.country),
+    inventors: parseJsonArray(r.inventors) as string[] | null,
+    applicants: parseJsonArray(r.applicants) as string[] | null,
     sourceName: r.source_name == null ? null : String(r.source_name)
   }));
+}
+
+export async function listRecentSearches(db: Db, userId: string, limit = 20): Promise<
+  Array<{
+    id: string;
+    queryText: string;
+    sourceTypes: string[];
+    status: SearchQuery["status"];
+    executedAt: string | null;
+    createdAt: string;
+    resultCount: number;
+  }>
+> {
+  const rows = await db(
+    `SELECT sq.id, sq.query_text, sq.source_types, sq.status, sq.executed_at, sq.created_at, sq.is_bookmarked,
+            count(sr.id)::int AS result_count
+     FROM search_queries sq
+     LEFT JOIN search_results sr ON sr.search_query_id = sq.id
+     WHERE sq.user_id = $1
+     GROUP BY sq.id
+     ORDER BY sq.created_at DESC
+     LIMIT $2`,
+    [userId, limit]
+  );
+  return rows.map((row) => ({
+    id: String(row.id),
+    queryText: String(row.query_text),
+    sourceTypes: parseJsonArray(row.source_types, ["web", "paper", "patent"]) as string[],
+    status: String(row.status) as SearchQuery["status"],
+    executedAt: row.executed_at == null ? null : String(row.executed_at),
+    createdAt: String(row.created_at),
+    resultCount: Number(row.result_count ?? 0),
+    isBookmarked: row.is_bookmarked === true || row.is_bookmarked === "true"
+  }));
+}
+
+export async function getLatestProjectSearch(db: Db, projectId: string): Promise<SearchQuery | null> {
+  const rows = await db(
+    "SELECT * FROM search_queries WHERE project_id = $1 ORDER BY created_at DESC LIMIT 1",
+    [projectId]
+  );
+  return rows[0] ? mapSearchQuery(rows[0]) : null;
+}
+
+export async function setSearchBookmark(
+  db: Db,
+  searchQueryId: string,
+  userId: string,
+  bookmarked: boolean
+): Promise<boolean> {
+  const rows = await db(
+    "UPDATE search_queries SET is_bookmarked = $3 WHERE id = $1 AND user_id = $2 RETURNING id",
+    [searchQueryId, userId, bookmarked]
+  );
+  return rows.length > 0;
+}
+
+export async function listBookmarkedSearches(db: Db, userId: string, limit = 50): Promise<
+  Array<{
+    id: string;
+    queryText: string;
+    sourceTypes: string[];
+    status: SearchQuery["status"];
+    executedAt: string | null;
+    createdAt: string;
+    resultCount: number;
+  }>
+> {
+  const rows = await db(
+    `SELECT sq.id, sq.query_text, sq.source_types, sq.status, sq.executed_at, sq.created_at, sq.is_bookmarked,
+            count(sr.id)::int AS result_count
+     FROM search_queries sq
+     LEFT JOIN search_results sr ON sr.search_query_id = sq.id
+     WHERE sq.user_id = $1 AND sq.is_bookmarked = true
+     GROUP BY sq.id
+     ORDER BY sq.created_at DESC
+     LIMIT $2`,
+    [userId, limit]
+  );
+  return rows.map((row) => ({
+    id: String(row.id),
+    queryText: String(row.query_text),
+    sourceTypes: parseJsonArray(row.source_types, ["web", "paper", "patent"]) as string[],
+    status: String(row.status) as SearchQuery["status"],
+    executedAt: row.executed_at == null ? null : String(row.executed_at),
+    createdAt: String(row.created_at),
+    resultCount: Number(row.result_count ?? 0),
+    isBookmarked: row.is_bookmarked === true || row.is_bookmarked === "true"
+  }));
+}
+
+// ---- auth tokens ----
+
+export interface AuthTokenRow {
+  id: string;
+  userId: string;
+  kind: string;
+  tokenHash: string;
+  expiresAt: string;
+  usedAt: string | null;
+  createdAt: string;
+}
+
+function mapAuthToken(row: Record<string, unknown>): AuthTokenRow {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    kind: String(row.kind),
+    tokenHash: String(row.token_hash),
+    expiresAt: String(row.expires_at),
+    usedAt: row.used_at == null ? null : String(row.used_at),
+    createdAt: String(row.created_at)
+  };
+}
+
+export async function createAuthToken(
+  db: Db,
+  input: { userId: string; kind: "reset" | "magic"; tokenHash: string; expiresAt: string }
+): Promise<AuthTokenRow> {
+  const rows = await db(
+    `INSERT INTO auth_tokens (user_id, kind, token_hash, expires_at)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [input.userId, input.kind, input.tokenHash, input.expiresAt]
+  );
+  return mapAuthToken(rows[0]!);
+}
+
+export async function findAuthTokenByHash(
+  db: Db,
+  kind: "reset" | "magic",
+  tokenHash: string
+): Promise<AuthTokenRow | null> {
+  const rows = await db(
+    "SELECT * FROM auth_tokens WHERE kind = $1 AND token_hash = $2 ORDER BY created_at DESC LIMIT 1",
+    [kind, tokenHash]
+  );
+  return rows[0] ? mapAuthToken(rows[0]) : null;
+}
+
+export async function markAuthTokenUsed(db: Db, id: string): Promise<void> {
+  await db("UPDATE auth_tokens SET used_at = now() WHERE id = $1", [id]);
+}
+
+export async function listDocumentCandidates(db: Db, excludeId: string, limit = 300): Promise<SourceDocument[]> {
+  const rows = await db(
+    "SELECT * FROM source_documents WHERE id <> $1 ORDER BY created_at DESC LIMIT $2",
+    [excludeId, limit]
+  );
+  return rows.map(mapDocument);
+}
+
+export async function listAllDocuments(db: Db, offset = 0, limit = 1000): Promise<SourceDocument[]> {
+  const rows = await db(
+    "SELECT * FROM source_documents ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    [limit, offset]
+  );
+  return rows.map(mapDocument);
 }
 
 // ---- source documents ----
@@ -334,11 +841,12 @@ export async function findDocumentByKey(
 }
 
 export async function insertDocument(db: Db, result: SearchConnectorResult, contentHash: string | null): Promise<SourceDocument> {
+  const classificationsJson = normalizeClassifications(result.classifications);
   const rows = await db(
     `INSERT INTO source_documents
        (source_type, title, original_title, abstract, url, doi, patent_number, publication_number,
-        authors, inventors, applicants, country, publication_date, source_name, license_note, content_hash)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        patent_status, classifications, authors, inventors, applicants, country, publication_date, source_name, license_note, content_hash)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
      RETURNING *`,
     [
       result.sourceType,
@@ -349,6 +857,8 @@ export async function insertDocument(db: Db, result: SearchConnectorResult, cont
       result.doi ?? null,
       result.patentNumber ?? null,
       result.publicationNumber ?? null,
+      result.patentStatus ?? null,
+      classificationsJson?.length ? JSON.stringify(classificationsJson) : null,
       result.authors?.length ? JSON.stringify(result.authors) : null,
       result.inventors?.length ? JSON.stringify(result.inventors) : null,
       result.applicants?.length ? JSON.stringify(result.applicants) : null,
@@ -383,10 +893,11 @@ export async function insertDocumentsBatch(db: Db, results: SearchConnectorResul
     const placeholders: string[] = [];
     const values: unknown[] = [];
     chunk.forEach((r, j) => {
-      const base = j * 16;
+      const classificationsJson = normalizeClassifications(r.classifications);
+      const base = j * 18;
       placeholders.push(
         `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8},` +
-          `$${base + 9},$${base + 10},$${base + 11},$${base + 12},$${base + 13},$${base + 14},$${base + 15},$${base + 16})`
+          `$${base + 9},$${base + 10},$${base + 11},$${base + 12},$${base + 13},$${base + 14},$${base + 15},$${base + 16},$${base + 17},$${base + 18})`
       );
       values.push(
         r.sourceType,
@@ -397,6 +908,8 @@ export async function insertDocumentsBatch(db: Db, results: SearchConnectorResul
         r.doi ?? null,
         r.patentNumber ?? null,
         r.publicationNumber ?? null,
+        r.patentStatus ?? null,
+        classificationsJson?.length ? JSON.stringify(classificationsJson) : null,
         r.authors?.length ? JSON.stringify(r.authors) : null,
         r.inventors?.length ? JSON.stringify(r.inventors) : null,
         r.applicants?.length ? JSON.stringify(r.applicants) : null,
@@ -410,7 +923,7 @@ export async function insertDocumentsBatch(db: Db, results: SearchConnectorResul
     const returned = await db(
       `INSERT INTO source_documents
          (source_type, title, original_title, abstract, url, doi, patent_number, publication_number,
-          authors, inventors, applicants, country, publication_date, source_name, license_note, content_hash)
+          patent_status, classifications, authors, inventors, applicants, country, publication_date, source_name, license_note, content_hash)
        VALUES ${placeholders.join(",")}
        ON CONFLICT (content_hash) WHERE content_hash IS NOT NULL DO NOTHING
        RETURNING id`,
@@ -600,6 +1113,21 @@ export async function listSummaries(db: Db, documentId: string): Promise<AiSumma
     [documentId]
   );
   return rows.map(mapSummary);
+}
+
+export async function listSummariesByDocumentIds(db: Db, documentIds: string[]): Promise<Map<string, AiSummary>> {
+  const result = new Map<string, AiSummary>();
+  if (documentIds.length === 0) return result;
+  const placeholders = documentIds.map((_, i) => `$${i + 1}`).join(",");
+  const rows = await db(
+    `SELECT DISTINCT ON (source_document_id) *
+     FROM ai_summaries
+     WHERE source_document_id IN (${placeholders})
+     ORDER BY source_document_id, created_at DESC`,
+    documentIds
+  );
+  for (const row of rows) result.set(String(row.source_document_id), mapSummary(row));
+  return result;
 }
 
 // ---- comparisons ----
@@ -844,6 +1372,127 @@ export async function deleteWatchTopic(db: Db, id: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+export async function listEnabledWatchTopics(db: Db): Promise<WatchTopicRow[]> {
+  const rows = await db("SELECT * FROM watch_topics WHERE enabled = true ORDER BY created_at ASC LIMIT 500");
+  return rows.map(mapWatchTopic);
+}
+
+export async function updateWatchTopicCheck(
+  db: Db,
+  id: string,
+  input: { lastCheckedAt: string; lastNewCount: number }
+): Promise<void> {
+  await db(
+    "UPDATE watch_topics SET last_checked_at = $2, last_new_count = $3 WHERE id = $1",
+    [id, input.lastCheckedAt, input.lastNewCount]
+  );
+}
+
+// ---- notifications ----
+
+export interface NotificationRow {
+  id: string;
+  userId: string;
+  watchTopicId: string | null;
+  sourceDocumentId: string | null;
+  kind: string;
+  title: string;
+  body: string | null;
+  url: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+function mapNotification(row: Record<string, unknown>): NotificationRow {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    watchTopicId: row.watch_topic_id == null ? null : String(row.watch_topic_id),
+    sourceDocumentId: row.source_document_id == null ? null : String(row.source_document_id),
+    kind: String(row.kind),
+    title: String(row.title),
+    body: row.body == null ? null : String(row.body),
+    url: row.url == null ? null : String(row.url),
+    readAt: row.read_at == null ? null : String(row.read_at),
+    createdAt: String(row.created_at)
+  };
+}
+
+export async function createNotification(
+  db: Db,
+  input: {
+    userId: string;
+    watchTopicId?: string | null;
+    sourceDocumentId?: string | null;
+    kind?: string;
+    title: string;
+    body?: string | null;
+    url?: string | null;
+    readAt?: string | null;
+  }
+): Promise<NotificationRow> {
+  const rows = await db(
+    `INSERT INTO notifications
+       (user_id, watch_topic_id, source_document_id, kind, title, body, url, read_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    [
+      input.userId,
+      input.watchTopicId ?? null,
+      input.sourceDocumentId ?? null,
+      input.kind ?? "watch",
+      input.title,
+      input.body ?? null,
+      input.url ?? null,
+      input.readAt ?? null
+    ]
+  );
+  return mapNotification(rows[0]!);
+}
+
+export async function notificationExistsForDocument(
+  db: Db,
+  watchTopicId: string,
+  sourceDocumentId: string
+): Promise<boolean> {
+  const rows = await db(
+    "SELECT 1 FROM notifications WHERE watch_topic_id = $1 AND source_document_id = $2 LIMIT 1",
+    [watchTopicId, sourceDocumentId]
+  );
+  return rows.length > 0;
+}
+
+export async function listNotifications(db: Db, userId: string, limit = 50): Promise<NotificationRow[]> {
+  const rows = await db(
+    "SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2",
+    [userId, limit]
+  );
+  return rows.map(mapNotification);
+}
+
+export async function unreadNotificationCount(db: Db, userId: string): Promise<number> {
+  const rows = await db(
+    "SELECT count(*)::int AS c FROM notifications WHERE user_id = $1 AND read_at IS NULL",
+    [userId]
+  );
+  return Number(rows[0]?.c ?? 0);
+}
+
+export async function markNotificationRead(db: Db, userId: string, notificationId: string): Promise<boolean> {
+  const rows = await db(
+    "UPDATE notifications SET read_at = now() WHERE id = $1 AND user_id = $2 AND read_at IS NULL RETURNING id",
+    [notificationId, userId]
+  );
+  return rows.length > 0;
+}
+
+export async function markAllNotificationsRead(db: Db, userId: string): Promise<number> {
+  const rows = await db(
+    "UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL RETURNING id",
+    [userId]
+  );
+  return rows.length;
+}
+
 // ---- chat 用: ユーザーの保存文献 ----
 
 export async function listUserDocuments(db: Db, userId: string, limit = 8): Promise<SourceDocument[]> {
@@ -884,4 +1533,131 @@ export async function listIngestRuns(db: Db, limit = 50): Promise<IngestRunLog[]
     createdAt: String(row.created_at),
     detail: parseJsonObject(row.detail)
   }));
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  adminUsers: number;
+  totalProjects: number;
+  totalDocuments: number;
+  documentsByType: Array<{ sourceType: string; count: number }>;
+  totalSearches: number;
+  totalComparisons: number;
+  totalReports: number;
+  totalWatchTopics: number;
+  ingestRuns: number;
+  lastIngestRunAt: string | null;
+}
+
+export async function getAdminStats(db: Db): Promise<AdminStats> {
+  const [users, projects, documents, docsByType, searches, comparisons, reports, watchTopics, ingestRuns, lastIngest] =
+    await Promise.all([
+      db("SELECT count(*)::int AS c, count(*) FILTER (WHERE role = 'admin')::int AS admins FROM users"),
+      db("SELECT count(*)::int AS c FROM research_projects"),
+      db("SELECT count(*)::int AS c FROM source_documents"),
+      db(
+        `SELECT source_type, count(*)::int AS c FROM source_documents
+         GROUP BY source_type ORDER BY c DESC`
+      ),
+      db("SELECT count(*)::int AS c FROM search_queries"),
+      db("SELECT count(*)::int AS c FROM comparisons"),
+      db("SELECT count(*)::int AS c FROM reports"),
+      db("SELECT count(*)::int AS c FROM watch_topics"),
+      db("SELECT count(*)::int AS c FROM audit_logs WHERE action = 'ingest.run'"),
+      db("SELECT max(created_at) AS at FROM audit_logs WHERE action = 'ingest.run'")
+    ]);
+  return {
+    totalUsers: Number(users[0]?.c ?? 0),
+    adminUsers: Number(users[0]?.admins ?? 0),
+    totalProjects: Number(projects[0]?.c ?? 0),
+    totalDocuments: Number(documents[0]?.c ?? 0),
+    documentsByType: docsByType.map((row) => ({
+      sourceType: String(row.source_type),
+      count: Number(row.c)
+    })),
+    totalSearches: Number(searches[0]?.c ?? 0),
+    totalComparisons: Number(comparisons[0]?.c ?? 0),
+    totalReports: Number(reports[0]?.c ?? 0),
+    totalWatchTopics: Number(watchTopics[0]?.c ?? 0),
+    ingestRuns: Number(ingestRuns[0]?.c ?? 0),
+    lastIngestRunAt: lastIngest[0]?.at == null ? null : String(lastIngest[0].at)
+  };
+}
+
+export interface LlmUsageSummary {
+  totalCalls: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCost: number;
+  byModel: Array<{
+    provider: string;
+    model: string;
+    calls: number;
+    inputTokens: number;
+    outputTokens: number;
+    cost: number;
+  }>;
+  recent: Array<{
+    id: string;
+    action: string;
+    provider: string;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    costEstimate: number;
+    createdAt: string;
+  }>;
+}
+
+export async function getLlmUsageSummary(db: Db, days = 30): Promise<LlmUsageSummary> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const [totals, byModel, recent] = await Promise.all([
+    db(
+      `SELECT count(*)::int AS calls,
+              coalesce(sum(input_tokens),0)::int AS input_tokens,
+              coalesce(sum(output_tokens),0)::int AS output_tokens,
+              coalesce(sum(cost_estimate),0)::numeric AS cost
+       FROM llm_usage WHERE created_at >= $1`,
+      [since]
+    ),
+    db(
+      `SELECT provider, model, count(*)::int AS calls,
+              sum(input_tokens)::int AS input_tokens,
+              sum(output_tokens)::int AS output_tokens,
+              sum(cost_estimate)::numeric AS cost
+       FROM llm_usage WHERE created_at >= $1
+       GROUP BY provider, model ORDER BY cost DESC`,
+      [since]
+    ),
+    db(
+      `SELECT id, action, provider, model, input_tokens, output_tokens, cost_estimate, created_at
+       FROM llm_usage WHERE created_at >= $1
+       ORDER BY created_at DESC LIMIT 30`,
+      [since]
+    )
+  ]);
+  return {
+    totalCalls: Number(totals[0]?.calls ?? 0),
+    totalInputTokens: Number(totals[0]?.input_tokens ?? 0),
+    totalOutputTokens: Number(totals[0]?.output_tokens ?? 0),
+    totalCost: Number(totals[0]?.cost ?? 0),
+    byModel: byModel.map((row) => ({
+      provider: String(row.provider),
+      model: String(row.model),
+      calls: Number(row.calls),
+      inputTokens: Number(row.input_tokens),
+      outputTokens: Number(row.output_tokens),
+      cost: Number(row.cost)
+    })),
+    recent: recent.map((row) => ({
+      id: String(row.id),
+      action: String(row.action),
+      provider: String(row.provider),
+      model: String(row.model),
+      inputTokens: Number(row.input_tokens),
+      outputTokens: Number(row.output_tokens),
+      costEstimate: Number(row.cost_estimate),
+      createdAt: String(row.created_at)
+    }))
+  };
 }
