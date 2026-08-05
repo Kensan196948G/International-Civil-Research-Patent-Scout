@@ -3,10 +3,13 @@ import type {
   Comparison,
   DashboardStats,
   ProjectDocument,
+  ProjectMember,
   Report,
   ResearchProject,
   SearchQuery,
   SourceDocument,
+  Team,
+  TeamMember,
   User
 } from "@icrps/contracts";
 
@@ -25,6 +28,29 @@ export interface LiteratureItem {
   sourceName: string | null;
   sourceLabel: string;
   createdAt: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  watchTopicId: string | null;
+  sourceDocumentId: string | null;
+  kind: string;
+  title: string;
+  body: string | null;
+  url: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface SearchHistoryItem {
+  id: string;
+  queryText: string;
+  sourceTypes: string[];
+  status: string;
+  executedAt: string | null;
+  createdAt: string;
+  resultCount: number;
+  isBookmarked: boolean;
 }
 
 function createTokenStore() {
@@ -114,24 +140,94 @@ async function request<T>(path: string, options: { method?: string; body?: unkno
   return (await response.json()) as T;
 }
 
+async function requestBlob(path: string, options: { method?: string; body?: unknown } = {}): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await fetch(path, {
+    method: options.method ?? "GET",
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+  });
+  if (!response.ok) throw new ApiError(response.status, "export_failed", "エクスポートに失敗しました");
+  return response.blob();
+}
+
 export const api = {
   health: () => request<{ ok: boolean; db: string }>("/api/health", { auth: false }),
   register: (input: { email: string; password: string; name: string }) =>
     request<AuthResponse>("/api/auth/register", { method: "POST", body: input, auth: false }),
   login: (input: { email: string; password: string }) =>
     request<AuthResponse>("/api/auth/login", { method: "POST", body: input, auth: false }),
+  changePassword: (input: { currentPassword: string; newPassword: string }) =>
+    request<{ ok: boolean }>("/api/auth/change-password", { method: "POST", body: input }),
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean }>("/api/auth/forgot-password", { method: "POST", body: { email } }),
+  resetPassword: (token: string, newPassword: string) =>
+    request<{ ok: boolean }>("/api/auth/reset-password", { method: "POST", body: { token, newPassword } }),
+  magicLink: (email: string) => request<{ ok: boolean }>("/api/auth/magic-link", { method: "POST", body: { email } }),
+  magicLinkVerify: (token: string) =>
+    request<AuthResponse>("/api/auth/magic-link/verify", { method: "POST", body: { token } }),
+  ssoStatus: () => request<{ google: boolean }>("/api/auth/sso", { auth: false }),
+  ssoGoogleUrl: () => request<{ url: string }>("/api/auth/sso/google/url", { auth: false }),
+  ssoGoogleCallback: (code: string) =>
+    request<AuthResponse>(`/api/auth/sso/google/callback?code=${encodeURIComponent(code)}`, { auth: false }),
   me: () => request<{ user: User }>("/api/auth/me"),
+  teams: {
+    list: () => request<{ teams: Team[] }>("/api/teams"),
+    create: (name: string) => request<{ team: Team }>("/api/teams", { method: "POST", body: { name } }),
+    rename: (teamId: string, name: string) =>
+      request<{ team: Team }>(`/api/teams/${teamId}`, { method: "PATCH", body: { name } }),
+    members: {
+      list: (teamId: string) => request<{ members: TeamMember[] }>(`/api/teams/${teamId}/members`),
+      add: (teamId: string, input: { email: string; role: string }) =>
+        request<{ member: TeamMember }>(`/api/teams/${teamId}/members`, { method: "POST", body: input }),
+      update: (teamId: string, userId: string, role: string) =>
+        request<{ member: TeamMember }>(`/api/teams/${teamId}/members/${userId}`, {
+          method: "PATCH",
+          body: { role }
+        }),
+      remove: (teamId: string, userId: string) =>
+        request<void>(`/api/teams/${teamId}/members/${userId}`, { method: "DELETE" })
+    },
+    stats: (teamId: string) =>
+      request<{
+        stats: { memberCount: number; projectCount: number; documentCount: number; reportCount: number; comparisonCount: number };
+      }>(`/api/teams/${teamId}/stats`)
+  },
   projects: {
     list: () => request<{ projects: ResearchProject[] }>("/api/projects"),
     create: (input: { title: string; description?: string; tags?: string[] }) =>
       request<{ project: ResearchProject }>("/api/projects", { method: "POST", body: input }),
     get: (id: string) =>
-      request<{ project: ResearchProject; documents: ProjectDocument[]; comparisons: Comparison[]; reports: Report[] }>(
+      request<{
+        project: ResearchProject;
+        documents: ProjectDocument[];
+        comparisons: Comparison[];
+        reports: Report[];
+        members: ProjectMember[];
+      }>(
         `/api/projects/${id}`
       ),
     update: (id: string, input: Partial<{ title: string; description: string; status: string; tags: string[] }>) =>
       request<{ project: ResearchProject }>(`/api/projects/${id}`, { method: "PATCH", body: input }),
     archive: (id: string) => request<{ project: ResearchProject }>(`/api/projects/${id}`, { method: "DELETE" }),
+    transfer: (id: string, email: string) =>
+      request<{ project: ResearchProject }>(`/api/projects/${id}/transfer`, { method: "POST", body: { email } }),
+    setTeam: (id: string, teamId: string | null) =>
+      request<{ project: ResearchProject }>(`/api/projects/${id}/team`, { method: "POST", body: { teamId } }),
+    members: {
+      list: (projectId: string) => request<{ members: ProjectMember[] }>(`/api/projects/${projectId}/members`),
+      add: (projectId: string, input: { email: string; role: string }) =>
+        request<{ member: ProjectMember }>(`/api/projects/${projectId}/members`, { method: "POST", body: input }),
+      update: (projectId: string, userId: string, role: string) =>
+        request<{ member: ProjectMember }>(`/api/projects/${projectId}/members/${userId}`, {
+          method: "PATCH",
+          body: { role }
+        }),
+      remove: (projectId: string, userId: string) =>
+        request<void>(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" })
+    },
     documents: {
       list: (projectId: string) =>
         request<{ projectDocuments: Array<ProjectDocument & { document: SourceDocument | null }> }>(
@@ -161,7 +257,14 @@ export const api = {
         method: "POST",
         body: input
       }),
-    get: (id: string) => request<SearchQuery>(`/api/search/${id}`)
+    get: (id: string) => request<SearchQuery>(`/api/search/${id}`),
+    history: (limit = 20) => request<{ history: SearchHistoryItem[] }>(`/api/search/history?limit=${limit}`),
+    bookmarks: (limit = 50) => request<{ bookmarks: SearchHistoryItem[] }>(`/api/search/bookmarks?limit=${limit}`),
+    bookmark: (id: string, bookmarked: boolean) =>
+      request<{ ok: boolean; bookmarked: boolean }>(`/api/search/${id}/bookmark`, {
+        method: "PATCH",
+        body: { bookmarked }
+      })
   },
   documents: {
     get: (id: string) =>
@@ -172,7 +275,60 @@ export const api = {
       request<{ summary: import("@icrps/contracts").AiSummary }>(`/api/documents/${id}/summarize`, {
         method: "POST",
         body: input
-      })
+      }),
+    import: (input: {
+      sourceType: string;
+      title: string;
+      originalTitle?: string | null;
+      abstract?: string | null;
+      url?: string | null;
+      doi?: string | null;
+      patentNumber?: string | null;
+      publicationNumber?: string | null;
+      authors?: string[];
+      inventors?: string[];
+      applicants?: string[];
+      country?: string | null;
+      publicationDate?: string | null;
+      sourceName?: string | null;
+      projectId?: string | null;
+    }) =>
+      request<{ document: SourceDocument; created: boolean }>("/api/documents/import", {
+        method: "POST",
+        body: input
+      }),
+    similar: (id: string, limit = 10) =>
+      request<{ items: Array<{ document: SourceDocument; score: number; matchedTerms: string[] }> }>(
+        `/api/documents/${id}/similar?limit=${limit}`
+      ),
+    citations: (id: string) =>
+      request<{
+        citation: {
+          doi: string | null;
+          citedByCount: number | null;
+          referenceCount: number | null;
+          references: Array<{ doi: string; title?: string }>;
+          citedBy: Array<{ doi?: string; title?: string; openalexId?: string }>;
+          fetchedAt: string;
+        };
+      }>(`/api/documents/${id}/citations`),
+    patentFamily: (id: string) =>
+      request<{
+        family: {
+          mode: "ops" | "db" | "none";
+          familyId: string | null;
+          members: Array<{
+            patentNumber: string;
+            country: string | null;
+            kind: string | null;
+            publicationDate: string | null;
+            title: string | null;
+            applicants: string[];
+            source: "ops" | "db";
+          }>;
+          note?: string;
+        };
+      }>(`/api/documents/${id}/patent-family`)
   },
   comparisons: {
     create: (projectId: string, input: { title?: string; documentIds: string[]; axes: string[] }) =>
@@ -184,7 +340,9 @@ export const api = {
   reports: {
     create: (projectId: string, input: { title: string; reportType: string; documentIds?: string[]; comparisonId?: string }) =>
       request<{ report: Report }>(`/api/projects/${projectId}/reports`, { method: "POST", body: input }),
-    get: (id: string) => request<{ report: Report }>(`/api/reports/${id}`)
+    get: (id: string) => request<{ report: Report }>(`/api/reports/${id}`),
+    exportFile: (id: string, format: "markdown" | "word" | "excel" | "html") =>
+      requestBlob(`/api/reports/${id}/export?format=${format}`, { method: "POST" })
   },
   watch: {
     list: () => request<{ topics: Array<{ id: string; displayName: string; terms: string | null; keyword: string; frequency: string; enabled: boolean; createdAt: string }> }>("/api/watch"),
@@ -192,7 +350,18 @@ export const api = {
       request<{ topic: { id: string } }>("/api/watch", { method: "POST", body: input }),
     update: (id: string, input: Partial<{ displayName: string; terms: string; keyword: string; frequency: string; enabled: boolean }>) =>
       request<{ topic: { id: string; enabled: boolean } }>(`/api/watch/${id}`, { method: "PATCH", body: input }),
-    remove: (id: string) => request<void>(`/api/watch/${id}`, { method: "DELETE" })
+    remove: (id: string) => request<void>(`/api/watch/${id}`, { method: "DELETE" }),
+    runNow: () =>
+      request<{
+        results: Array<{ topicId: string; keyword: string; fetched: number; inserted: number; notified: number }>;
+        message?: string;
+      }>("/api/watch/run", { method: "POST" })
+  },
+  notifications: {
+    list: (limit = 50) => request<{ notifications: NotificationItem[] }>(`/api/notifications?limit=${limit}`),
+    unreadCount: () => request<{ count: number }>("/api/notifications/unread-count"),
+    markRead: (id: string) => request<{ ok: boolean }>(`/api/notifications/${id}/read`, { method: "POST" }),
+    markAllRead: () => request<{ ok: boolean; count: number }>("/api/notifications/read-all", { method: "POST" })
   },
   chat: {
     send: (message: string) =>
@@ -237,6 +406,42 @@ export const api = {
           error?: string;
         }>;
       }>("/api/admin/ingest/run", { method: "POST" }),
+    stats: () =>
+      request<{
+        stats: {
+          totalUsers: number;
+          adminUsers: number;
+          totalProjects: number;
+          totalDocuments: number;
+          documentsByType: Array<{ sourceType: string; count: number }>;
+          totalSearches: number;
+          totalComparisons: number;
+          totalReports: number;
+          totalWatchTopics: number;
+          ingestRuns: number;
+          lastIngestRunAt: string | null;
+        };
+      }>("/api/admin/stats"),
+    usage: (days = 30) =>
+      request<{
+        usage: {
+          totalCalls: number;
+          totalInputTokens: number;
+          totalOutputTokens: number;
+          totalCost: number;
+          byModel: Array<{ provider: string; model: string; calls: number; inputTokens: number; outputTokens: number; cost: number }>;
+          recent: Array<{
+            id: string;
+            action: string;
+            provider: string;
+            model: string;
+            inputTokens: number;
+            outputTokens: number;
+            costEstimate: number;
+            createdAt: string;
+          }>;
+        };
+      }>(`/api/admin/usage?days=${days}`),
     settings: {
       get: () =>
         request<{

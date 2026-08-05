@@ -185,6 +185,62 @@ select {
   margin: 0 0 14px;
 }
 
+.auth-info {
+  background: #e4f3ec;
+  color: #1f8255;
+  border: 1px solid #b7e0c5;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  margin: 0 0 14px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.auth-tab {
+  cursor: pointer;
+  border: 1px solid #e3e8ef;
+  background: #fff;
+  color: #5a6678;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.auth-tab.active {
+  border-color: #e08a2b;
+  background: #fdefe0;
+  color: #b5701a;
+}
+
+.auth-link-button {
+  width: 100%;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: #2e5aac;
+  font: inherit;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.auth-button.google {
+  border-color: #5a6678;
+  background: #fff;
+  color: #1a2433;
+  margin-top: 10px;
+}
+
+.auth-button.google:hover {
+  background: #f2f4f8;
+}
+
 @media (max-width: 720px) {
   aside {
     width: 200px !important;
