@@ -37,7 +37,7 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.9.0（ローカル本番適用済み 2026-08-05／Cloudflare は v0.1.1 のまま）",
+      "version": "v0.9.0（ローカル本番・Cloudflare 本番適用済み 2026-08-05）",
       "date": "2026-08-05",
       "production_url": "https://icrps.mirai-dx-platform.com",
       "local_fallback_url": "http://192.168.0.185:8787",
@@ -86,6 +86,13 @@
       ],
       "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
       "cloudflare": "icrps.mirai-dx-platform.com 稼働中（worker beb23e50・Access 有効）",
+      "cloudflare_v090": "version d427904b（2026-08-05 デプロイ・custom domain 稼働・Access 302 確認）",
+      "preview": "https://icrps-api-preview.kensan1969.workers.dev（v0.9.0 検証済み）",
+      "merged_prs": [22, 23],
+      "main_commits": {
+        "v0.9.0": "50ba2bb59afee8811c4242114241823d6d2d6a79",
+        "hotfix_classifications": "04d847793faa067f7f16175df4ba4e1904669b39"
+      },
       "domain_migration": {
         "status": "稼働中（Access 設定待ち）",
         "subdomain": "icrps.mirai-dx-platform.com",
