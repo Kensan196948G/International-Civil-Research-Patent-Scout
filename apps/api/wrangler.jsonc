@@ -41,6 +41,8 @@
     "preview": {
       "name": "icrps-api-preview",
       "workers_dev": true,
+      // 本番 custom domain を Preview に継承させない
+      "routes": [],
       "assets": {
         "directory": "../web/dist",
         "not_found_handling": "single-page-application",
