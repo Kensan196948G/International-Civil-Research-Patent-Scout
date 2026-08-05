@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type {
   AiSummary,
   Comparison,
   ProjectDocument,
+  ProjectMember,
   ResearchProject,
+  ReportType,
   SearchResultItem,
   SourceDocument,
+  Team,
+  TeamMember,
   User
 } from "@icrps/contracts";
-import { DISCLAIMER } from "@icrps/contracts";
-import { api, type LiteratureItem } from "../api";
+import { DISCLAIMER, REPORT_TYPES, SOURCE_TYPE_LABELS } from "@icrps/contracts";
+import { api, type LiteratureItem, type NotificationItem, type SearchHistoryItem } from "../api";
 import { useAuth } from "../auth";
 
 export type Page =
@@ -115,9 +119,70 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [projects, setProjects] = useState<ResearchProject[]>([]);
+  const [projectMembers, setProjectMembers] = useState<Record<string, ProjectMember[]>>({});
+  const [memberProjectId, setMemberProjectId] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState("viewer");
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberMsg, setMemberMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Record<string, TeamMember[]>>({});
+  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [teamName, setTeamName] = useState("");
+  const [teamMemberEmail, setTeamMemberEmail] = useState("");
+  const [teamMemberRole, setTeamMemberRole] = useState("viewer");
+  const [teamBusy, setTeamBusy] = useState(false);
+  const [teamMsg, setTeamMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [transferEmail, setTransferEmail] = useState("");
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferMsg, setTransferMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [projectTeamId, setProjectTeamId] = useState("");
+  const [teamStats, setTeamStats] = useState<Awaited<ReturnType<typeof api.teams.stats>>["stats"] | null>(null);
   const [projectDocs, setProjectDocs] = useState<Record<string, Array<ProjectDocument & { document: SourceDocument | null }>>>({});
   const [stats, setStats] = useState<{ projectCount: number; savedDocumentCount: number; reportCount: number; searchCount: number } | null>(null);
   const [audit, setAudit] = useState<Array<{ id: string; action: string; createdAt: string; detail: unknown }>>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [bookmarks, setBookmarks] = useState<SearchHistoryItem[]>([]);
+  const [similarDocs, setSimilarDocs] = useState<
+    Array<{ id: string; title: string; venue: string; url: string; score: number; matchedTerms: string[] }>
+  >([]);
+  const [shareMsg, setShareMsg] = useState("");
+  const [historyBusy, setHistoryBusy] = useState(false);
+  const [citationInfo, setCitationInfo] = useState<Awaited<ReturnType<typeof api.documents.citations>>["citation"] | null>(null);
+  const [citationBusy, setCitationBusy] = useState(false);
+  const [familyInfo, setFamilyInfo] = useState<Awaited<ReturnType<typeof api.documents.patentFamily>>["family"] | null>(null);
+  const [familyBusy, setFamilyBusy] = useState(false);
+  const [facetTypes, setFacetTypes] = useState<Set<string>>(new Set());
+  const [facetCountries, setFacetCountries] = useState<Set<string>>(new Set());
+  const [facetStatuses, setFacetStatuses] = useState<Set<string>>(new Set());
+  const [facetYearFrom, setFacetYearFrom] = useState("");
+  const [facetYearTo, setFacetYearTo] = useState("");
+  const [apiAdminStats, setApiAdminStats] = useState<Awaited<ReturnType<typeof api.admin.stats>>["stats"] | null>(null);
+  const [llmUsage, setLlmUsage] = useState<Awaited<ReturnType<typeof api.admin.usage>>["usage"] | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importForm, setImportForm] = useState({
+    sourceType: "patent",
+    title: "",
+    originalTitle: "",
+    abstract: "",
+    url: "",
+    doi: "",
+    patentNumber: "",
+    authors: "",
+    publicationDate: "",
+    sourceName: "",
+    projectId: ""
+  });
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState<{ type: "ok" | "error" | "info"; text: string }>({ type: "info", text: "" });
+  const [pwdCurrent, setPwdCurrent] = useState("");
+  const [pwdNew, setPwdNew] = useState("");
+  const [pwdBusy, setPwdBusy] = useState(false);
+  const [pwdMsg, setPwdMsg] = useState<{ type: "ok" | "error" | "info"; text: string }>({ type: "info", text: "" });
+  const [watchRunBusy, setWatchRunBusy] = useState(false);
+  const [watchRunMsg, setWatchRunMsg] = useState<{ type: "ok" | "error" | "info"; text: string }>({ type: "info", text: "" });
   const [feedDomain, setFeedDomain] = useState("すべて");
   const [feedType, setFeedType] = useState("すべて");
   const [feedTab, setFeedTab] = useState<"saved" | "collected">("saved");
@@ -130,6 +195,12 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [litError, setLitError] = useState<string | null>(null);
   const litOffsetRef = useRef(0);
   const [q, setQ] = useState("低炭素コンクリート 海洋環境 塩害 実証データ");
+  const [searchTypes, setSearchTypes] = useState<Set<string>>(new Set(["web", "paper", "patent"]));
+  const [yearFrom, setYearFrom] = useState("");
+  const [yearTo, setYearTo] = useState("");
+  const [countries, setCountries] = useState<Set<string>>(new Set(["JP", "US", "EP"]));
+  const [reportType, setReportType] = useState<ReportType>("summary");
+  const [reportTitle, setReportTitle] = useState("技術調査レポート");
   const [phase, setPhase] = useState<"idle" | "running" | "done">("idle");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [expanded, setExpanded] = useState<string[]>([]);
@@ -213,6 +284,18 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       try {
         const [p, s] = await Promise.all([api.projects.list(), api.dashboard.stats()]);
         setProjects(p.projects);
+        const membersEntries = await Promise.all(
+          p.projects.map(async (pr) => {
+            try {
+              const res = await api.projects.members.list(pr.id);
+              return [pr.id, res.members] as const;
+            } catch {
+              return [pr.id, []] as const;
+            }
+          })
+        );
+        setProjectMembers(Object.fromEntries(membersEntries));
+        if (p.projects.length > 0) setMemberProjectId((prev) => prev || p.projects[0]!.id);
         setStats(s.stats);
         const docsMap: Record<string, Array<ProjectDocument & { document: SourceDocument | null }>> = {};
         const allDocs: SourceDocument[] = [];
@@ -290,6 +373,200 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       .catch(() => setWatchMsg({ type: "error", text: "ウォッチテーマの取得に失敗しました" }));
   }, [page]);
 
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const [res, count] = await Promise.all([api.notifications.list(50), api.notifications.unreadCount()]);
+      setNotifications(res.notifications);
+      setUnreadCount(count.count);
+      return { notifications: res.notifications, count: count.count };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (page !== "dashboard" && page !== "watch") return;
+    void refreshNotifications();
+  }, [page, refreshNotifications]);
+
+  useEffect(() => {
+    if (page !== "search") return;
+    setHistoryBusy(true);
+    void api.search
+      .history(20)
+      .then((res) => setSearchHistory(res.history))
+      .catch(() => undefined)
+      .finally(() => setHistoryBusy(false));
+    void api.search
+      .bookmarks(50)
+      .then((res) => setBookmarks(res.bookmarks))
+      .catch(() => undefined);
+  }, [page]);
+
+  useEffect(() => {
+    if (page !== "admin" || !isAdmin) return;
+    void api.admin
+      .stats()
+      .then((res) => setApiAdminStats(res.stats))
+      .catch(() => undefined);
+    void api.admin
+      .usage(30)
+      .then((res) => setLlmUsage(res.usage))
+      .catch(() => undefined);
+  }, [page, isAdmin]);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    await api.notifications.markAllRead();
+    await refreshNotifications();
+  }, [refreshNotifications]);
+
+  const markOneNotificationRead = useCallback(
+    async (id: string) => {
+      await api.notifications.markRead(id);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    },
+    []
+  );
+
+  const runWatchNow = useCallback(async () => {
+    setWatchRunBusy(true);
+    setWatchRunMsg({ type: "info", text: "ウォッチテーマを監視実行中…（最大 10 テーマ・数分かかる場合があります）" });
+    try {
+      const res = await api.watch.runNow();
+      const notified = res.results.reduce((acc, r) => acc + r.notified, 0);
+      const inserted = res.results.reduce((acc, r) => acc + r.inserted, 0);
+      setWatchRunMsg({
+        type: "ok",
+        text: `監視実行が完了しました: ${res.results.length} テーマ / 新着 ${notified} 件 / 新規登録 ${inserted} 件${res.message ? `（${res.message}）` : ""}`
+      });
+      await Promise.all([
+        api.watch.list().then((r) => setWatchTopics(r.topics)).catch(() => undefined),
+        refreshNotifications()
+      ]);
+    } catch (err) {
+      setWatchRunMsg({ type: "error", text: err instanceof Error ? err.message : "監視実行に失敗しました" });
+    } finally {
+      setWatchRunBusy(false);
+    }
+  }, [refreshNotifications]);
+
+  const submitImport = useCallback(async () => {
+    if (!importForm.title.trim()) {
+      setImportMsg({ type: "error", text: "タイトルを入力してください" });
+      return;
+    }
+    if (!importForm.url.trim() && !importForm.doi.trim() && !importForm.patentNumber.trim()) {
+      setImportMsg({ type: "error", text: "URL・DOI・特許番号のいずれかを入力してください" });
+      return;
+    }
+    setImportBusy(true);
+    setImportMsg({ type: "info", text: "文献を登録中…" });
+    try {
+      const authors = importForm.authors.split(/[,、]/).map((s) => s.trim()).filter(Boolean);
+      const res = await api.documents.import({
+        sourceType: importForm.sourceType,
+        title: importForm.title.trim(),
+        originalTitle: importForm.originalTitle.trim() || null,
+        abstract: importForm.abstract.trim() || null,
+        url: importForm.url.trim() || null,
+        doi: importForm.doi.trim() || null,
+        patentNumber: importForm.patentNumber.trim() || null,
+        authors,
+        publicationDate: importForm.publicationDate.trim() || null,
+        sourceName: importForm.sourceName.trim() || "手動登録",
+        projectId: importForm.projectId || null
+      });
+      setImportMsg({
+        type: "ok",
+        text: res.created ? "新規文献として登録しました。" : "既存の文献を再利用しました（重複登録はされません）。"
+      });
+      setImportForm((prev) => ({ ...prev, title: "", originalTitle: "", abstract: "", url: "", doi: "", patentNumber: "", authors: "", publicationDate: "", sourceName: "" }));
+      setImportOpen(false);
+      if (importForm.projectId) {
+        const pd = await api.projects.documents.list(importForm.projectId);
+        setProjectDocs((prev) => ({ ...prev, [importForm.projectId]: pd.projectDocuments }));
+      }
+    } catch (err) {
+      setImportMsg({ type: "error", text: err instanceof Error ? err.message : "登録に失敗しました" });
+    } finally {
+      setImportBusy(false);
+    }
+  }, [importForm, setProjectDocs]);
+
+  const setImportField = useCallback(
+    (field: keyof typeof importForm) => (e: { target: { value: string } }) => {
+      setImportForm((prev) => ({ ...prev, [field]: e.target.value }));
+    },
+    []
+  );
+
+  const changePassword = useCallback(async () => {
+    if (!pwdCurrent || pwdNew.length < 8) {
+      setPwdMsg({ type: "error", text: "現在のパスワードと 8 文字以上の新しいパスワードを入力してください" });
+      return;
+    }
+    setPwdBusy(true);
+    setPwdMsg({ type: "info", text: "パスワードを変更中…" });
+    try {
+      await api.changePassword({ currentPassword: pwdCurrent, newPassword: pwdNew });
+      setPwdCurrent("");
+      setPwdNew("");
+      setPwdMsg({ type: "ok", text: "パスワードを変更しました。次回ログインから新しいパスワードを使用してください。" });
+    } catch (err) {
+      setPwdMsg({ type: "error", text: err instanceof Error ? err.message : "変更に失敗しました" });
+    } finally {
+      setPwdBusy(false);
+    }
+  }, [pwdCurrent, pwdNew]);
+
+  const applyHistoryQuery = useCallback((query: string) => {
+    setQ(query);
+  }, []);
+
+  const toggleSearchType = useCallback((type: string) => {
+    setSearchTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
+
+  const toggleCountry = useCallback((country: string) => {
+    setCountries((prev) => {
+      const next = new Set(prev);
+      if (next.has(country)) next.delete(country);
+      else next.add(country);
+      return next;
+    });
+  }, []);
+
+  const exportResultsCsv = useCallback(() => {
+    if (searchResults.length === 0) return;
+    const rows = [
+      ["順位", "種別", "タイトル", "関連度", "公開日", "DOI/特許番号", "出典", "URL"],
+      ...searchResults.map((r, i) => [
+        String(i + 1),
+        SOURCE_TYPE_LABELS[r.sourceType] ?? r.sourceType,
+        r.title,
+        String(r.relevanceScore ?? ""),
+        r.publicationDate ?? "",
+        r.doi ?? r.patentNumber ?? "",
+        r.sourceName ?? "",
+        r.url ?? ""
+      ])
+    ];
+    const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "icrps-search-results.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [searchResults]);
+
   // 文書詳細の読み込み
   useEffect(() => {
     const id = documentId ?? lastDocId;
@@ -306,6 +583,51 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       }
     })();
   }, [documentId, page]);
+
+  useEffect(() => {
+    const id = documentId ?? lastDocId;
+    if (!id || page !== "document") return;
+    setSimilarDocs([]);
+    void api.documents
+      .similar(id, 10)
+      .then((res) =>
+        setSimilarDocs(
+          res.items.map((item) => ({
+            id: item.document.id,
+            title: item.document.title,
+            venue: item.document.sourceName ?? item.document.doi ?? "",
+            url: item.document.url ?? "#",
+            score: item.score,
+            matchedTerms: item.matchedTerms
+          }))
+        )
+      )
+      .catch(() => undefined);
+  }, [documentId, page]);
+
+  useEffect(() => {
+    const id = documentId ?? lastDocId;
+    if (!id || page !== "document") return;
+    setCitationBusy(true);
+    setCitationInfo(null);
+    void api.documents
+      .citations(id)
+      .then((res) => setCitationInfo(res.citation))
+      .catch(() => undefined)
+      .finally(() => setCitationBusy(false));
+  }, [documentId, page]);
+
+  useEffect(() => {
+    const id = documentId ?? lastDocId;
+    if (!id || page !== "document" || doc?.sourceType !== "patent") return;
+    setFamilyBusy(true);
+    setFamilyInfo(null);
+    void api.documents
+      .patentFamily(id)
+      .then((res) => setFamilyInfo(res.family))
+      .catch(() => undefined)
+      .finally(() => setFamilyBusy(false));
+  }, [documentId, page, doc?.sourceType]);
 
   // 保存済みレポートの表示
   useEffect(() => {
@@ -346,7 +668,10 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       const res = await api.search.start({
         query: q,
         languageMode: "bilingual",
-        sourceTypes: ["web", "paper", "patent"],
+        sourceTypes: searchTypes.size ? [...searchTypes] : ["web", "paper", "patent"],
+        countries: [...countries],
+        yearFrom: yearFrom ? Number(yearFrom) : undefined,
+        yearTo: yearTo ? Number(yearTo) : undefined,
         includeSynonyms: true,
         includeTranslation: true,
         maxResults: 20
@@ -362,7 +687,87 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     } catch {
       setPhase("done");
     }
-  }, [q]);
+  }, [q, searchTypes, yearFrom, yearTo, countries]);
+
+  const [searchParams] = useSearchParams();
+  const searchParamsAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (page !== "search" || searchParamsAppliedRef.current) return;
+    const qParam = searchParams.get("q");
+    if (!qParam) return;
+    searchParamsAppliedRef.current = true;
+    setQ(qParam);
+    const types = (searchParams.get("types") ?? "").split(",").filter(Boolean);
+    if (types.length) setSearchTypes(new Set(types));
+    setYearFrom(searchParams.get("from") ?? "");
+    setYearTo(searchParams.get("to") ?? "");
+    const countriesParam = (searchParams.get("countries") ?? "").split(",").filter(Boolean);
+    if (countriesParam.length) setCountries(new Set(countriesParam));
+    void runSearch();
+  }, [page, searchParams, runSearch]);
+
+  const shareSearch = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (q.trim()) params.set("q", q.trim());
+    if (searchTypes.size) params.set("types", [...searchTypes].join(","));
+    if (yearFrom) params.set("from", yearFrom);
+    if (yearTo) params.set("to", yearTo);
+    if (countries.size) params.set("countries", [...countries].join(","));
+    const url = `${window.location.origin}/search?${params.toString()}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareMsg("共有リンクをコピーしました（同じ条件で検索できます）");
+    } catch {
+      setShareMsg(url);
+    }
+  }, [q, searchTypes, yearFrom, yearTo, countries]);
+
+  const toggleBookmark = useCallback(async (id: string, current: boolean) => {
+    try {
+      await api.search.bookmark(id, !current);
+      setSearchHistory((prev) => prev.map((h) => (h.id === id ? { ...h, isBookmarked: !current } : h)));
+      const res = await api.search.bookmarks(50);
+      setBookmarks(res.bookmarks);
+    } catch {
+      // ブックマーク更新失敗時は表示を変更しない
+    }
+  }, []);
+
+  const toggleFacetType = useCallback((type: string) => {
+    setFacetTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
+
+  const toggleFacetCountry = useCallback((country: string) => {
+    setFacetCountries((prev) => {
+      const next = new Set(prev);
+      if (next.has(country)) next.delete(country);
+      else next.add(country);
+      return next;
+    });
+  }, []);
+
+  const toggleFacetStatus = useCallback((status: string) => {
+    setFacetStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  }, []);
+
+  const clearFacets = useCallback(() => {
+    setFacetTypes(new Set());
+    setFacetCountries(new Set());
+    setFacetStatuses(new Set());
+    setFacetYearFrom("");
+    setFacetYearTo("");
+  }, []);
 
   const regenSum = useCallback(async () => {
     const id = documentId ?? lastDocId;
@@ -405,18 +810,18 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     try {
       const ids = (Object.values(projectDocs).flat().map((x) => x.sourceDocumentId)).slice(0, 20);
       const res = await api.reports.create(projects[0]!.id, {
-        title: "技術調査レポート",
-        reportType: "summary",
+        title: reportTitle.trim() || "技術調査レポート",
+        reportType,
         documentIds: ids
       });
       setReportText(res.report.contentMarkdown);
-      setReportStatus(`ドラフト完了 · 引用 ${ids.length} 件`);
+      setReportStatus(`${REPORT_TYPES[reportType]} · ドラフト完了 · 引用 ${ids.length} 件`);
     } catch (err) {
       setReportStatus(err instanceof Error ? err.message : "生成失敗");
     } finally {
       setReportBusy(false);
     }
-  }, [projects, projectDocs]);
+  }, [projects, projectDocs, reportType, reportTitle]);
 
   const sendChat = useCallback(() => {
     const question = chatInput.trim();
@@ -447,14 +852,23 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
 
   const regenDigest = useCallback(() => {
     setDigestBusy(true);
-    setDigestText("再生成中…");
     setTimeout(() => {
-      setDigestText(
-        `調査プロジェクト ${projects.length} 件・保存文献 ${Object.values(projectDocs).flat().length} 件。直近の保存文献から重点テーマの新着を選別しています。`
-      );
+      const unread = notifications.filter((n) => !n.readAt);
+      if (unread.length > 0) {
+        setDigestText(
+          `更新監視により未読の新着候補が ${unread.length} 件あります。直近: ${unread
+            .slice(0, 3)
+            .map((n) => n.title)
+            .join(" / ")}。詳細は「更新監視」画面で確認できます。`
+        );
+      } else {
+        setDigestText(
+          `調査プロジェクト ${projects.length} 件・保存文献 ${Object.values(projectDocs).flat().length} 件。直近の保存文献から重点テーマの新着を選別しています。新着通知はありません。`
+        );
+      }
       setDigestBusy(false);
     }, 800);
-  }, [projects, projectDocs]);
+  }, [projects, projectDocs, notifications]);
 
   const refreshSettings = useCallback(async () => {
     try {
@@ -649,6 +1063,197 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     }
   }, [newProjectTitle]);
 
+  const refreshProjectMembers = useCallback(async (projectId: string) => {
+    try {
+      const res = await api.projects.members.list(projectId);
+      setProjectMembers((prev) => ({ ...prev, [projectId]: res.members }));
+      return res.members;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const addProjectMember = useCallback(async () => {
+    if (!memberProjectId || !memberEmail.trim()) {
+      setMemberMsg({ type: "error", text: "プロジェクトとメールアドレスを入力してください" });
+      return;
+    }
+    setMemberBusy(true);
+    setMemberMsg(null);
+    try {
+      await api.projects.members.add(memberProjectId, { email: memberEmail.trim(), role: memberRole });
+      setMemberEmail("");
+      await refreshProjectMembers(memberProjectId);
+      setMemberMsg({ type: "ok", text: "メンバーを追加しました" });
+    } catch (err) {
+      setMemberMsg({ type: "error", text: err instanceof Error ? err.message : "追加に失敗しました" });
+    } finally {
+      setMemberBusy(false);
+    }
+  }, [memberProjectId, memberEmail, memberRole, refreshProjectMembers]);
+
+  const changeProjectMemberRole = useCallback(
+    async (projectId: string, userId: string, role: string) => {
+      try {
+        await api.projects.members.update(projectId, userId, role);
+        await refreshProjectMembers(projectId);
+      } catch {
+        setMemberMsg({ type: "error", text: "ロール変更に失敗しました" });
+      }
+    },
+    [refreshProjectMembers]
+  );
+
+  const removeProjectMember = useCallback(
+    async (projectId: string, userId: string) => {
+      try {
+        await api.projects.members.remove(projectId, userId);
+        await refreshProjectMembers(projectId);
+      } catch {
+        setMemberMsg({ type: "error", text: "メンバー削除に失敗しました" });
+      }
+    },
+    [refreshProjectMembers]
+  );
+
+  useEffect(() => {
+    if (page !== "projects") return;
+    void api.teams
+      .list()
+      .then((res) => {
+        setTeams(res.teams);
+        if (res.teams.length > 0) setSelectedTeamId((prev) => prev || res.teams[0]!.id);
+      })
+      .catch(() => undefined);
+  }, [page]);
+
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    void api.teams.members
+      .list(selectedTeamId)
+      .then((res) => setTeamMembers((prev) => ({ ...prev, [selectedTeamId]: res.members })))
+      .catch(() => undefined);
+    void api.teams
+      .stats(selectedTeamId)
+      .then((res) => setTeamStats(res.stats))
+      .catch(() => undefined);
+  }, [selectedTeamId]);
+
+  const createTeam = useCallback(async () => {
+    if (!teamName.trim()) {
+      setTeamMsg({ type: "error", text: "チーム名を入力してください" });
+      return;
+    }
+    setTeamBusy(true);
+    setTeamMsg(null);
+    try {
+      const res = await api.teams.create(teamName.trim());
+      setTeamName("");
+      const list = await api.teams.list();
+      setTeams(list.teams);
+      setSelectedTeamId(res.team.id);
+      setTeamMsg({ type: "ok", text: `チーム「${res.team.name}」を作成しました` });
+    } catch (err) {
+      setTeamMsg({ type: "error", text: err instanceof Error ? err.message : "作成に失敗しました" });
+    } finally {
+      setTeamBusy(false);
+    }
+  }, [teamName]);
+
+  const addTeamMember = useCallback(async () => {
+    if (!selectedTeamId || !teamMemberEmail.trim()) {
+      setTeamMsg({ type: "error", text: "チームとメールアドレスを入力してください" });
+      return;
+    }
+    setTeamBusy(true);
+    setTeamMsg(null);
+    try {
+      await api.teams.members.add(selectedTeamId, { email: teamMemberEmail.trim(), role: teamMemberRole });
+      setTeamMemberEmail("");
+      const res = await api.teams.members.list(selectedTeamId);
+      setTeamMembers((prev) => ({ ...prev, [selectedTeamId]: res.members }));
+      setTeamMsg({ type: "ok", text: "チームメンバーを追加しました" });
+    } catch (err) {
+      setTeamMsg({ type: "error", text: err instanceof Error ? err.message : "追加に失敗しました" });
+    } finally {
+      setTeamBusy(false);
+    }
+  }, [selectedTeamId, teamMemberEmail, teamMemberRole]);
+
+  const changeTeamMemberRole = useCallback(
+    async (teamId: string, userId: string, role: string) => {
+      try {
+        await api.teams.members.update(teamId, userId, role);
+        const res = await api.teams.members.list(teamId);
+        setTeamMembers((prev) => ({ ...prev, [teamId]: res.members }));
+      } catch {
+        setTeamMsg({ type: "error", text: "ロール変更に失敗しました" });
+      }
+    },
+    []
+  );
+
+  const removeTeamMember = useCallback(
+    async (teamId: string, userId: string) => {
+      try {
+        await api.teams.members.remove(teamId, userId);
+        const res = await api.teams.members.list(teamId);
+        setTeamMembers((prev) => ({ ...prev, [teamId]: res.members }));
+      } catch {
+        setTeamMsg({ type: "error", text: "メンバー削除に失敗しました" });
+      }
+    },
+    []
+  );
+
+  const assignProjectTeam = useCallback(async () => {
+    if (!memberProjectId) {
+      setTeamMsg({ type: "error", text: "対象プロジェクトを選択してください" });
+      return;
+    }
+    setTeamBusy(true);
+    setTeamMsg(null);
+    try {
+      await api.projects.setTeam(memberProjectId, projectTeamId || null);
+      const res = await api.projects.list();
+      setProjects(res.projects);
+      setTeamMsg({ type: "ok", text: "プロジェクトのチーム割当を更新しました" });
+    } catch (err) {
+      setTeamMsg({ type: "error", text: err instanceof Error ? err.message : "更新に失敗しました" });
+    } finally {
+      setTeamBusy(false);
+    }
+  }, [memberProjectId, projectTeamId]);
+
+  const transferOwnership = useCallback(async () => {
+    if (!memberProjectId || !transferEmail.trim()) {
+      setTransferMsg({ type: "error", text: "プロジェクトと移譲先メールアドレスを入力してください" });
+      return;
+    }
+    setTransferBusy(true);
+    setTransferMsg(null);
+    try {
+      await api.projects.transfer(memberProjectId, transferEmail.trim());
+      setTransferEmail("");
+      const res = await api.projects.list();
+      setProjects(res.projects);
+      setTransferMsg({ type: "ok", text: "プロジェクトのオーナーを移譲しました（自分は admin メンバーとして残ります）" });
+    } catch (err) {
+      setTransferMsg({ type: "error", text: err instanceof Error ? err.message : "移譲に失敗しました" });
+    } finally {
+      setTransferBusy(false);
+    }
+  }, [memberProjectId, transferEmail]);
+
+  const selectMemberProject = useCallback(
+    (value: string) => {
+      setMemberProjectId(value);
+      const project = projects.find((p) => p.id === value);
+      setProjectTeamId(project?.teamId ?? "");
+    },
+    [projects]
+  );
+
   const startSave = useCallback((documentId: string | null) => {
     if (!documentId) return;
     if (projects.length === 0) {
@@ -723,6 +1328,40 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     a.click();
     URL.revokeObjectURL(url);
   }, [reportText]);
+
+  const exportReportFile = useCallback(async (format: "word" | "excel") => {
+    const id = reportId;
+    if (!id) return;
+    try {
+      const blob = await api.reports.exportFile(id, format);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `icrps-report.${format === "word" ? "doc" : "xls"}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // エクスポート失敗時は何もしない
+    }
+  }, [reportId]);
+
+  const exportReportPdf = useCallback(async () => {
+    const id = reportId;
+    if (!id) return;
+    try {
+      const blob = await api.reports.exportFile(id, "html");
+      const text = await blob.text();
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(text);
+        win.document.close();
+        win.focus();
+        win.print();
+      }
+    } catch {
+      // 印刷ウィンドウを開けない場合は何もしない
+    }
+  }, [reportId]);
 
   const acceptSuggest = useCallback(() => {
     setQ((prev) => `${prev} 実構造物データ 暴露試験`);
@@ -886,9 +1525,36 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     [q, expanded]
   );
 
+  const facetCounts = useMemo(() => {
+    const types = new Map<string, number>();
+    const countries = new Map<string, number>();
+    const statuses = new Map<string, number>();
+    for (const r of searchResults) {
+      types.set(r.sourceType, (types.get(r.sourceType) ?? 0) + 1);
+      if (r.country) countries.set(r.country, (countries.get(r.country) ?? 0) + 1);
+      if (r.patentStatus) statuses.set(r.patentStatus, (statuses.get(r.patentStatus) ?? 0) + 1);
+    }
+    return { types, countries, statuses };
+  }, [searchResults]);
+
+  const visibleResults = useMemo(
+    () =>
+      searchResults.filter((r) => {
+        const year = r.publicationDate ? Number(r.publicationDate.slice(0, 4)) : null;
+        return (
+          (facetTypes.size === 0 || facetTypes.has(r.sourceType)) &&
+          (facetCountries.size === 0 || (r.country ? facetCountries.has(r.country) : false)) &&
+          (facetStatuses.size === 0 || (r.patentStatus ? facetStatuses.has(r.patentStatus) : false)) &&
+          (facetYearFrom === "" || (year !== null && year >= Number(facetYearFrom))) &&
+          (facetYearTo === "" || (year !== null && year <= Number(facetYearTo)))
+        );
+      }),
+    [searchResults, facetTypes, facetCountries, facetStatuses, facetYearFrom, facetYearTo]
+  );
+
   const results = useMemo(
     () =>
-      searchResults.map((r) => {
+      visibleResults.map((r) => {
         const type = r.sourceType === "pdf" ? "book" : r.sourceType;
         const on = picks.includes(r.documentId);
         return {
@@ -901,6 +1567,10 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
           typeStyle: TYPE_STYLE[type] ?? TYPE_STYLE.web,
           typeLabel: TYPE_LABEL[type] ?? "Web",
           score: (r.relevanceScore ?? 50) / 100,
+          patentStatus: r.patentStatus ?? null,
+          country: r.country ?? null,
+          inventors: r.inventors ?? [],
+          applicants: r.applicants ?? [],
           goDoc: () => openDoc(r.documentId),
           pickLabel: on ? "✓ 比較に追加済" : "比較に追加",
           pickStyle: on
@@ -909,7 +1579,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
           toggle: () => setPicks((prev) => (on ? prev.filter((x) => x !== r.documentId) : [...prev, r.documentId]))
         };
       }),
-    [searchResults, picks, openDoc]
+    [visibleResults, picks, openDoc]
   );
 
   const sumText = useMemo(() => {
@@ -928,19 +1598,17 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
 
   const related = useMemo(
     () =>
-      allDocs
-        .filter((d) => d.id !== (documentId ?? lastDocId))
-        .slice(0, 5)
-        .map((d) => ({
-          rel: "同主題",
-          title: d.title,
-          venue: d.sourceName ?? "",
-          sim: "0.80",
-          relStyle:
-            "font-size:10.5px;font-weight:700;color:#B5701A;background:#FDEFE0;padding:2px 8px;border-radius:5px;flex-shrink:0",
-          barStyle: "display:block;height:100%;width:80%;background:#E08A2B;border-radius:3px"
-        })),
-    [allDocs, documentId]
+      similarDocs.map((d) => ({
+        rel: "類似",
+        title: d.title,
+        venue: d.venue,
+        sim: (d.score / 100).toFixed(2),
+        relStyle:
+          "font-size:10.5px;font-weight:700;color:#B5701A;background:#FDEFE0;padding:2px 8px;border-radius:5px;flex-shrink:0",
+        barStyle: `display:block;height:100%;width:${Math.min(100, d.score)}%;background:#E08A2B;border-radius:3px`,
+        go: () => openDoc(d.id)
+      })),
+    [similarDocs, openDoc]
   );
 
   const axes = useMemo(
@@ -1128,10 +1796,14 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       totalUsers: users.length,
       admins,
       connectorLabel: activeProvider ? `AI: ${activeProvider}` : "AI: 未設定（ルール応答）",
-      costLabel: "未計測（コスト連携は Phase 2）",
-      rejectLabel: "—（却下機能は Phase 2）"
+      costLabel: apiAdminStats ? `文献 ${apiAdminStats.totalDocuments} 件` : "—",
+      costSub: apiAdminStats
+        ? `検索 ${apiAdminStats.totalSearches} / 比較 ${apiAdminStats.totalComparisons} / レポート ${apiAdminStats.totalReports}`
+        : "管理統計を読み込み中…",
+      rejectLabel: apiAdminStats ? `${apiAdminStats.totalWatchTopics} テーマ` : "—",
+      rejectSub: apiAdminStats ? `収集実行 ${apiAdminStats.ingestRuns} 回` : "ウォッチテーマ数"
     };
-  }, [users, activeProvider]);
+  }, [users, activeProvider, apiAdminStats]);
 
   const claimsInfo = useMemo(() => {
     if (doc?.sourceType !== "patent") {
@@ -1148,25 +1820,33 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   }, [doc, summaries]);
 
   const watchNotices = useMemo(
-    () =>
-      watchTopics.length === 0
-        ? "通知はまだありません。テーマを登録すると新着の検知結果がここに表示されます（バックグラウンド監視は Phase 2）。"
-        : `登録テーマ ${watchTopics.length} 件。新着監視ジョブは Phase 2 で有効化されます。`,
-    [watchTopics]
+    () => {
+      if (notifications.length === 0) {
+        return watchTopics.length === 0
+          ? "通知はまだありません。テーマを登録すると新着の検知結果がここに表示されます。"
+          : "通知はまだありません。2 時間ごとの自動監視または「今すぐ監視」で新着を検知できます。";
+      }
+      const lines = notifications.slice(0, 5).map(
+        (n) => `${n.readAt ? "既読" : "未読"} · ${n.createdAt.slice(5, 16).replace("T", " ")} · ${n.title}`
+      );
+      return lines.join("\n") + (notifications.length > 5 ? `\nほか ${notifications.length - 5} 件` : "");
+    },
+    [notifications, watchTopics.length]
   );
 
   const watchTopicVars = useMemo(
     () =>
       watchTopics.map((t) => {
         const on = t.enabled;
+        const newCount = notifications.filter((n) => n.watchTopicId === t.id && !n.readAt).length;
         return {
           id: t.id,
           name: t.displayName,
           terms: t.terms ?? t.keyword,
           meta: `${t.frequency === "daily" ? "毎日" : t.frequency === "monthly" ? "毎月" : "毎週"} · 登録 ${t.createdAt.slice(0, 10)}`,
           freq: on ? (t.frequency === "daily" ? "毎日" : t.frequency === "monthly" ? "毎月" : "毎週") : "停止中",
-          isNew: false,
-          newCount: 0,
+          isNew: newCount > 0,
+          newCount,
           label: on ? "監視中" : "停止",
           style: on
             ? "cursor:pointer;border:1px solid #1F8255;background:#E4F3EC;color:#1F8255;padding:5px 13px;border-radius:7px;font:inherit;font-size:11.5px;font-weight:600"
@@ -1175,7 +1855,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
           remove: () => removeWatchTopic(t.id)
         };
       }),
-    [watchTopics, toggleWatchTopic, removeWatchTopic]
+    [watchTopics, notifications, toggleWatchTopic, removeWatchTopic]
   );
 
   const auditRows = useMemo(
@@ -1250,8 +1930,8 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const statDocsSub = "論文・特許・Web の混在コレクション";
   const statReports = String(stats?.reportCount ?? 0);
   const statReportsSub = `生成レポート ${stats?.reportCount ?? 0} 件`;
-  const statWatch = "0";
-  const statWatchSub = "更新監視は Phase 2 で有効化";
+  const statWatch = String(unreadCount);
+  const statWatchSub = unreadCount > 0 ? `${unreadCount} 件の未読通知（更新監視）` : "ウォッチ監視で検知した未読通知";
   const digestMeta = `直近データから自動生成 · 保存文献 ${allDocs.length} 件を対象`;
 
   return {
@@ -1278,7 +1958,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       {
         label: "管理",
         items: [
-          { ico: "🔔", label: "更新監視", badge: null, active: page === "watch", go: () => go("watch") },
+          { ico: "🔔", label: "更新監視", badge: unreadCount > 0 ? String(unreadCount) : null, active: page === "watch", go: () => go("watch") },
           { ico: "📁", label: "プロジェクト", active: page === "projects", go: () => go("projects") },
           ...(isAdmin
             ? [
@@ -1333,6 +2013,14 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     loadMoreLiterature: () => void loadLiterature(false),
     q,
     setQ: (e: { target: { value: string } }) => setQ(e.target.value),
+    searchTypes: [...searchTypes],
+    toggleSearchType,
+    yearFrom,
+    setYearFrom: (e: { target: { value: string } }) => setYearFrom(e.target.value),
+    yearTo,
+    setYearTo: (e: { target: { value: string } }) => setYearTo(e.target.value),
+    countries: [...countries],
+    toggleCountry,
     runSearch,
     searchStatus:
       phase === "idle" ? "待機中" : phase === "running" ? "実行中… 3 情報源に並列問い合わせ" : `完了 · ${searchResults.length} 件`,
@@ -1343,6 +2031,31 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     resultsReady: phase === "done",
     results,
     resultCount: searchResults.length,
+    visibleCount: visibleResults.length,
+    facetActive: facetTypes.size + facetCountries.size + facetStatuses.size > 0,
+    facetTypeOptions: [...facetCounts.types.entries()].map(([value, count]) => ({
+      value,
+      count,
+      on: facetTypes.has(value),
+      toggle: () => toggleFacetType(value)
+    })),
+    facetCountryOptions: [...facetCounts.countries.entries()].map(([value, count]) => ({
+      value,
+      count,
+      on: facetCountries.has(value),
+      toggle: () => toggleFacetCountry(value)
+    })),
+    facetStatusOptions: [...facetCounts.statuses.entries()].map(([value, count]) => ({
+      value,
+      count,
+      on: facetStatuses.has(value),
+      toggle: () => toggleFacetStatus(value)
+    })),
+    facetYearFrom,
+    setFacetYearFrom: (e: { target: { value: string } }) => setFacetYearFrom(e.target.value),
+    facetYearTo,
+    setFacetYearTo: (e: { target: { value: string } }) => setFacetYearTo(e.target.value),
+    clearFacets,
     hasCompare: picks.length >= 2,
     compareCount: picks.length,
     toggleQueryEdit: () => setSuggestDismissed((prev) => !prev),
@@ -1357,8 +2070,9 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     docTabs: [
       ["summary", "AI 要約"],
       ["abstract", "抄録と翻訳"],
-      ["claims", "特許クレーム解析"],
-      ["cite", "引用ネットワーク"]
+      ...(doc?.sourceType === "patent" ? (["claims", "特許クレーム解析"] as const) : []),
+      ["cite", "引用ネットワーク"],
+      ...(doc?.sourceType === "patent" ? (["family", "特許ファミリー"] as const) : [])
     ].map(([k, label]) => ({
       label,
       style:
@@ -1371,6 +2085,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     docTabAbstract: docTab === "abstract",
     docTabClaims: docTab === "claims",
     docTabCite: docTab === "cite",
+    docTabFamily: docTab === "family",
     sumLevels: [
       ["short", "短文（3 行）"],
       ["detail", "詳細"],
@@ -1396,6 +2111,11 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     compareStatus,
     compareRows,
     outline,
+    reportType,
+    setReportType: (v: string) => setReportType(v as ReportType),
+    reportTitle,
+    setReportTitle: (e: { target: { value: string } }) => setReportTitle(e.target.value),
+    reportTypeOptions: Object.entries(REPORT_TYPES).map(([value, label]) => ({ value, label })),
     genReport,
     reportText,
     reportBusy,
@@ -1405,6 +2125,8 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     setReportEdit,
     toggleReportEdit,
     exportReportMd,
+    exportReportFile,
+    exportReportPdf,
     chat: chat.map((m) => ({
       ...m,
       hasCites: !!(m.cites && m.cites.length),
@@ -1445,6 +2167,71 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
           ? "margin-top:10px;padding:9px 12px;background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F;border-radius:8px;font-size:12px;line-height:1.6"
           : "margin-top:10px;padding:9px 12px;background:#E9F0FB;border:1px solid #C9D7EC;color:#2E5AAC;border-radius:8px;font-size:12px;line-height:1.6",
     watchNotices,
+    notifications: notifications.map((n) => {
+      const url = n.url ?? "#";
+      return {
+        id: n.id,
+        title: n.title,
+        body: n.body ?? "",
+        url,
+        kind: n.kind,
+        read: !!n.readAt,
+        createdAt: n.createdAt,
+        go: url !== "#" ? () => window.open(url, "_blank", "noreferrer") : undefined,
+        markRead: n.readAt ? undefined : () => void markOneNotificationRead(n.id)
+      };
+    }),
+    unreadCount,
+    markAllNotificationsRead,
+    watchRunBusy,
+    watchRunMsg,
+    runWatchNow,
+    searchHistory: searchHistory.map((h) => ({
+      id: h.id,
+      query: h.queryText,
+      status: h.status,
+      resultCount: h.resultCount,
+      at: h.createdAt.slice(0, 16).replace("T", " "),
+      bookmarked: h.isBookmarked,
+      toggleBookmark: () => toggleBookmark(h.id, h.isBookmarked),
+      apply: () => applyHistoryQuery(h.queryText)
+    })),
+    bookmarks: bookmarks.map((h) => ({
+      id: h.id,
+      query: h.queryText,
+      resultCount: h.resultCount,
+      at: h.createdAt.slice(0, 16).replace("T", " "),
+      apply: () => applyHistoryQuery(h.queryText),
+      unbookmark: () => toggleBookmark(h.id, true)
+    })),
+    historyBusy,
+    shareSearch,
+    shareMsg,
+    importOpen,
+    setImportOpen,
+    importForm,
+    setImportField,
+    importBusy,
+    importMsg,
+    submitImport,
+    importProjects: projects,
+    pwdCurrent,
+    setPwdCurrent: (e: { target: { value: string } }) => setPwdCurrent(e.target.value),
+    pwdNew,
+    setPwdNew: (e: { target: { value: string } }) => setPwdNew(e.target.value),
+    pwdBusy,
+    pwdMsg,
+    changePassword,
+    pwdMsgStyle:
+      pwdMsg.type === "ok"
+        ? "margin-top:4px;padding:10px 13px;background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"
+        : pwdMsg.type === "error"
+          ? "margin-top:4px;padding:10px 13px;background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"
+          : "margin-top:4px;padding:10px 13px;background:#E9F0FB;border:1px solid #C9D7EC;color:#2E5AAC;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap",
+    citationInfo,
+    citationBusy,
+    familyInfo,
+    familyBusy,
     digestFreq,
     setDigestFreq: (e: { target: { value: string } }) => setDigestFreq(e.target.value),
     chatPaperCount: chatCounts.paper,
@@ -1464,6 +2251,44 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     setShowNewProject,
     createProject,
     projectMsg,
+    projectMembers,
+    memberProjectId,
+    onSelectMemberProject: (e: { target: { value: string } }) => selectMemberProject(e.target.value),
+    memberEmail,
+    setMemberEmail: (e: { target: { value: string } }) => setMemberEmail(e.target.value),
+    memberRole,
+    setMemberRole: (e: { target: { value: string } }) => setMemberRole(e.target.value),
+    memberBusy,
+    memberMsg,
+    addProjectMember,
+    changeProjectMemberRole,
+    removeProjectMember,
+    isOwnerOfSelected: projects.find((p) => p.id === memberProjectId)?.ownerUserId === user?.id,
+    teams,
+    selectedTeamId,
+    setSelectedTeamId: (e: { target: { value: string } }) => setSelectedTeamId(e.target.value),
+    teamStats,
+    teamName,
+    setTeamName: (e: { target: { value: string } }) => setTeamName(e.target.value),
+    teamMembers,
+    teamMemberEmail,
+    setTeamMemberEmail: (e: { target: { value: string } }) => setTeamMemberEmail(e.target.value),
+    teamMemberRole,
+    setTeamMemberRole: (e: { target: { value: string } }) => setTeamMemberRole(e.target.value),
+    teamBusy,
+    teamMsg,
+    createTeam,
+    addTeamMember,
+    changeTeamMemberRole,
+    removeTeamMember,
+    projectTeamId,
+    setProjectTeamId: (e: { target: { value: string } }) => setProjectTeamId(e.target.value),
+    assignProjectTeam,
+    transferEmail,
+    setTransferEmail: (e: { target: { value: string } }) => setTransferEmail(e.target.value),
+    transferBusy,
+    transferMsg,
+    transferOwnership,
     docActionMsg,
     clearDocument,
     saveOpenFor,
@@ -1481,15 +2306,20 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     claimsNote: claimsInfo.note,
     claimsText: claimsInfo.text,
     exportCompareCsv,
+    exportResultsCsv,
     compareSummary: comparison
       ? `比較表を生成しました（${comparison.rows.length} 文献 × ${comparison.comparisonAxes.length} 軸）。各セルは保存文献の要旨に基づきます。重要度の高い判断には原典確認と専門家確認が必要です。`
       : "比較表が未生成です。比較対象を選んで「比較表を生成」を実行してください。",
     adminTotalUsers: adminStats.totalUsers,
     adminAdmins: adminStats.admins,
     adminCostLabel: adminStats.costLabel,
+    adminCostSub: adminStats.costSub,
     adminConnectorLabel: adminStats.connectorLabel,
     adminRejectLabel: adminStats.rejectLabel,
+    adminRejectSub: adminStats.rejectSub,
     adminAccessDenied: !isAdmin,
+    adminStats,
+    llmUsage,
     projects: projectRows,
     audit: auditRows,
     fitReady,
