@@ -11,6 +11,16 @@ export interface WorkerEnv {
   CROSSREF_API_URL: string;
   OPENALEX_API_URL: string;
   SERP_API_KEY?: string;
+  ESPACENET_OPS_URL: string;
+  ESPACENET_OPS_KEY?: string;
+  ESPACENET_OPS_SECRET?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
+  ADMIN_EMAIL?: string;
+  MEILISEARCH_HOST?: string;
+  MEILISEARCH_API_KEY?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 }
 
 export const DEFAULTS = {
@@ -20,7 +30,8 @@ export const DEFAULTS = {
   OPENAI_BASE_URL: "https://api.openai.com/v1",
   AI_MODEL: "gpt-4o-mini",
   CROSSREF_API_URL: "https://api.crossref.org",
-  OPENALEX_API_URL: "https://api.openalex.org"
+  OPENALEX_API_URL: "https://api.openalex.org",
+  ESPACENET_OPS_URL: "https://ops.epo.org/3.2"
 } as const;
 
 export function resolveEnv(input: Partial<WorkerEnv> | undefined): WorkerEnv {
@@ -43,7 +54,17 @@ export function resolveEnv(input: Partial<WorkerEnv> | undefined): WorkerEnv {
     AI_MODEL: get("AI_MODEL") ?? DEFAULTS.AI_MODEL,
     CROSSREF_API_URL: get("CROSSREF_API_URL") ?? DEFAULTS.CROSSREF_API_URL,
     OPENALEX_API_URL: get("OPENALEX_API_URL") ?? DEFAULTS.OPENALEX_API_URL,
-    SERP_API_KEY: get("SERP_API_KEY")
+    SERP_API_KEY: get("SERP_API_KEY"),
+    ESPACENET_OPS_URL: get("ESPACENET_OPS_URL") ?? DEFAULTS.ESPACENET_OPS_URL,
+    ESPACENET_OPS_KEY: get("ESPACENET_OPS_KEY"),
+    ESPACENET_OPS_SECRET: get("ESPACENET_OPS_SECRET"),
+    RESEND_API_KEY: get("RESEND_API_KEY"),
+    EMAIL_FROM: get("EMAIL_FROM"),
+    ADMIN_EMAIL: get("ADMIN_EMAIL"),
+    MEILISEARCH_HOST: get("MEILISEARCH_HOST"),
+    MEILISEARCH_API_KEY: get("MEILISEARCH_API_KEY"),
+    GOOGLE_CLIENT_ID: get("GOOGLE_CLIENT_ID"),
+    GOOGLE_CLIENT_SECRET: get("GOOGLE_CLIENT_SECRET")
   };
 }
 

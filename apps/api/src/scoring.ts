@@ -107,3 +107,67 @@ export function dedupeAndScore(
     })
     .sort((a, b) => b.score - a.score);
 }
+
+/** 類似文献判定用のトークン化（英単語＋日本語2グラム） */
+export function tokenizeForSimilarity(text: string): Set<string> {
+  const normalized = text.toLowerCase();
+  const tokens = new Set<string>();
+  for (const word of normalized.split(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf]+/)) {
+    if (word.length >= 2) tokens.add(word);
+  }
+  const compact = normalized.replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf]/g, "");
+  for (let i = 0; i + 2 <= compact.length; i++) {
+    tokens.add(compact.slice(i, i + 2));
+  }
+  return tokens;
+}
+
+export interface SimilarityMetadata {
+  applicantsA?: string[];
+  applicantsB?: string[];
+  inventorsA?: string[];
+  inventorsB?: string[];
+  classificationsA?: string[];
+  classificationsB?: string[];
+}
+
+function normalizeName(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, "").replace(/[（(]株[)）]|株式会社|inc\.?/g, "");
+}
+
+function overlapCount(a: string[] | undefined, b: string[] | undefined, normalize: (v: string) => string): string[] {
+  if (!a?.length || !b?.length) return [];
+  const setB = new Set(b.map(normalize));
+  return [...new Set(a.map(normalize))].filter((v) => setB.has(v));
+}
+
+export function similarityScore(
+  aText: string,
+  bText: string,
+  metadata: SimilarityMetadata = {}
+): { score: number; matchedTerms: string[] } {
+  const a = tokenizeForSimilarity(aText);
+  const b = tokenizeForSimilarity(bText);
+  const matched = [...a].filter((t) => b.has(t));
+  const applicantHits = overlapCount(metadata.applicantsA, metadata.applicantsB, normalizeName);
+  const inventorHits = overlapCount(metadata.inventorsA, metadata.inventorsB, normalizeName);
+  const classHits = overlapCount(
+    metadata.classificationsA,
+    metadata.classificationsB,
+    (v) => v.toUpperCase().replace(/\s+/g, "")
+  );
+  if (matched.length === 0 && applicantHits.length === 0 && inventorHits.length === 0 && classHits.length === 0) {
+    return { score: 0, matchedTerms: [] };
+  }
+  const union = a.size + b.size - matched.length;
+  const jaccard = union > 0 ? matched.length / union : 0;
+  const overlap = Math.min(a.size, b.size) > 0 ? matched.length / Math.min(a.size, b.size) : 0;
+  const bonus =
+    Math.min(10, applicantHits.length * 5) +
+    Math.min(5, inventorHits.length * 3) +
+    Math.min(15, classHits.length * 5);
+  return {
+    score: Math.min(100, Math.round((jaccard * 0.5 + overlap * 0.5) * 100) + bonus),
+    matchedTerms: [...matched, ...applicantHits, ...classHits].slice(0, 10)
+  };
+}

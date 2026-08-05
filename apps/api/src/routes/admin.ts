@@ -6,8 +6,16 @@ import { createDb } from "../db.js";
 import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAdmin, requireAuth } from "../auth.js";
-import { listAuditLogs, listIngestRuns, listUsers, updateUserRole } from "../repositories.js";
+import {
+  getAdminStats,
+  getLlmUsageSummary,
+  listAuditLogs,
+  listIngestRuns,
+  listUsers,
+  updateUserRole
+} from "../repositories.js";
 import { runLiteratureIngest } from "../literature/index.js";
+import { reindexMeilisearch } from "../search-engine.js";
 
 const roleSchema = z.object({
   role: z.enum(["admin", "user", "viewer"])
@@ -44,6 +52,17 @@ export function adminRoutes(): Hono<AppBindings> {
     return c.json({ auditLogs: await listAuditLogs(db, 200) });
   });
 
+  app.get("/stats", async (c) => {
+    const db = createDb(resolveEnv(c.env));
+    return c.json({ stats: await getAdminStats(db) });
+  });
+
+  app.get("/usage", async (c) => {
+    const db = createDb(resolveEnv(c.env));
+    const days = Math.min(Math.max(Number(c.req.query("days") ?? 30), 1), 365);
+    return c.json({ usage: await getLlmUsageSummary(db, days) });
+  });
+
   app.get("/ingest/runs", async (c) => {
     const db = createDb(resolveEnv(c.env));
     return c.json({ runs: await listIngestRuns(db, 50) });
@@ -62,6 +81,19 @@ export function adminRoutes(): Hono<AppBindings> {
       }
     });
     return c.json({ results });
+  });
+
+  app.post("/search/reindex", async (c) => {
+    const env = resolveEnv(c.env);
+    const db = createDb(env);
+    const result = await reindexMeilisearch(db, env);
+    await createAuditLog(db, {
+      userId: c.get("userId"),
+      action: "admin.search_reindex",
+      resourceType: "system",
+      detail: { ...result }
+    });
+    return c.json({ result });
   });
 
   return app;

@@ -3,6 +3,7 @@ import type { WorkerEnv } from "./env.js";
 import type { ActiveAiProvider } from "./settings.js";
 import { callLlmJson } from "./ai.js";
 import { listUserDocuments } from "./repositories.js";
+import { searchDocuments } from "./search-engine.js";
 
 export interface ChatCitation {
   n: string;
@@ -41,17 +42,24 @@ export async function answerChat(
   message: string
 ): Promise<ChatResult> {
   const docs = await listUserDocuments(db, userId, 8);
-  const fallback = ruleAnswer(message, docs);
+  let effectiveDocs = docs;
+  if (docs.length < 3) {
+    const globalDocs = await searchDocuments(env, db, message, 8);
+    const known = new Set(docs.map((d) => d.id));
+    effectiveDocs = [...docs, ...globalDocs.filter((d) => !known.has(d.id))].slice(0, 10);
+  }
+  const fallback = ruleAnswer(message, effectiveDocs);
   if (!provider) return { ...fallback, mode: "rule" };
   try {
-    const numbered = docs
+    const numbered = effectiveDocs
       .map((d, i) => `${i + 1}. ${d.title}${d.abstract ? `\n   要旨: ${d.abstract.slice(0, 500)}` : ""}${d.url ? `\n   URL: ${d.url}` : ""}`)
       .join("\n\n");
     const result = await callLlmJson(
       {
         system:
           "あなたは土木技術調査のリサーチアシスタントです。与えられた保存文献のみに基づき、日本語で回答してください。引用は [1] の形式で番号を明記し、保存文献に根拠がない場合は「保存文献の範囲では確認できません」と明記してください。推測は「推測」と断ってください。JSON で {reply, citations:[{n,title,url}]} を出力してください。",
-        user: `質問: ${message}\n\n保存文献:\n${numbered || "（保存文献がありません）"}`
+        user: `質問: ${message}\n\n保存文献:\n${numbered || "（保存文献がありません）"}`,
+        meta: { action: "chat.answer" }
       },
       env,
       CHAT_SCHEMA,

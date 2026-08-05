@@ -3,6 +3,7 @@
 import type { SearchConnectorResult } from "@icrps/contracts";
 import { createAuditLog } from "../audit.js";
 import { createDb, type Db } from "../db.js";
+import { emailEnabled, sendEmail } from "../email.js";
 import type { WorkerEnv } from "../env.js";
 import { insertDocumentsBatch } from "../repositories.js";
 import { collectItc } from "./itc.js";
@@ -41,6 +42,7 @@ async function runOneSource(
   db: Db,
   source: LiteratureSourceName,
   collect: () => Promise<SearchConnectorResult[]>,
+  env: WorkerEnv
 ): Promise<IngestSourceSummary> {
   const startedAt = new Date().toISOString();
   const t0 = Date.now();
@@ -73,6 +75,16 @@ async function runOneSource(
       resourceType: "literature_source",
       detail: { source, status: "error", error }
     });
+    if (emailEnabled(env) && env.ADMIN_EMAIL) {
+      await sendEmail(
+        {
+          to: env.ADMIN_EMAIL,
+          subject: `[ICRPS] 文献収集失敗: ${source}`,
+          text: `文献収集（${source}）が失敗しました。\n\nエラー: ${error}\n\n監査ログ（ingest.run）で詳細を確認してください。`
+        },
+        env
+      );
+    }
     return {
       source,
       fetched: 0,
@@ -102,21 +114,21 @@ export async function runLiteratureIngest(
   };
 
   if (desired.includes("J-STAGE")) {
-    summaries.push(await runOneSource(db, "J-STAGE", () => collectJStage()));
+    summaries.push(await runOneSource(db, "J-STAGE", () => collectJStage(), env));
   }
   if (desired.includes("土木研究所")) {
-    summaries.push(await runOneSource(db, "土木研究所", () => collectPwri()));
+    summaries.push(await runOneSource(db, "土木研究所", () => collectPwri(), env));
   }
   if (desired.includes("ITC Digital Library")) {
     summaries.push(
-      await runOneSource(db, "ITC Digital Library", () => collectItc({ fetchKnown: fetchKnownUrls }))
+      await runOneSource(db, "ITC Digital Library", () => collectItc({ fetchKnown: fetchKnownUrls }), env)
     );
   }
   if (desired.includes("国土交通省 技術調査")) {
-    summaries.push(await runOneSource(db, "国土交通省 技術調査", () => collectMlit()));
+    summaries.push(await runOneSource(db, "国土交通省 技術調査", () => collectMlit(), env));
   }
   if (desired.includes("関東地整 技術情報")) {
-    summaries.push(await runOneSource(db, "関東地整 技術情報", () => collectKtr()));
+    summaries.push(await runOneSource(db, "関東地整 技術情報", () => collectKtr(), env));
   }
   return summaries;
 }
