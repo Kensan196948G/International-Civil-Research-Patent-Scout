@@ -11,10 +11,11 @@
 | 本番 URL | `https://icrps.mirai-dx-platform.com`（Cloudflare Workers・HTTPS）／ フォールバック: `http://192.168.0.185:8787` |
 | 稼働方式 | Node.js + systemd（`icrps.service`、起動時自動起動・異常時自動再起動） |
 | 文献データ連携 | systemd timer（`icrps-ingest.timer`）による **2時間ごとの自動収集**（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整） |
+| 更新監視（ウォッチ） | systemd timer（`icrps-watch.timer`）による **2時間ごとの新着検知＋アプリ内通知** |
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
 | Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-01。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.1.1（2026-08-01 本番適用済み） |
+| バージョン | v0.9.0（2026-08-05 ローカル本番適用済み／Cloudflare は v0.1.1 のまま） |
 
 ## 🏗️ アーキテクチャ
 
@@ -26,7 +27,8 @@ flowchart LR
     A --> D[(Neon PostgreSQL<br/>正本データ)]
     A --> C1[Crossref]
     A --> C2[OpenAlex]
-    A --> C3[Google Patents]
+    A --> C3[Google Patents / SerpAPI]
+    A --> C3b[Espacenet OPS（キー設定時）]
     A --> C4[DuckDuckGo / SerpAPI]
     A --> C5[J-STAGE WebAPI]
     A --> C6[土木研究所 / ITC / 国交省 / 関東地整]
@@ -126,8 +128,9 @@ scripts/      migrate / smoke テスト
 | 比較表 | `/projects/:id/comparison` | 比較軸ごとの比較表 |
 | レポート生成 | `/projects/:id/reports/new` | 5 テンプレートから Markdown 生成 |
 | レポート | `/reports/:id` | Markdown 表示・ダウンロード |
+| 更新監視 | `/watch` | ウォッチテーマの登録・有効/停止・**新着通知の確認・今すぐ監視** |
 | 管理 | `/admin` | ユーザー管理・監査ログ（admin のみ） |
-| システム設定 | `/settings` | AI プロバイダ設定（DeepSeek / Anthropic のキー・テスト・保存・クリア）＋ 文献データ連携（取得履歴・今すぐ取得） |
+| システム設定 | `/settings` | パスワード変更＋ AI プロバイダ設定（DeepSeek / Anthropic のキー・テスト・保存・クリア）＋ 文献データ連携（取得履歴・今すぐ取得） |
 
 ## 🔌 API 概要
 
@@ -136,22 +139,47 @@ scripts/      migrate / smoke テスト
 | GET | `/api/health` | ヘルスチェック |
 | POST | `/api/auth/register` `/api/auth/login` | 登録・ログイン |
 | GET | `/api/auth/me` | 現在のユーザー |
+| POST | `/api/auth/forgot-password` `/reset-password` | パスワードリセット |
+| POST | `/api/auth/magic-link` `/verify` | マジックリンクログイン |
+| GET | `/api/auth/sso` `/sso/google/url` | Google SSO |
 | GET/POST | `/api/projects` | プロジェクト一覧・作成 |
 | GET/PATCH/DELETE | `/api/projects/:id` | 詳細・更新・アーカイブ |
+| GET/POST | `/api/projects/:id/members` | メンバー一覧・追加 |
+| PATCH/DELETE | `/api/projects/:id/members/:userId` | メンバーのロール変更・削除 |
+| POST | `/api/projects/:id/transfer` | オーナー移譲 |
+| POST | `/api/projects/:id/team` | チーム割当 |
+| GET/POST | `/api/teams` | チーム一覧・作成 |
+| GET/POST | `/api/teams/:id/members` | チームメンバー一覧・追加 |
+| PATCH/DELETE | `/api/teams/:id/members/:userId` | チームメンバーのロール変更・削除 |
 | POST | `/api/search` | 横断検索の実行 |
 | GET | `/api/search/:id` | 検索状態と結果 |
+| GET | `/api/search/history` | 検索履歴 |
+| GET | `/api/search/bookmarks` | ブックマーク済み検索 |
+| PATCH | `/api/search/:id/bookmark` | 検索履歴のブックマーク登録/解除 |
 | GET | `/api/documents/:id` | 文書詳細 |
+| GET | `/api/documents/:id/similar` | 類似文献検索 |
+| GET | `/api/documents/:id/citations` | 引用・被引用情報（Cited-by） |
+| GET | `/api/documents/:id/patent-family` | 特許ファミリー（INPADOC / DB 候補） |
 | POST | `/api/documents/:id/summarize` | AI 要約 |
+| POST | `/api/documents/import` | 手動文献登録（特許・論文・Web・PDF） |
 | POST | `/api/projects/:id/documents` | 文書保存 |
 | POST | `/api/projects/:id/comparisons` | 比較表生成 |
 | GET/PATCH | `/api/comparisons/:id` | 比較表取得・編集 |
 | POST | `/api/projects/:id/reports` | レポート生成 |
 | GET/POST | `/api/reports/:id` `/export` | レポート取得・Markdown エクスポート |
+| POST | `/api/auth/change-password` | パスワード変更 |
+| GET | `/api/notifications` `/unread-count` | 通知一覧・未読件数 |
+| POST | `/api/notifications/:id/read` `/read-all` | 通知の既読化 |
+| POST | `/api/watch/run` | 更新監視の手動実行 |
 | GET | `/api/dashboard/stats` | ダッシュボード統計 |
 | GET | `/api/literature` | 収集文献一覧（情報源・キーワード・ページング。認証必須） |
 | GET/PATCH | `/api/admin/users` | ユーザー管理（admin） |
 | GET | `/api/admin/ingest/runs` | 文献収集の実行履歴（admin） |
 | POST | `/api/admin/ingest/run` | 文献収集を手動実行（admin） |
+| POST | `/api/admin/search/reindex` | Meilisearch 再インデックス（admin） |
+| GET | `/api/admin/stats` | システム統計（admin） |
+| GET | `/api/admin/usage` | LLM 使用量（admin） |
+| GET | `/api/teams/:id/stats` | チーム統計 |
 
 詳細は [docs/api.md](docs/api.md) を参照。
 
@@ -192,5 +220,8 @@ curl http://127.0.0.1:8787/api/health
 - [API 仕様](docs/api.md) / [アーキテクチャ](docs/architecture.md)
 - [デプロイ手順](docs/operations/deploy-runbook.md) / [障害対応](docs/operations/rollback.md)
 - [監視手順](docs/operations/monitoring.md) / [バックアップ・リストア](docs/operations/backup-restore.md)
+- [インシデント対応 Runbook](docs/operations/runbook.md) / [SLO・アラート](docs/operations/slo-alerts.md)
+- [運用台帳](docs/operations/ops-ledger.md) / [セキュリティ・保守手順](docs/operations/security-maintenance.md)
 - [文献データ連携の運用](docs/operations/literature-ingest.md)
-- [リリースノート](docs/release-notes/v0.1.0.md) / [v0.1.1](docs/release-notes/v0.1.1.md) / [v0.1.2](docs/release-notes/v0.1.2.md)
+- [更新監視（ウォッチ）の運用](docs/operations/watch-monitoring.md)
+- [リリースノート](docs/release-notes/v0.1.0.md) / [v0.1.1](docs/release-notes/v0.1.1.md) / [v0.1.2](docs/release-notes/v0.1.2.md) / [v0.2.0](docs/release-notes/v0.2.0.md) / [v0.3.0](docs/release-notes/v0.3.0.md) / [v0.4.0](docs/release-notes/v0.4.0.md) / [v0.5.0](docs/release-notes/v0.5.0.md) / [v0.6.0](docs/release-notes/v0.6.0.md) / [v0.7.0](docs/release-notes/v0.7.0.md) / [v0.8.0](docs/release-notes/v0.8.0.md) / [v0.9.0](docs/release-notes/v0.9.0.md)
