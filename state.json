@@ -5,21 +5,21 @@
     "start_date": "2026-07-31",
     "phase_mode": "development"
   },
-  "goal": "v0.1.1 リリース直前準備（堅牢化・運用監視・文書化）を Draft PR まで完了させ、Cloudflare サブドメイン決定後に移行する",
-  "phase": "Improvement",
+  "goal": "v0.2.0（更新監視の実動化・AI レポート・通知センター）を実装し、typecheck/lint/test/build をグリーンにする",
+  "phase": "Development",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 48,
+    "test_count": 59,
     "security_critical": 0,
     "blocker_count": 0
   },
   "execution": {
     "max_duration_minutes": 300,
     "last_session": {
-      "date": "2026-08-01",
-      "summary": "土木建設技術文献の自動収集を実装・稼働開始（2時間ごと・icrps-ingest.timer）。文書詳細クリック不具合の修正、保存フロー実装、技術文献フィードへの収集文献掲載（タブ切替・情報源/キーワード絞り込み・詳細カード・ページング）を完了。Cloudflare 本番へ 0d1a7dd3 を 100% デプロイ済み（https://icrps.mirai-dx-platform.com）。ローカル :8787 も反映済み。PATENTSCOPE/J-PlatPat は対象外（後日手動取り込みUI検討）"
+      "date": "2026-08-05",
+      "summary": "v0.9.0 を実装・ローカル本番へ反映: Meilisearch 抽象化（trigram フォールバック・再インデックスAPI）、チーム招待メール、チーム統計、パスワードリセット/マジックリンク/Google SSO、LLM 使用量ダッシュボード、レポート Word/Excel/PDF 出力。マイグレーション 0009 適用、API 93＋Web 15 テストグリーン。"
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -37,13 +37,32 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.1.1（本番適用済み）",
-      "date": "2026-08-01",
+      "version": "v0.9.0（ローカル本番適用済み 2026-08-05／Cloudflare は v0.1.1 のまま）",
+      "date": "2026-08-05",
       "production_url": "https://icrps.mirai-dx-platform.com",
       "local_fallback_url": "http://192.168.0.185:8787",
-      "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer",
+      "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer + icrps-ingest.timer + icrps-watch.timer",
       "migration_0002": "app_settings 適用済み（2026-08-01）",
       "migration_0003": "watch_topics 拡張 適用済み（2026-08-01）",
+      "migration_0004": "notifications + watch_topics.last_new_count 適用済み（2026-08-05）",
+      "migration_0005": "source_documents.patent_status + search_queries.is_bookmarked 適用済み（2026-08-05）",
+      "migration_0006": "source_documents.classifications 適用済み（2026-08-05）",
+      "migration_0007": "project_members 適用済み（2026-08-05）",
+      "migration_0008": "teams / team_members / team_id / pg_trgm 適用済み（2026-08-05）",
+      "migration_0009": "auth_tokens / llm_usage 適用済み（2026-08-05）",
+      "watch_monitoring": {
+        "status": "稼働中",
+        "schedule": "2時間ごと（icrps-watch.timer・cron 相当）",
+        "manual": "更新監視画面「今すぐ監視」または systemctl start icrps-watch.service",
+        "verified": "2026-08-05 手動実行 PASS（topics=0 / exit 0）"
+      },
+      "patent_connectors": {
+        "espacenet_ops": "実装済み・キー未設定のため未使用（ESPACENET_OPS_KEY / SECRET 設定で有効化）",
+        "serpapi_google_patents": "実装済み・SERP_API_KEY 未設定のため従来の HTML パースを使用"
+      },
+      "email_notify": {
+        "status": "実装済み・未設定（RESEND_API_KEY / EMAIL_FROM / ADMIN_EMAIL を /etc/icrps/icrps.env へ設定すると有効化）"
+      },
       "literature_ingest": {
         "status": "稼働中",
         "schedule": "2時間ごと（icrps-ingest.timer・cron 相当）",
@@ -60,7 +79,10 @@
       "pr": 13,
       "neon_project_id": "green-dawn-58312822",
       "neon_migrations_applied": [
-        "0001_initial_schema.sql"
+        "0001_initial_schema.sql",
+        "0002_app_settings.sql",
+        "0003_watch_topics_ext.sql",
+        "0004_notifications_watch_ext.sql"
       ],
       "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
       "cloudflare": "icrps.mirai-dx-platform.com 稼働中（worker beb23e50・Access 有効）",

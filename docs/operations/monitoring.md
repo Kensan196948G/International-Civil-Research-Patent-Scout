@@ -39,6 +39,16 @@ journalctl -u icrps-healthcheck.service -n 20
 
 ヘルスチェック失敗時は `icrps.service` を自動再起動する（`/usr/local/bin/icrps-healthcheck.sh`）。
 
+## 更新監視（v0.2.0 以降）
+
+```bash
+systemctl status icrps-watch.timer          # 2時間間隔
+journalctl -u icrps-watch.service -n 20
+systemctl start icrps-watch.service         # 手動実行
+```
+
+ウォッチテーマの新着はアプリ内通知（未読バッジ・更新監視画面）で確認できる。詳細は [watch-monitoring.md](watch-monitoring.md) を参照。
+
 ## Cloudflare 移行後
 
 - Workers ログ: `wrangler tail icrps-api`

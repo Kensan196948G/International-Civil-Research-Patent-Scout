@@ -26,6 +26,7 @@
 | POST | `/auth/register` | - | ユーザー登録 |
 | POST | `/auth/login` | - | ログイン |
 | GET | `/auth/me` | ○ | 現在のユーザー |
+| POST | `/auth/change-password` | ○ | パスワード変更（`{ currentPassword, newPassword }`） |
 | GET | `/projects` | ○ | プロジェクト一覧 |
 | POST | `/projects` | ○ | 作成 |
 | GET | `/projects/{id}` | ○ | 詳細（+ 保存文書・比較表・レポート） |
@@ -33,8 +34,10 @@
 | DELETE | `/projects/{id}` | ○ | アーカイブ |
 | POST | `/search` | ○ | 横断検索（同期実行、`searchQueryId` 返却） |
 | GET | `/search/{id}` | ○ | 検索状態・結果 |
+| GET | `/search/history` | ○ | 検索履歴（`limit` 指定可・最大100件） |
 | GET | `/documents/{id}` | ○ | 文書詳細 + 既存要約 |
 | POST | `/documents/{id}/summarize` | ○ | `{ summaryType, language }` で要約生成 |
+| POST | `/documents/import` | ○ | 手動文献登録（URL/DOI/特許番号のいずれか必須。`projectId` 指定で同時保存） |
 | POST | `/projects/{id}/documents` | ○ | 文書をプロジェクトへ保存 |
 | GET | `/projects/{id}/documents` | ○ | 保存文書一覧 |
 | PATCH/DELETE | `/projects/{id}/documents/{pdId}` | ○ | 保存文書更新・削除 |
@@ -57,8 +60,14 @@
 | POST | `/watch` | ○ | ウォッチテーマ登録（テーマ名・キーワード・頻度） |
 | PATCH | `/watch/{id}` | ○ | 有効/停止・キーワード更新 |
 | DELETE | `/watch/{id}` | ○ | ウォッチテーマ削除 |
+| POST | `/watch/run` | ○ | 自分の有効テーマを今すぐ監視実行（最大10テーマ） |
+| GET | `/notifications` | ○ | 通知一覧（`limit` 指定可・最大100件） |
+| GET | `/notifications/unread-count` | ○ | 未読通知数 |
+| POST | `/notifications/{id}/read` | ○ | 通知を既読化 |
+| POST | `/notifications/read-all` | ○ | 全通知を既読化 |
 | GET | `/literature` | ○ | 収集文献一覧（`source`=all/jstage/pwri/itc/mlit/ktr、`q`、`limit`(最大100)、`offset`） |
 | POST | `/chat` | ○ | 保存文献ベースの AI チャット（出典付き回答・ルール応答フォールバック） |
+| GET | `/admin/stats` | ○ admin | システム統計（ユーザー・文献種別・検索/比較/レポート・ウォッチ・収集実行） |
 
 ## 検索リクエスト例
 
