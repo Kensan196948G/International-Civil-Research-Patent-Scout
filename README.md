@@ -8,14 +8,15 @@
 
 | 項目 | 状態 |
 | --- | --- |
-| 本番 URL | `https://icrps.mirai-dx-platform.com`（Cloudflare Workers・HTTPS）／ フォールバック: `http://192.168.0.185:8787` |
+| 本番 URL | `https://icrps.mirai-dx-platform.com`（Cloudflare Workers・HTTPS・Access 保護）／ フォールバック: `http://192.168.0.185:8787` |
+| Preview | `https://icrps-api-preview.kensan1969.workers.dev`（v0.9.0 検証済み） |
 | 稼働方式 | Node.js + systemd（`icrps.service`、起動時自動起動・異常時自動再起動） |
 | 文献データ連携 | systemd timer（`icrps-ingest.timer`）による **2時間ごとの自動収集**（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整） |
 | 更新監視（ウォッチ） | systemd timer（`icrps-watch.timer`）による **2時間ごとの新着検知＋アプリ内通知** |
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
-| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-01。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
+| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-05 v0.9.0 / version d427904b。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.9.0（2026-08-05 ローカル本番適用済み／Cloudflare は v0.1.1 のまま） |
+| バージョン | v0.9.0（2026-08-05 ローカル本番・Cloudflare 本番とも適用済み） |
 
 ## 🏗️ アーキテクチャ
 
