@@ -50,6 +50,16 @@ if [[ -n "${DATABASE_URL:-}" ]]; then
     echo "CROSSREF_API_URL=${CROSSREF_API_URL:-https://api.crossref.org}"
     echo "OPENALEX_API_URL=${OPENALEX_API_URL:-https://api.openalex.org}"
     echo "SERP_API_KEY=${SERP_API_KEY:-}"
+    echo "ESPACENET_OPS_URL=${ESPACENET_OPS_URL:-https://ops.epo.org/3.2}"
+    echo "ESPACENET_OPS_KEY=${ESPACENET_OPS_KEY:-}"
+    echo "ESPACENET_OPS_SECRET=${ESPACENET_OPS_SECRET:-}"
+    echo "RESEND_API_KEY=${RESEND_API_KEY:-}"
+    echo "EMAIL_FROM=${EMAIL_FROM:-}"
+    echo "ADMIN_EMAIL=${ADMIN_EMAIL:-}"
+    echo "MEILISEARCH_HOST=${MEILISEARCH_HOST:-}"
+    echo "MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY:-}"
+    echo "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}"
+    echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}"
   } > "${ENV_FILE}"
   chmod 600 "${ENV_FILE}"
   echo "==> ${ENV_FILE} を更新（秘密情報のため内容は表示しません）"
@@ -65,11 +75,28 @@ install -m 755 "${APP_DIR}/deploy/scripts/icrps-healthcheck.sh" /usr/local/bin/i
 install -m 644 "${APP_DIR}/deploy/systemd/icrps-healthcheck.service" /etc/systemd/system/icrps-healthcheck.service
 install -m 644 "${APP_DIR}/deploy/systemd/icrps-healthcheck.timer" /etc/systemd/system/icrps-healthcheck.timer
 
+echo "==> 更新監視（watch timer）をインストール"
+sed -e "s|__APP_DIR__|${APP_DIR}|g" -e "s|__NODE_BIN__|${NODE_BIN}|g" \
+  "${APP_DIR}/deploy/systemd/icrps-watch.service" > /etc/systemd/system/icrps-watch.service
+chmod 644 /etc/systemd/system/icrps-watch.service
+install -m 644 "${APP_DIR}/deploy/systemd/icrps-watch.timer" /etc/systemd/system/icrps-watch.timer
+
+echo "==> 日次点検（daily timer）をインストール"
+sed -e "s|__APP_DIR__|${APP_DIR}|g" -e "s|__NODE_BIN__|${NODE_BIN}|g" \
+  "${APP_DIR}/deploy/systemd/icrps-daily.service" > /etc/systemd/system/icrps-daily.service
+chmod 644 /etc/systemd/system/icrps-daily.service
+install -m 644 "${APP_DIR}/deploy/systemd/icrps-daily.timer" /etc/systemd/system/icrps-daily.timer
+install -d -m 755 /var/backups/icrps
+install -d -m 755 /var/log/icrps
+chown -R "${APP_OWNER}:${APP_OWNER}" /var/backups/icrps /var/log/icrps
+
 echo "==> サービスを有効化・起動"
 systemctl daemon-reload
 systemctl enable icrps
 systemctl restart icrps
 systemctl enable --now icrps-healthcheck.timer
+systemctl enable --now icrps-watch.timer
+systemctl enable --now icrps-daily.timer
 
 IP="$(hostname -I | awk '{print $1}')"
 echo ""
@@ -80,4 +107,6 @@ echo " ヘルスチェック: http://${IP}:${PORT}/api/health"
 echo " ログ: journalctl -u icrps -f"
 echo " 状態: systemctl status icrps"
 echo " 死活監視: systemctl status icrps-healthcheck.timer（5分間隔）"
+echo " 更新監視: systemctl status icrps-watch.timer（2時間間隔・手動: systemctl start icrps-watch.service）"
+echo " 日次点検: systemctl status icrps-daily.timer（毎日 03:30・バックアップ/検証）"
 echo "=============================================="
