@@ -19,4 +19,7 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
-      - run: npm audit --audit-level=high
+      # 本番依存の脆弱性を必須ゲートとする。
+      # 開発専用 CLI（wrangler/miniflare/undici）の advisory は Dependabot で追跡し、
+      # 修正版が公開され次第 update する（デプロイ成果物には含まれない）。
+      - run: npm audit --omit=dev --audit-level=high
