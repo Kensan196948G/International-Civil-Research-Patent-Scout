@@ -17,7 +17,8 @@ const ENV = {
   OPENAI_BASE_URL: "https://api.openai.com/v1",
   AI_MODEL: "gpt-4o-mini",
   CROSSREF_API_URL: "https://api.crossref.org",
-  OPENALEX_API_URL: "https://api.openalex.org"
+  OPENALEX_API_URL: "https://api.openalex.org",
+  ESPACENET_OPS_URL: "https://ops.epo.org/3.2"
 };
 
 function fakeDb(store: Map<string, Record<string, unknown>>): Db {
