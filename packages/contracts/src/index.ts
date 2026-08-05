@@ -13,6 +13,8 @@ export type ReportType =
   | "paper_review"
   | "proposal_research";
 export type ProjectDocumentStatus = "saved" | "reviewed" | "excluded";
+export type ProjectMemberRole = "viewer" | "editor" | "admin";
+export type TeamMemberRole = "viewer" | "editor" | "admin";
 
 export interface User {
   id: string;
@@ -37,6 +39,41 @@ export interface ResearchProject {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  teamId?: string | null;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  teamId: string;
+  userId: string;
+  role: TeamMemberRole;
+  createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+}
+
+export interface ProjectMember {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: ProjectMemberRole;
+  createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
 }
 
 export interface SearchParams {
@@ -70,6 +107,8 @@ export interface SearchConnectorResult {
   doi?: string;
   patentNumber?: string;
   publicationNumber?: string;
+  patentStatus?: string;
+  classifications?: string[];
   authors?: string[];
   inventors?: string[];
   applicants?: string[];
@@ -90,6 +129,8 @@ export interface SourceDocument {
   doi: string | null;
   patentNumber: string | null;
   publicationNumber: string | null;
+  patentStatus?: string | null;
+  classifications?: string[] | null;
   authors: string[] | null;
   inventors: string[] | null;
   applicants: string[] | null;
@@ -113,6 +154,10 @@ export interface SearchResultItem {
   relevanceScore: number | null;
   doi: string | null;
   patentNumber: string | null;
+  patentStatus?: string | null;
+  country?: string | null;
+  inventors?: string[] | null;
+  applicants?: string[] | null;
   sourceName: string | null;
 }
 
