@@ -1,0 +1,11 @@
+[Unit]
+Description=ICRPS daily maintenance (every day 03:30 JST)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=300
+Unit=icrps-daily.service
+
+[Install]
+WantedBy=timers.target

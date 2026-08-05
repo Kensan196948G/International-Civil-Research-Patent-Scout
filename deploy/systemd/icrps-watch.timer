@@ -1,0 +1,11 @@
+[Unit]
+Description=ICRPS watch monitor every 2 hours (cron equivalent)
+
+[Timer]
+OnCalendar=*-*-* 0/2:00:00
+Persistent=true
+RandomizedDelaySec=120
+Unit=icrps-watch.service
+
+[Install]
+WantedBy=timers.target
