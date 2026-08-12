@@ -2,14 +2,14 @@ import { useState, type FormEvent } from "react";
 import { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../auth";
-import { api, ApiError, setToken } from "../api";
+import { api, ApiError } from "../api";
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const magic = searchParams.get("magic");
-  const ssoToken = searchParams.get("token");
+  const sso = searchParams.get("sso");
   const [mode, setMode] = useState<"password" | "magic" | "forgot">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,10 +23,7 @@ export function LoginPage() {
     setSubmitting(true);
     void api
       .magicLinkVerify(magic)
-      .then((res) => {
-        setToken(res.accessToken);
-        window.location.assign("/dashboard");
-      })
+      .then(() => window.location.assign("/dashboard"))
       .catch(() => {
         setError("ログインリンクが無効または期限切れです");
         setSubmitting(false);
@@ -34,10 +31,8 @@ export function LoginPage() {
   }, [magic]);
 
   useEffect(() => {
-    if (!ssoToken) return;
-    setToken(ssoToken);
-    window.location.assign("/dashboard");
-  }, [ssoToken]);
+    if (sso === "success") setInfo("SSO でログインしました");
+  }, [sso]);
 
   useEffect(() => {
     void api

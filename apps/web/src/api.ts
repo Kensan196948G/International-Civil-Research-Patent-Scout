@@ -80,6 +80,12 @@ function createTokenStore() {
 
 const tokenStore = createTokenStore();
 
+function getCsrfToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const m = /(?:^|;\s*)icrps_csrf=([^;]+)/.exec(document.cookie);
+  return m && m[1] ? decodeURIComponent(m[1]) : null;
+}
+
 export function getToken(): string | null {
   return tokenStore.get();
 }
@@ -105,12 +111,16 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: { method?: string; body?: unknown; auth?: boolean } = {}): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const token = getToken();
-  if (options.auth !== false && token) headers.Authorization = `Bearer ${token}`;
+  const method = options.method ?? "GET";
+  if (method !== "GET" && method !== "HEAD") {
+    const csrf = getCsrfToken();
+    if (csrf) headers["X-CSRF-Token"] = csrf;
+  }
   const response = await fetch(path, {
-    method: options.method ?? "GET",
+    method,
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    credentials: "include"
   });
   if (response.status === 401 && options.auth !== false) {
     clearToken();
@@ -142,12 +152,16 @@ async function request<T>(path: string, options: { method?: string; body?: unkno
 
 async function requestBlob(path: string, options: { method?: string; body?: unknown } = {}): Promise<Blob> {
   const headers: Record<string, string> = {};
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const method = options.method ?? "GET";
+  if (method !== "GET" && method !== "HEAD") {
+    const csrf = getCsrfToken();
+    if (csrf) headers["X-CSRF-Token"] = csrf;
+  }
   const response = await fetch(path, {
-    method: options.method ?? "GET",
+    method,
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    credentials: "include"
   });
   if (!response.ok) throw new ApiError(response.status, "export_failed", "エクスポートに失敗しました");
   return response.blob();
@@ -172,6 +186,7 @@ export const api = {
   ssoGoogleUrl: () => request<{ url: string }>("/api/auth/sso/google/url", { auth: false }),
   ssoGoogleCallback: (code: string) =>
     request<AuthResponse>(`/api/auth/sso/google/callback?code=${encodeURIComponent(code)}`, { auth: false }),
+  logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
   me: () => request<{ user: User }>("/api/auth/me"),
   teams: {
     list: () => request<{ teams: Team[] }>("/api/teams"),

@@ -1,12 +1,14 @@
 import { compare, hash } from "bcryptjs";
 import { jwtVerify, SignJWT } from "jose";
 import type { Context, Next } from "hono";
+import { getCookie } from "hono/cookie";
 import type { Role } from "@icrps/contracts";
 import { resolveEnv, expiresInToSeconds } from "./env.js";
 import type { AppEnv } from "./types.js";
 import { forbidden, unauthorized } from "./errors.js";
 import { createDb } from "./db.js";
 import { findUserById } from "./repositories.js";
+import { TOKEN_COOKIE } from "./auth-cookie.js";
 
 export async function hashPassword(password: string): Promise<string> {
   return hash(password, 10);
@@ -65,7 +67,7 @@ export type AuthContext = {
 export async function requireAuth(c: Context<AppEnv>, next: Next): Promise<Response> {
   const env = resolveEnv(c.env);
   const header = c.req.header("authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
+  const token = header?.startsWith("Bearer ") ? header.slice(7) : getCookie(c, TOKEN_COOKIE);
   if (!token) throw unauthorized();
   try {
     const payload = await verifyToken(token, env.JWT_SECRET);

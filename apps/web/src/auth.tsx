@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { User } from "@icrps/contracts";
-import { api, clearToken, getToken, setToken } from "./api";
+import { api } from "./api";
 
 interface AuthState {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => void | Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -18,10 +18,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!getToken()) {
-      setLoading(false);
-      return;
-    }
     api
       .me()
       .then((res) => {
@@ -40,18 +36,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.login({ email, password });
-    setToken(res.accessToken);
     setUser(res.user);
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
     const res = await api.register({ name, email, password });
-    setToken(res.accessToken);
     setUser(res.user);
   }, []);
 
-  const logout = useCallback(() => {
-    clearToken();
+  const logout = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {
+      // セッションが既に失効している場合もローカル状態はリセットする
+    }
     setUser(null);
   }, []);
 

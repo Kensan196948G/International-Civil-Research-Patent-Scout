@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { isEmailDomainAllowed, resolveEnv } from "../env.js";
+import { expiresInToSeconds, isEmailDomainAllowed, resolveEnv } from "../env.js";
 import type { AppBindings } from "../types.js";
 import { createDb } from "../db.js";
 import { createAuditLog } from "../audit.js";
@@ -18,6 +18,7 @@ import {
   updateUserPassword
 } from "../repositories.js";
 import { hashPassword, hashToken, randomToken, requireAuth, signToken, verifyPassword } from "../auth.js";
+import { clearAuthCookies, setAuthCookies } from "../auth-cookie.js";
 import { clientIp, rateLimit } from "../rate-limit.js";
 import {
   buildMagicLinkEmail,
@@ -96,6 +97,7 @@ export function authRoutes(): Hono<AppBindings> {
       role
     });
     const token = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
+    setAuthCookies(c, token, expiresInToSeconds(env.JWT_EXPIRES_IN));
     await createAuditLog(db, { userId: user.id, action: "auth.register", detail: { email: user.email } });
     return c.json({ accessToken: token, user }, 201);
   });
@@ -124,6 +126,7 @@ export function authRoutes(): Hono<AppBindings> {
       user = (await updateUserRole(db, user.id, "admin")) ?? user;
     }
     const token = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
+    setAuthCookies(c, token, expiresInToSeconds(env.JWT_EXPIRES_IN));
     await createAuditLog(db, { userId: user.id, action: "auth.login" });
     return c.json({ accessToken: token, user });
   });
@@ -234,6 +237,7 @@ export function authRoutes(): Hono<AppBindings> {
     if (!user) throw unauthorized("ユーザーが見つかりません");
     await markAuthTokenUsed(db, token.id);
     const accessToken = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
+    setAuthCookies(c, accessToken, expiresInToSeconds(env.JWT_EXPIRES_IN));
     await createAuditLog(db, { userId: user.id, action: "auth.magic_login" });
     return c.json({ accessToken, user });
   });
@@ -308,8 +312,15 @@ export function authRoutes(): Hono<AppBindings> {
       }
     }
     const accessToken = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
+    setAuthCookies(c, accessToken, expiresInToSeconds(env.JWT_EXPIRES_IN));
     await createAuditLog(db, { userId: user.id, action: "auth.sso_google" });
-    return c.redirect(`${env.APP_URL}/login?token=${encodeURIComponent(accessToken)}`);
+    return c.redirect(`${env.APP_URL}/login?sso=success`);
+  });
+
+  app.post("/logout", requireAuth, async (c) => {
+    clearAuthCookies(c);
+    await createAuditLog(createDb(resolveEnv(c.env)), { userId: c.get("userId"), action: "auth.logout" });
+    return c.json({ ok: true });
   });
 
   return app;
