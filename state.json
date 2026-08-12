@@ -38,7 +38,7 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.9.0 稼働中（本番） / v0.10.0 評価版（branch: improvement/production-hardening-v0.10.0・本番未適用）",
+      "version": "v0.11.0（ローカル systemd 反映済み 2026-08-12） / Cloudflare は v0.9.0 のまま（再デプロイ待ち）",
       "date": "2026-08-05",
       "production_url": "https://icrps.mirai-dx-platform.com",
       "local_fallback_url": "http://192.168.0.185:8787",
@@ -51,7 +51,7 @@
       "migration_0007": "project_members 適用済み（2026-08-05）",
       "migration_0008": "teams / team_members / team_id / pg_trgm 適用済み（2026-08-05）",
       "migration_0009": "auth_tokens / llm_usage 適用済み（2026-08-05）",
-      "migration_0010": "ai_summaries レビュー状態（status/reviewed_by/reviewed_at）追加。本番適用は承認待ち",
+      "migration_0010": "ai_summaries レビュー状態（status/reviewed_by/reviewed_at）本番適用済み（2026-08-12）",
       "watch_monitoring": {
         "status": "稼働中",
         "schedule": "2時間ごと（icrps-watch.timer・cron 相当）",

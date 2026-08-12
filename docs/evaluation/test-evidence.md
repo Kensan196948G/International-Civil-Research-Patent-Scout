@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | `npm run typecheck` | PASS | contracts / api / web |
 | `npm run lint` | PASS | eslint --max-warnings 0 |
-| `npm run test` | PASS（API 100 / Web 15 / 合計115） | 追加: auth-policy 5 / fit 2 |
+| `npm run test` | PASS（API 107 / Web 16 / 合計123） | 追加: auth-policy 5 / fit 2 / cookie-auth 5 |
 | `npm run build` | PASS | api tsc + web vite build |
 | `npm audit --omit=dev --audit-level=high` | 0 vulnerabilities | |
 
@@ -26,6 +26,8 @@
 | `https://icrps.mirai-dx-platform.com/api/health` | 302（Cloudflare Access ログインへ。設計どおり） |
 | `scripts/smoke-local.sh` | PASS（health 200 / トップ200 / 未認証401） |
 | GitHub Actions CI（PR #25） | PASS（typecheck / lint / test / build / audit） |
+| GitHub Actions CI（PR #27 / #28） | PASS |
+| Cookie/CSRF 実機確認（v0.11.0） | CSRF欠落403・不正トークン401・Cookieなし401 |
 
 ## 4. 未実施（理由）
 
