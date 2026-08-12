@@ -234,3 +234,4 @@ curl http://127.0.0.1:8787/api/health
 - [更新監視（ウォッチ）の運用](docs/operations/watch-monitoring.md)
 - [リリースノート](docs/release-notes/v0.1.0.md) / [v0.1.1](docs/release-notes/v0.1.1.md) / [v0.1.2](docs/release-notes/v0.1.2.md) / [v0.2.0](docs/release-notes/v0.2.0.md) / [v0.3.0](docs/release-notes/v0.3.0.md) / [v0.4.0](docs/release-notes/v0.4.0.md) / [v0.5.0](docs/release-notes/v0.5.0.md) / [v0.6.0](docs/release-notes/v0.6.0.md) / [v0.7.0](docs/release-notes/v0.7.0.md) / [v0.8.0](docs/release-notes/v0.8.0.md) / [v0.9.0](docs/release-notes/v0.9.0.md)
 - [v0.10.0 改善記録](docs/release-notes/v0.10.0.md) / [評価・改善報告](docs/evaluation/report.md)
+- [v0.11.0 Cookie 認証](docs/release-notes/v0.11.0.md)

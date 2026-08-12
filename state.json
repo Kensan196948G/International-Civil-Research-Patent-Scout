@@ -6,7 +6,7 @@
     "phase_mode": "development"
   },
   "goal": "v0.10.0（登録制御・AI コスト管理・要約レビュー・適用可否チェック・正直表示）を実装し、typecheck/lint/test/build をグリーンにする",
-  "phase": "Verify",
+  "phase": "Verify → Deploy Gate",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": null,
@@ -19,7 +19,7 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-08-05",
-      "summary": "v0.10.0 を実装・検証: 登録ドメイン制御・初回管理者ブートストラップ、AI レート制限と LLM 使用量のユーザー帰属、要約レビュー永続化、適用可否チェック API、検索並列化・失敗表示、SSO リダイレクト修正、UI 誤表示修正。API 100＋Web 15 テストグリーン（予定）。"
+      "summary": "v0.10.0 をマージ・本番デプロイ（health 0.10.0）。migration 0010 を本番適用。Cookie 認証（v0.11.0）を実装・PR 作成中。復元試験計画・特許/品質要件を文書化。"
     },
     "repair_count": 0,
     "max_repair": 3,
