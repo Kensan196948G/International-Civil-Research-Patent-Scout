@@ -66,8 +66,9 @@ SELECT created_at, detail FROM audit_logs WHERE action = 'ingest.run' ORDER BY c
 
 ## 監視アラート（推奨）
 
-現在は「失敗の記録」まで。Slack/メール通知は未設定のため、必要に応じて `icrps-ingest.service` の
-失敗を検知する systemd 監視（例: `OnFailure=` で通知ユニット起動）を追加してください。
+`RESEND_API_KEY` / `EMAIL_FROM` / `ADMIN_EMAIL` を設定すると、ソース単位の失敗を管理者メールへ自動通知します。
+未設定時は監査ログ（`ingest.run`・status=error）への記録のみです。Slack 等への通知は必要に応じて
+`icrps-ingest.service` の `OnFailure=` で通知ユニットを追加してください。
 
 ## 関連ファイル
 

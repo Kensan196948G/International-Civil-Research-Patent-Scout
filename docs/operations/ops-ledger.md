@@ -19,5 +19,11 @@
 | 2026-08-05 | 日次点検ジョブ導入 | OK（timer 有効） | 自動化セッション |
 | 2026-08-05 | 本番デプロイ（ローカル systemd + Cloudflare） | OK（v0.9.0 / CF version d427904b） | 自動化セッション |
 | 2026-08-05 | 主要フロー E2E スモーク（登録→検索→保存→要約→比較→レポート→チャット） | OK（全項目 PASS） | 自動化セッション |
+| 2026-08-12 | v0.10.0 評価版: 登録制御・AI コスト管理・要約レビュー・適用可否 API・UI 正直表示を実装 | typecheck/lint/test/build 成功（API 100 / Web 15） | 評価セッション |
+| 2026-08-12 | migration 0010（ai_summaries レビュー状態） | 未適用（本番影響のため承認待ち） | 評価セッション |
+| 2026-08-12 | PR #25（v0.10.0）作成・push・GitHub Actions CI 成功 | OK（typecheck/lint/test/build/audit） | 評価セッション |
+| 2026-08-12 | migration 0010 本番適用・バックアップ取得（18テーブル） | OK | 評価セッション |
+| 2026-08-12 | 復元試験を四半期計画へ登録（docs/operations/restore-drill.md） | 登録済み・初回試験は次回四半期初週 | 評価セッション |
+| 2026-08-12 | 通知先確認 | RESEND_API_KEY 設定済み・ADMIN_EMAIL を設定・EMAIL_FROM は Resend ドメイン検証待ち | 評価セッション |
 
 今後はこの表に日付・結果・担当を追記する。

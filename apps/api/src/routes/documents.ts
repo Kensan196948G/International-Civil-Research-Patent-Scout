@@ -8,6 +8,7 @@ import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAuth } from "../auth.js";
 import { requireProjectAccess } from "../access.js";
+import { aiRateLimited } from "../ai-limits.js";
 import { summarizeDocument, toSummaryRecord } from "../ai.js";
 import { getActiveAiProvider } from "../settings.js";
 import { getCitationInfo } from "../citations.js";
@@ -16,6 +17,7 @@ import {
   deleteProjectDocument,
   findDocumentByKey,
   getDocumentById,
+  getSummaryById,
   listDocumentCandidates,
   getProjectDocument,
   getSummary,
@@ -24,7 +26,8 @@ import {
   listProjectDocuments,
   listSummaries,
   saveProjectDocument,
-  updateProjectDocument
+  updateProjectDocument,
+  updateSummaryReview
 } from "../repositories.js";
 import { similarityScore } from "../scoring.js";
 
@@ -69,6 +72,11 @@ const importSchema = z
     message: "URL・DOI・特許番号のいずれかを指定してください",
     path: ["url"]
   });
+
+const reviewSchema = z.object({
+  status: z.enum(["pending", "approved", "rejected", "edited"]),
+  summaryText: z.string().max(20000).nullable().optional()
+});
 
 export function documentRoutes(): Hono<AppBindings> {
   const app = new Hono<AppBindings>();
@@ -188,7 +196,24 @@ export function documentRoutes(): Hono<AppBindings> {
     const existing = await getSummary(db, document.id, parsed.data.summaryType, parsed.data.language);
     if (existing) return c.json({ summary: existing });
     const provider = await getActiveAiProvider(db, env);
-    const output = await summarizeDocument(document, parsed.data.summaryType, parsed.data.language, env, provider);
+    if (provider) {
+      const limited = aiRateLimited(c);
+      if (!limited.allowed) {
+        return c.json(
+          { error: { code: "rate_limited", message: "AI 利用量の上限に達しました。1時間後に再試行してください" } },
+          429,
+          { "Retry-After": String(limited.retryAfterSeconds) }
+        );
+      }
+    }
+    const output = await summarizeDocument(
+      document,
+      parsed.data.summaryType,
+      parsed.data.language,
+      env,
+      provider,
+      c.get("userId")
+    );
     const summary = await insertSummary(db, {
       sourceDocumentId: document.id,
       summaryType: parsed.data.summaryType,
@@ -203,6 +228,29 @@ export function documentRoutes(): Hono<AppBindings> {
       detail: { summaryType: parsed.data.summaryType, model: summary.modelName }
     });
     return c.json({ summary }, 201);
+  });
+
+  app.patch("/documents/:documentId/summaries/:summaryId", async (c) => {
+    const parsed = reviewSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) throw new HttpError(400, "bad_request", "レビュー内容が不正です", parsed.error.flatten());
+    const db = createDb(resolveEnv(c.env));
+    const document = await getDocumentById(db, c.req.param("documentId"));
+    if (!document) throw notFound("文書が見つかりません");
+    const summary = await getSummaryById(db, c.req.param("summaryId"));
+    if (!summary || summary.sourceDocumentId !== document.id) throw notFound("要約が見つかりません");
+    const updated = await updateSummaryReview(db, summary.id, {
+      status: parsed.data.status,
+      reviewedBy: c.get("userId")!,
+      summaryText: parsed.data.summaryText ?? undefined
+    });
+    await createAuditLog(db, {
+      userId: c.get("userId"),
+      action: "summary.review",
+      resourceType: "ai_summary",
+      resourceId: summary.id,
+      detail: { status: parsed.data.status, edited: !!parsed.data.summaryText }
+    });
+    return c.json({ summary: updated });
   });
 
   app.post("/projects/:projectId/documents", async (c) => {

@@ -9,6 +9,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const magic = searchParams.get("magic");
+  const ssoToken = searchParams.get("token");
   const [mode, setMode] = useState<"password" | "magic" | "forgot">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,6 +32,12 @@ export function LoginPage() {
         setSubmitting(false);
       });
   }, [magic]);
+
+  useEffect(() => {
+    if (!ssoToken) return;
+    setToken(ssoToken);
+    window.location.assign("/dashboard");
+  }, [ssoToken]);
 
   useEffect(() => {
     void api

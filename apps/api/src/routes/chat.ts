@@ -6,6 +6,7 @@ import { createAuditLog } from "../audit.js";
 import { HttpError } from "../errors.js";
 import { requireAuth } from "../auth.js";
 import { resolveEnv } from "../env.js";
+import { aiRateLimited } from "../ai-limits.js";
 import { getActiveAiProvider } from "../settings.js";
 import { answerChat } from "../chat.js";
 
@@ -23,6 +24,16 @@ export function chatRoutes(): Hono<AppBindings> {
     const env = resolveEnv(c.env);
     const db = createDb(env);
     const provider = await getActiveAiProvider(db, env);
+    if (provider) {
+      const limited = aiRateLimited(c);
+      if (!limited.allowed) {
+        return c.json(
+          { error: { code: "rate_limited", message: "AI 利用量の上限に達しました。1時間後に再試行してください" } },
+          429,
+          { "Retry-After": String(limited.retryAfterSeconds) }
+        );
+      }
+    }
     const result = await answerChat(db, env, provider, c.get("userId")!, parsed.data.message);
     await createAuditLog(db, {
       userId: c.get("userId"),

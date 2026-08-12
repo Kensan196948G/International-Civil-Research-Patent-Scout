@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { resolveEnv } from "../env.js";
+import { isEmailDomainAllowed, resolveEnv } from "../env.js";
 import type { AppBindings } from "../types.js";
 import { createDb } from "../db.js";
 import { createAuditLog } from "../audit.js";
-import { conflict, HttpError, unauthorized } from "../errors.js";
+import { conflict, forbidden, HttpError, unauthorized } from "../errors.js";
 import {
+  adminUserCount,
   createUser,
   createAuthToken,
   findAuthTokenByHash,
@@ -13,6 +14,7 @@ import {
   findUserById,
   findUserCredentialsByEmail,
   markAuthTokenUsed,
+  updateUserRole,
   updateUserPassword
 } from "../repositories.js";
 import { hashPassword, hashToken, randomToken, requireAuth, signToken, verifyPassword } from "../auth.js";
@@ -53,6 +55,18 @@ const magicVerifySchema = z.object({
   token: z.string().min(20).max(200)
 });
 
+async function resolveBootstrapRole(
+  db: ReturnType<typeof createDb>,
+  env: ReturnType<typeof resolveEnv>,
+  email: string
+): Promise<"admin" | "user"> {
+  if (env.BOOTSTRAP_ADMIN_EMAIL && env.BOOTSTRAP_ADMIN_EMAIL.trim().toLowerCase() === email.toLowerCase()) {
+    const admins = await adminUserCount(db);
+    if (admins === 0) return "admin";
+  }
+  return "user";
+}
+
 export function authRoutes(): Hono<AppBindings> {
   const app = new Hono<AppBindings>();
 
@@ -71,10 +85,15 @@ export function authRoutes(): Hono<AppBindings> {
     const db = createDb(env);
     const existing = await findUserByEmail(db, parsed.data.email);
     if (existing) throw conflict("このメールアドレスは既に登録されています");
+    if (!isEmailDomainAllowed(parsed.data.email, env)) {
+      throw forbidden("このメールドメインは登録できません（管理者へ連絡してください）");
+    }
+    const role = await resolveBootstrapRole(db, env, parsed.data.email);
     const user = await createUser(db, {
       email: parsed.data.email,
       name: parsed.data.name,
-      passwordHash: await hashPassword(parsed.data.password)
+      passwordHash: await hashPassword(parsed.data.password),
+      role
     });
     const token = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
     await createAuditLog(db, { userId: user.id, action: "auth.register", detail: { email: user.email } });
@@ -99,7 +118,11 @@ export function authRoutes(): Hono<AppBindings> {
     if (!credentials || !(await verifyPassword(parsed.data.password, credentials.passwordHash))) {
       throw unauthorized("メールアドレスまたはパスワードが正しくありません");
     }
-    const user = credentials.user;
+    let user = credentials.user;
+    const role = await resolveBootstrapRole(db, env, user.email);
+    if (role === "admin" && user.role !== "admin") {
+      user = (await updateUserRole(db, user.id, "admin")) ?? user;
+    }
     const token = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
     await createAuditLog(db, { userId: user.id, action: "auth.login" });
     return c.json({ accessToken: token, user });
@@ -265,18 +288,28 @@ export function authRoutes(): Hono<AppBindings> {
     if (!infoResponse.ok) throw new HttpError(400, "bad_request", "Google のユーザー情報を取得できませんでした");
     const info = (await infoResponse.json()) as { email?: string; name?: string };
     if (!info.email) throw new HttpError(400, "bad_request", "メールアドレスが取得できませんでした");
+    if (!isEmailDomainAllowed(info.email, env)) {
+      throw forbidden("このメールドメインは利用できません（管理者へ連絡してください）");
+    }
     const db = createDb(env);
     let user = await findUserByEmail(db, info.email);
     if (!user) {
+      const role = await resolveBootstrapRole(db, env, info.email);
       user = await createUser(db, {
         email: info.email,
         name: info.name ?? info.email.split("@")[0] ?? "SSO User",
-        passwordHash: await hashPassword(randomToken())
+        passwordHash: await hashPassword(randomToken()),
+        role
       });
+    } else {
+      const role = await resolveBootstrapRole(db, env, user.email);
+      if (role === "admin" && user.role !== "admin") {
+        user = (await updateUserRole(db, user.id, "admin")) ?? user;
+      }
     }
     const accessToken = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
     await createAuditLog(db, { userId: user.id, action: "auth.sso_google" });
-    return c.json({ accessToken, user });
+    return c.redirect(`${env.APP_URL}/login?token=${encodeURIComponent(accessToken)}`);
   });
 
   return app;

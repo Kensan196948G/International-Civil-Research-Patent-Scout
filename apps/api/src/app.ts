@@ -17,6 +17,7 @@ import { chatRoutes } from "./routes/chat.js";
 import { literatureRoutes } from "./routes/literature.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { teamRoutes } from "./routes/teams.js";
+import { fitRoutes } from "./routes/fit.js";
 import { HttpError } from "./errors.js";
 import type { ApiErrorBody } from "@icrps/contracts";
 
@@ -54,6 +55,7 @@ export function createApp(): Hono<AppBindings> {
   app.route("/api", literatureRoutes());
   app.route("/api", notificationRoutes());
   app.route("/api", teamRoutes());
+  app.route("/api", fitRoutes());
   app.route("/api/dashboard", dashboardRoutes());
 
   app.onError((err, c) => {

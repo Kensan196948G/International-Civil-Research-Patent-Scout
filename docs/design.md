@@ -12,7 +12,8 @@ WebUI のデザイン仕様はルート直下の [ICRPS WebUI (standalone).html]
 | Redis Queue / Celery 案 | 同期実行（Phase 2 で Cloudflare Queues を検討） | MVP では要求を満たし、構成を単純化 |
 | S3 互換オブジェクト保存 | 未実装（レポートは Markdown で DB 保存） | MVP 範囲では不要 |
 | NextAuth 案 | 自前 JWT + bcrypt | 依存を最小化 |
-| 全文検索インデックス | 現状は外部 API + DB 保存 | 検索はコネクタ経由のため |
+| 全文検索インデックス | Meilisearch 任意 + PostgreSQL trigram | 未設定時は DB 全文検索へフォールバック |
+| 適用可否チェック | ルールベース照合（v0.10.0） | AI 生成ではなく保存文献のキーワード照合として明示 |
 
 ## モジュール構成
 
@@ -29,6 +30,8 @@ WebUI のデザイン仕様はルート直下の [ICRPS WebUI (standalone).html]
 
 ## データベース
 
-`db/migrations/0001_initial_schema.sql` に 11 テーブル（users / research_projects / search_queries / source_documents / search_results / project_documents / ai_summaries / comparisons / reports / watch_topics / audit_logs）。
+マイグレーション 0001〜0010 により、18 テーブル（users / research_projects / search_queries / source_documents / search_results / project_documents / ai_summaries / comparisons / reports / watch_topics / audit_logs / app_settings / notifications / project_members / teams / team_members / auth_tokens / llm_usage）を管理。
+
+v0.10.0 では `ai_summaries.status / reviewed_by / reviewed_at`（レビュー状態）、登録ドメイン制限・初回管理者昇格、AI 利用量のユーザー帰属記録とレート制限を追加。
 
 重複排除用に DOI・特許番号・コンテンツハッシュの部分ユニークインデックスを定義。`updated_at` はトリガーで自動更新。

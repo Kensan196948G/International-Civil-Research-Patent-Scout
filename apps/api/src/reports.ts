@@ -47,6 +47,7 @@ export function renderReport(input: {
   documents: SourceDocument[];
   comparison: Comparison | null;
   title: string;
+  audience?: string;
 }): string {
   const { reportType, project, query, documents, comparison, title } = input;
   const generatedAt = new Date().toISOString();
@@ -54,6 +55,7 @@ export function renderReport(input: {
   sections.push(`# ${md(title)}`, "", `> 生成日時: ${generatedAt}`, "");
   sections.push(`## 1. 調査概要`, `- 調査テーマ: ${md(project?.title ?? "未設定")}`);
   if (project?.description) sections.push(`- 調査目的: ${md(project.description)}`);
+  if (input.audience) sections.push(`- 想定読者: ${md(input.audience)}`);
   sections.push("", `## 2. 検索条件`, searchConditions(query), "");
   if (reportType === "technical_comparison") {
     sections.push(`## 3. 比較表`, comparisonTable(comparison), "", `## 4. 各技術の詳細`, docList(documents), "");

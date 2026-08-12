@@ -59,7 +59,7 @@ export async function answerChat(
         system:
           "あなたは土木技術調査のリサーチアシスタントです。与えられた保存文献のみに基づき、日本語で回答してください。引用は [1] の形式で番号を明記し、保存文献に根拠がない場合は「保存文献の範囲では確認できません」と明記してください。推測は「推測」と断ってください。JSON で {reply, citations:[{n,title,url}]} を出力してください。",
         user: `質問: ${message}\n\n保存文献:\n${numbered || "（保存文献がありません）"}`,
-        meta: { action: "chat.answer" }
+        meta: { action: "chat.answer", userId }
       },
       env,
       CHAT_SCHEMA,

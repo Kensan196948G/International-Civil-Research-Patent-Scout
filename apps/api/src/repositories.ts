@@ -91,6 +91,9 @@ function mapSummary(row: Record<string, unknown>): AiSummary {
     citations: parseJsonArray(row.citations) as AiSummary["citations"],
     modelName: row.model_name == null ? null : String(row.model_name),
     promptVersion: row.prompt_version == null ? null : String(row.prompt_version),
+    status: row.status == null ? "pending" : (String(row.status) as AiSummary["status"]),
+    reviewedBy: row.reviewed_by == null ? null : String(row.reviewed_by),
+    reviewedAt: row.reviewed_at == null ? null : String(row.reviewed_at),
     createdAt: String(row.created_at)
   };
 }
@@ -1067,6 +1070,28 @@ export async function getSummary(
   return rows[0] ? mapSummary(rows[0]) : null;
 }
 
+export async function getSummaryById(db: Db, id: string): Promise<AiSummary | null> {
+  const rows = await db("SELECT * FROM ai_summaries WHERE id = $1 LIMIT 1", [id]);
+  return rows[0] ? mapSummary(rows[0]) : null;
+}
+
+export async function updateSummaryReview(
+  db: Db,
+  id: string,
+  input: { status: "pending" | "approved" | "rejected" | "edited"; reviewedBy: string; summaryText?: string }
+): Promise<AiSummary | null> {
+  const rows = await db(
+    `UPDATE ai_summaries
+     SET status = $2,
+         reviewed_by = $3,
+         reviewed_at = now(),
+         summary_text = COALESCE($4, summary_text)
+     WHERE id = $1 RETURNING *`,
+    [id, input.status, input.reviewedBy, input.summaryText ?? null]
+  );
+  return rows[0] ? mapSummary(rows[0]) : null;
+}
+
 export async function insertSummary(
   db: Db,
   input: {
@@ -1219,29 +1244,66 @@ export async function getDashboardStats(db: Db, userId: string): Promise<{
   recentReports: Report[];
 }> {
   const [projectCount, savedDocumentCount, reportCount, searchCount] = await Promise.all([
-    db("SELECT count(*)::int AS c FROM research_projects WHERE owner_user_id = $1", [userId]),
+    db(
+      `SELECT count(*)::int AS c FROM research_projects p
+       WHERE p.owner_user_id = $1 OR p.id IN (
+         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = $1
+         UNION
+         SELECT p2.id FROM research_projects p2 JOIN teams t ON t.id = p2.team_id
+           JOIN team_members tm ON tm.team_id = t.id WHERE tm.user_id = $1
+       )`,
+      [userId]
+    ),
     db(
       `SELECT count(*)::int AS c FROM project_documents pd
        JOIN research_projects p ON p.id = pd.project_id
-       WHERE p.owner_user_id = $1`,
+       WHERE p.id IN (
+         SELECT p2.id FROM research_projects p2
+         LEFT JOIN project_members pm ON pm.project_id = p2.id
+         LEFT JOIN team_members tm ON tm.team_id = p2.team_id
+         WHERE p2.owner_user_id = $1 OR pm.user_id = $1 OR tm.user_id = $1
+       )`,
       [userId]
     ),
     db(
       `SELECT count(*)::int AS c FROM reports r
        JOIN research_projects p ON p.id = r.project_id
-       WHERE p.owner_user_id = $1`,
+       WHERE p.id IN (
+         SELECT p2.id FROM research_projects p2
+         LEFT JOIN project_members pm ON pm.project_id = p2.id
+         LEFT JOIN team_members tm ON tm.team_id = p2.team_id
+         WHERE p2.owner_user_id = $1 OR pm.user_id = $1 OR tm.user_id = $1
+       )`,
       [userId]
     ),
-    db("SELECT count(*)::int AS c FROM search_queries WHERE user_id = $1", [userId])
+    db(
+      `SELECT count(*)::int AS c FROM search_queries sq
+       WHERE sq.user_id = $1 OR sq.project_id IN (
+         SELECT p2.id FROM research_projects p2
+         LEFT JOIN project_members pm ON pm.project_id = p2.id
+         LEFT JOIN team_members tm ON tm.team_id = p2.team_id
+         WHERE p2.owner_user_id = $1 OR pm.user_id = $1 OR tm.user_id = $1
+       )`,
+      [userId]
+    )
   ]);
   const recentProjects = (await db(
-    "SELECT * FROM research_projects WHERE owner_user_id = $1 ORDER BY updated_at DESC LIMIT 5",
+    `SELECT DISTINCT p.* FROM research_projects p
+     LEFT JOIN project_members pm ON pm.project_id = p.id
+     LEFT JOIN team_members tm ON tm.team_id = p.team_id
+     WHERE p.owner_user_id = $1 OR pm.user_id = $1 OR tm.user_id = $1
+     ORDER BY p.updated_at DESC LIMIT 5`,
     [userId]
   )).map(mapProject);
   const recentReports = (await db(
     `SELECT r.* FROM reports r
      JOIN research_projects p ON p.id = r.project_id
-     WHERE p.owner_user_id = $1 ORDER BY r.created_at DESC LIMIT 5`,
+     WHERE p.id IN (
+       SELECT p2.id FROM research_projects p2
+       LEFT JOIN project_members pm ON pm.project_id = p2.id
+       LEFT JOIN team_members tm ON tm.team_id = p2.team_id
+       WHERE p2.owner_user_id = $1 OR pm.user_id = $1 OR tm.user_id = $1
+     ) ORDER BY r.created_at DESC LIMIT 5`,
     [userId]
   )).map(mapReport);
   return {
@@ -1255,10 +1317,18 @@ export async function getDashboardStats(db: Db, userId: string): Promise<{
 }
 
 export async function listAuditLogs(db: Db, limit = 100): Promise<AuditLog[]> {
-  const rows = await db("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1", [limit]);
+  const rows = await db(
+    `SELECT a.*, u.name AS user_name
+     FROM audit_logs a
+     LEFT JOIN users u ON u.id = a.user_id
+     ORDER BY a.created_at DESC
+     LIMIT $1`,
+    [limit]
+  );
   return rows.map((row) => ({
     id: String(row.id),
     userId: row.user_id == null ? null : String(row.user_id),
+    userName: row.user_name == null ? null : String(row.user_name),
     action: String(row.action),
     resourceType: row.resource_type == null ? null : String(row.resource_type),
     resourceId: row.resource_id == null ? null : String(row.resource_id),
@@ -1497,15 +1567,22 @@ export async function markAllNotificationsRead(db: Db, userId: string): Promise<
 
 export async function listUserDocuments(db: Db, userId: string, limit = 8): Promise<SourceDocument[]> {
   const rows = await db(
-    `SELECT d.* FROM project_documents pd
+    `SELECT DISTINCT ON (d.id) d.* FROM project_documents pd
      JOIN research_projects p ON p.id = pd.project_id
+     LEFT JOIN project_members pm ON pm.project_id = p.id
+     LEFT JOIN team_members tm ON tm.team_id = p.team_id
      JOIN source_documents d ON d.id = pd.source_document_id
-     WHERE p.owner_user_id = $1
-     ORDER BY pd.created_at DESC
+     WHERE p.owner_user_id = $1 OR pm.user_id = $1 OR tm.user_id = $1
+     ORDER BY d.id, pd.created_at DESC
      LIMIT $2`,
     [userId, limit]
   );
   return rows.map(mapDocument);
+}
+
+export async function adminUserCount(db: Db): Promise<number> {
+  const rows = await db("SELECT count(*)::int AS c FROM users WHERE role = 'admin'");
+  return Number(rows[0]?.c ?? 0);
 }
 
 export function newId(): string {
