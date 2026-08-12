@@ -84,7 +84,7 @@
 - ブランチ: `improvement/production-hardening-v0.10.0`（main から作成）
 - ローカル検証: typecheck / lint / test（115）/ build / npm audit すべて PASS
 - 稼働確認: `http://127.0.0.1:8787` 200・LAN 200・Cloudflare 302（Access 設計どおり）
-- CI: PR #25 の GitHub Actions 実行中（typecheck / lint / test / build / audit）
+- CI: PR #25 の GitHub Actions PASS（typecheck / lint / test / build / audit）
 - デプロイ: 本番（ローカル systemd / Cloudflare）への v0.10.0 適用は未実施（承認待ち）
 
 ## 9. 残課題
