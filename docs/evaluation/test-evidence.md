@@ -25,6 +25,7 @@
 | `http://192.168.0.185:8787/api/health` | 200 |
 | `https://icrps.mirai-dx-platform.com/api/health` | 302（Cloudflare Access ログインへ。設計どおり） |
 | `scripts/smoke-local.sh` | PASS（health 200 / トップ200 / 未認証401） |
+| GitHub Actions CI（PR #25） | PASS（typecheck / lint / test / build / audit） |
 
 ## 4. 未実施（理由）
 
