@@ -121,3 +121,17 @@ Phase 1（Cookie 認証・復旧試験・E2E CI・AI 承認）を完了させる
 | Phase 2 | 競合製品 80% 代替（特許分析ダッシュボード、品質監視、検索強化） | 2027年Q1 |
 | Phase 3 | AI・モバイル・外部連携（Entra/Teams/SharePoint、PWA、AI 予算・評価） | 2027年Q2 |
 | Phase 4 | 90% 代替・本番最適化（ランドスケープ、協力会社ポータル、DR 構成） | 2027年Q4 |
+
+## 13. 追記（2026-08-12 v0.11.0 完了分）
+
+上記の「次に着手すべき作業」5 項目のうち、以下の対応を完了しました。
+
+| 作業 | 結果 |
+| --- | --- |
+| 本番 env・migration | migration 0010 を本番適用・バックアップ取得・`BOOTSTRAP_ADMIN_EMAIL` / `AI_RATE_LIMIT_PER_HOUR` / `ADMIN_EMAIL` を設定。`REGISTRATION_MODE=domain` への切替は会社メールドメイン確認待ち |
+| PR マージ・デプロイ | PR #25（v0.10.0）→ #26（バージョン）→ #27（Cookie 認証）→ #28（v0.11.0）を順にマージし、ローカル systemd へ v0.11.0 をデプロイ |
+| Cookie 認証 | HttpOnly Cookie + CSRF ダブルサブミットを実装・テスト（API 107 / Web 16）・デプロイ・実機確認（403/401 動作） |
+| 復元試験・通知 | 四半期復元ドリル手順を登録（docs/operations/restore-drill.md）。RESEND_API_KEY 設定済み・ADMIN_EMAIL 設定・EMAIL_FROM は Resend ドメイン検証待ち |
+| 要件定義 | 特許コネクタ（J-PlatPat/PATENTSCOPE）とデータ品質ダッシュボードの要件書を追加 |
+
+残課題: Cloudflare への v0.10/v0.11 再デプロイ（トークン承認待ち）、`REGISTRATION_MODE=domain` 切替（会社ドメイン確認待ち）、`EMAIL_FROM` の Resend 送信元検証、ブラウザ実操作での Cookie 認証最終確認。
