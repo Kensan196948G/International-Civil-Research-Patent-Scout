@@ -209,8 +209,13 @@ export interface AiSummary {
   citations: Evidence[] | null;
   modelName: string | null;
   promptVersion: string | null;
+  status?: "pending" | "approved" | "rejected" | "edited";
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
   createdAt: string;
 }
+
+export type AiSummaryReviewStatus = "pending" | "approved" | "rejected" | "edited";
 
 export interface ComparisonRow {
   technologyName: string;
@@ -244,6 +249,7 @@ export interface Report {
 export interface AuditLog {
   id: string;
   userId: string | null;
+  userName?: string | null;
   action: string;
   resourceType: string | null;
   resourceId: string | null;

@@ -7,7 +7,7 @@ import { extractLlmUsage, recordLlmUsage } from "./usage.js";
 type JsonObject = Record<string, unknown>;
 
 export async function callLlmJson(
-  input: { system: string; user: string; meta?: { action?: string } },
+  input: { system: string; user: string; meta?: { action?: string; userId?: string } },
   env: WorkerEnv,
   jsonSchema: Record<string, unknown>,
   provider: ActiveAiProvider | null = null
@@ -45,6 +45,7 @@ export async function callLlmJson(
     const usage = extractLlmUsage(data, "anthropic");
     if (usage.inputTokens > 0 || usage.outputTokens > 0) {
       await recordLlmUsage(createDb(env), {
+        userId: input.meta?.userId ?? null,
         action: input.meta?.action ?? "llm.call",
         provider: "anthropic",
         model: active.model,
@@ -84,6 +85,7 @@ export async function callLlmJson(
     const usage = extractLlmUsage(data, active.provider);
     if (usage.inputTokens > 0 || usage.outputTokens > 0) {
       await recordLlmUsage(createDb(env), {
+        userId: input.meta?.userId ?? null,
         action: input.meta?.action ?? "llm.call",
         provider: active.provider,
         model: active.model,
@@ -182,7 +184,8 @@ export async function summarizeDocument(
   summaryType: SummaryType,
   language: string,
   env: WorkerEnv,
-  provider: ActiveAiProvider | null = null
+  provider: ActiveAiProvider | null = null,
+  userId?: string
 ): Promise<SummaryOutput> {
   if (!env.OPENAI_API_KEY && !provider) return fallbackSummary(document, summaryType, language);
   const prompt =
@@ -201,7 +204,7 @@ export async function summarizeDocument(
           patentNumber: document.patentNumber,
           publicationDate: document.publicationDate
         })}`,
-        meta: { action: "summary.generate" }
+        meta: { action: "summary.generate", userId }
       },
       env,
       SUMMARY_SCHEMA,
@@ -279,7 +282,8 @@ export async function generateComparison(
   documents: SourceDocument[],
   requestedAxes: string[],
   env: WorkerEnv,
-  provider: ActiveAiProvider | null = null
+  provider: ActiveAiProvider | null = null,
+  userId?: string
 ): Promise<{ title: string; axes: string[]; rows: ComparisonRow[]; notes: string[] }> {
   const fallback = fallbackComparison(documents, requestedAxes);
   if ((!env.OPENAI_API_KEY && !provider) || documents.length === 0) {
@@ -299,7 +303,7 @@ export async function generateComparison(
             url: d.url
           }))
         }),
-        meta: { action: "comparison.generate" }
+        meta: { action: "comparison.generate", userId }
       },
       env,
       COMPARISON_SCHEMA,

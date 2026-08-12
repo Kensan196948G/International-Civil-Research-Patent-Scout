@@ -21,6 +21,10 @@ export interface WorkerEnv {
   MEILISEARCH_API_KEY?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  REGISTRATION_MODE?: string;
+  ALLOWED_EMAIL_DOMAINS?: string;
+  BOOTSTRAP_ADMIN_EMAIL?: string;
+  AI_RATE_LIMIT_PER_HOUR?: string;
 }
 
 export const DEFAULTS = {
@@ -64,8 +68,30 @@ export function resolveEnv(input: Partial<WorkerEnv> | undefined): WorkerEnv {
     MEILISEARCH_HOST: get("MEILISEARCH_HOST"),
     MEILISEARCH_API_KEY: get("MEILISEARCH_API_KEY"),
     GOOGLE_CLIENT_ID: get("GOOGLE_CLIENT_ID"),
-    GOOGLE_CLIENT_SECRET: get("GOOGLE_CLIENT_SECRET")
+    GOOGLE_CLIENT_SECRET: get("GOOGLE_CLIENT_SECRET"),
+    REGISTRATION_MODE: get("REGISTRATION_MODE") ?? "open",
+    ALLOWED_EMAIL_DOMAINS: get("ALLOWED_EMAIL_DOMAINS") ?? "",
+    BOOTSTRAP_ADMIN_EMAIL: get("BOOTSTRAP_ADMIN_EMAIL") ?? "",
+    AI_RATE_LIMIT_PER_HOUR: get("AI_RATE_LIMIT_PER_HOUR") ?? "100"
   };
+}
+
+export function isEmailDomainAllowed(email: string, env: WorkerEnv): boolean {
+  const mode = (env.REGISTRATION_MODE ?? "open").trim().toLowerCase();
+  if (mode === "open") return true;
+  if (mode !== "domain") return false;
+  const domains = (env.ALLOWED_EMAIL_DOMAINS ?? "")
+    .split(",")
+    .map((d) => d.trim().toLowerCase().replace(/^\./, ""))
+    .filter(Boolean);
+  if (domains.length === 0) return false;
+  const domain = email.split("@")[1]?.toLowerCase() ?? "";
+  return domains.some((allowed) => domain === allowed || domain.endsWith(`.${allowed}`));
+}
+
+export function aiRateLimitPerHour(env: WorkerEnv): number {
+  const n = Number(env.AI_RATE_LIMIT_PER_HOUR ?? "100");
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 100;
 }
 
 export function expiresInToSeconds(expiresIn: string): number {

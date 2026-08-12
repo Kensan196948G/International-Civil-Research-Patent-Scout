@@ -23,6 +23,7 @@ export interface AiReportInput {
   summaries: Map<string, AiSummary>;
   comparison: Comparison | null;
   title: string;
+  audience?: string;
 }
 
 export interface AiReportResult {
@@ -48,7 +49,8 @@ const REPORT_SCHEMA = {
 export async function generateReportWithAi(
   input: AiReportInput,
   env: WorkerEnv,
-  provider: ActiveAiProvider | null
+  provider: ActiveAiProvider | null,
+  userId?: string
 ): Promise<AiReportResult> {
   const templateMarkdown = renderReport({
     reportType: input.reportType,
@@ -87,8 +89,9 @@ export async function generateReportWithAi(
           "あなたは土木技術調査の専門アシスタントです。与えられた文献・要約・比較表に基づき、調査レポートを日本語の Markdown で作成してください。出典にない断定は避け、推測は「推測」と明記してください。文献への引用は [1] 形式で番号を明記してください。JSON で {title, contentMarkdown, keyFindings[], risks[], references[]} を出力してください。",
         user: JSON.stringify({
           reportType: input.reportType,
-          reportTypeLabel: REPORT_TYPES[input.reportType],
-          title: input.title,
+      reportTypeLabel: REPORT_TYPES[input.reportType],
+      audience: input.audience ?? "",
+      title: input.title,
           project: input.project ? { title: input.project.title, description: input.project.description } : null,
           searchQuery: input.query
             ? { queryText: input.query.queryText, expanded: input.query.expandedQueries }
@@ -96,7 +99,7 @@ export async function generateReportWithAi(
           documents: numberedDocs,
           comparison: comparisonText
         }),
-        meta: { action: "report.generate" }
+        meta: { action: "report.generate", userId }
       },
       env,
       REPORT_SCHEMA,

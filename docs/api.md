@@ -37,6 +37,7 @@
 | GET | `/search/history` | ○ | 検索履歴（`limit` 指定可・最大100件） |
 | GET | `/documents/{id}` | ○ | 文書詳細 + 既存要約 |
 | POST | `/documents/{id}/summarize` | ○ | `{ summaryType, language }` で要約生成 |
+| PATCH | `/documents/{id}/summaries/{summaryId}` | ○ | 要約レビュー状態を保存 `{ status: pending|approved|rejected|edited, summaryText? }` |
 | POST | `/documents/import` | ○ | 手動文献登録（URL/DOI/特許番号のいずれか必須。`projectId` 指定で同時保存） |
 | POST | `/projects/{id}/documents` | ○ | 文書をプロジェクトへ保存 |
 | GET | `/projects/{id}/documents` | ○ | 保存文書一覧 |
@@ -67,7 +68,14 @@
 | POST | `/notifications/read-all` | ○ | 全通知を既読化 |
 | GET | `/literature` | ○ | 収集文献一覧（`source`=all/jstage/pwri/itc/mlit/ktr、`q`、`limit`(最大100)、`offset`） |
 | POST | `/chat` | ○ | 保存文献ベースの AI チャット（出典付き回答・ルール応答フォールバック） |
+| POST | `/fit` | ○ | 適用可否チェック（`{ workType, environment, designStrength, cover, serviceLife, co2Target, candidates }`。ルールベース照合） |
 | GET | `/admin/stats` | ○ admin | システム統計（ユーザー・文献種別・検索/比較/レポート・ウォッチ・収集実行） |
+
+## 認証・登録ポリシー
+
+- `REGISTRATION_MODE=domain` 時、`ALLOWED_EMAIL_DOMAINS` に含まれないドメインの登録・SSO アカウント作成は 403 で拒否されます。
+- `BOOTSTRAP_ADMIN_EMAIL` に一致するユーザーは、システムに管理者が 1 人もいない場合に admin ロールで作成/昇格されます。
+- AI を利用するエンドポイント（検索・要約・比較・レポート・チャット）は、ユーザー単位で 1 時間あたり `AI_RATE_LIMIT_PER_HOUR` 回（既定 100）を超えると 429 を返します。LLM 使用量は `llm_usage.user_id` に帰属記録されます。
 
 ## 検索リクエスト例
 

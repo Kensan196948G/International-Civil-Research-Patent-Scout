@@ -16,7 +16,7 @@
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
 | Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-05 v0.9.0 / version d427904b。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.9.0（2026-08-05 ローカル本番・Cloudflare 本番とも適用済み） |
+| バージョン | v0.10.0（2026-08-12 改善版・評価対象） |
 
 ## 🏗️ アーキテクチャ
 
@@ -168,6 +168,8 @@ scripts/      migrate / smoke テスト
 | GET/PATCH | `/api/comparisons/:id` | 比較表取得・編集 |
 | POST | `/api/projects/:id/reports` | レポート生成 |
 | GET/POST | `/api/reports/:id` `/export` | レポート取得・Markdown エクスポート |
+| PATCH | `/api/documents/:id/summaries/:summaryId` | AI 要約のレビュー状態（採用/却下/編集）を保存 |
+| POST | `/api/fit` | 適用可否チェック（保存文献とのキーワード照合・ルールベース） |
 | POST | `/api/auth/change-password` | パスワード変更 |
 | GET | `/api/notifications` `/unread-count` | 通知一覧・未読件数 |
 | POST | `/api/notifications/:id/read` `/read-all` | 通知の既読化 |
@@ -208,8 +210,12 @@ curl http://127.0.0.1:8787/api/health
 ## 🛡️ セキュリティ
 
 - パスワードは bcrypt でハッシュ化、JWT は HS256 + 12 時間期限
+- 登録制御: `REGISTRATION_MODE=domain` 設定時は許可ドメインのみ登録・SSO 利用可（本番推奨）
+- 初回管理者: `BOOTSTRAP_ADMIN_EMAIL` のユーザーが最初の管理者になります
 - 全データ操作に所有者チェック、admin 専用ルートはロールチェック
 - 操作ログ（監査ログ）を記録
+- AI 利用量: ユーザー単位の1時間あたりレート制限（`AI_RATE_LIMIT_PER_HOUR`）と LLM 使用量のユーザー帰属記録
+- AI 要約のレビュー（採用・却下・編集）状態を `ai_summaries.status` に記録し、監査ログへ出力
 - セキュリティヘッダー（CSP・X-Frame-Options 等）を API レスポンスに付与
 - 秘密情報（DATABASE_URL・JWT_SECRET・API キー）はリポジトリに置かず、`/etc/icrps/icrps.env`（0600）または GitHub Secrets で管理
 - 依存関係監査: `npm audit`（現在 0 vulnerabilities）
@@ -226,3 +232,4 @@ curl http://127.0.0.1:8787/api/health
 - [文献データ連携の運用](docs/operations/literature-ingest.md)
 - [更新監視（ウォッチ）の運用](docs/operations/watch-monitoring.md)
 - [リリースノート](docs/release-notes/v0.1.0.md) / [v0.1.1](docs/release-notes/v0.1.1.md) / [v0.1.2](docs/release-notes/v0.1.2.md) / [v0.2.0](docs/release-notes/v0.2.0.md) / [v0.3.0](docs/release-notes/v0.3.0.md) / [v0.4.0](docs/release-notes/v0.4.0.md) / [v0.5.0](docs/release-notes/v0.5.0.md) / [v0.6.0](docs/release-notes/v0.6.0.md) / [v0.7.0](docs/release-notes/v0.7.0.md) / [v0.8.0](docs/release-notes/v0.8.0.md) / [v0.9.0](docs/release-notes/v0.9.0.md)
+- [v0.10.0 改善記録](docs/release-notes/v0.10.0.md) / [評価・改善報告](docs/evaluation/report.md)

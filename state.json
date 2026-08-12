@@ -5,13 +5,13 @@
     "start_date": "2026-07-31",
     "phase_mode": "development"
   },
-  "goal": "v0.2.0（更新監視の実動化・AI レポート・通知センター）を実装し、typecheck/lint/test/build をグリーンにする",
-  "phase": "Development",
+  "goal": "v0.10.0（登録制御・AI コスト管理・要約レビュー・適用可否チェック・正直表示）を実装し、typecheck/lint/test/build をグリーンにする",
+  "phase": "Verify",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 59,
+    "test_count": 115,
     "security_critical": 0,
     "blocker_count": 0
   },
@@ -19,7 +19,7 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-08-05",
-      "summary": "v0.9.0 を実装・ローカル本番へ反映: Meilisearch 抽象化（trigram フォールバック・再インデックスAPI）、チーム招待メール、チーム統計、パスワードリセット/マジックリンク/Google SSO、LLM 使用量ダッシュボード、レポート Word/Excel/PDF 出力。マイグレーション 0009 適用、API 93＋Web 15 テストグリーン。"
+      "summary": "v0.10.0 を実装・検証: 登録ドメイン制御・初回管理者ブートストラップ、AI レート制限と LLM 使用量のユーザー帰属、要約レビュー永続化、適用可否チェック API、検索並列化・失敗表示、SSO リダイレクト修正、UI 誤表示修正。API 100＋Web 15 テストグリーン（予定）。"
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -37,7 +37,7 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.9.0（ローカル本番・Cloudflare 本番適用済み 2026-08-05）",
+      "version": "v0.9.0 稼働中（本番） / v0.10.0 評価版（branch: improvement/production-hardening-v0.10.0・本番未適用）",
       "date": "2026-08-05",
       "production_url": "https://icrps.mirai-dx-platform.com",
       "local_fallback_url": "http://192.168.0.185:8787",
@@ -50,6 +50,7 @@
       "migration_0007": "project_members 適用済み（2026-08-05）",
       "migration_0008": "teams / team_members / team_id / pg_trgm 適用済み（2026-08-05）",
       "migration_0009": "auth_tokens / llm_usage 適用済み（2026-08-05）",
+      "migration_0010": "ai_summaries レビュー状態（status/reviewed_by/reviewed_at）追加。本番適用は承認待ち",
       "watch_monitoring": {
         "status": "稼働中",
         "schedule": "2時間ごと（icrps-watch.timer・cron 相当）",

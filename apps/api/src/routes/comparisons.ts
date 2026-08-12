@@ -7,6 +7,7 @@ import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAuth } from "../auth.js";
 import { requireProjectAccess } from "../access.js";
+import { aiRateLimited } from "../ai-limits.js";
 import { generateComparison } from "../ai.js";
 import { getActiveAiProvider } from "../settings.js";
 import {
@@ -54,7 +55,17 @@ export function comparisonRoutes(): Hono<AppBindings> {
     const documents = await getDocumentsByIds(db, parsed.data.documentIds);
     if (documents.length < 2) throw new HttpError(400, "bad_request", "比較には2件以上の文書が必要です");
     const provider = await getActiveAiProvider(db, env);
-    const generated = await generateComparison(documents, parsed.data.axes, env, provider);
+    if (provider) {
+      const limited = aiRateLimited(c);
+      if (!limited.allowed) {
+        return c.json(
+          { error: { code: "rate_limited", message: "AI 利用量の上限に達しました。1時間後に再試行してください" } },
+          429,
+          { "Retry-After": String(limited.retryAfterSeconds) }
+        );
+      }
+    }
+    const generated = await generateComparison(documents, parsed.data.axes, env, provider, c.get("userId"));
     const comparison = await createComparison(db, {
       projectId,
       title: parsed.data.title ?? generated.title,

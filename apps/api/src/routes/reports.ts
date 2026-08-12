@@ -7,6 +7,7 @@ import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAuth } from "../auth.js";
 import { requireProjectAccess } from "../access.js";
+import { aiRateLimited } from "../ai-limits.js";
 import { generateReportWithAi } from "../ai-report.js";
 import { getActiveAiProvider } from "../settings.js";
 import { renderExcelDocument, renderPrintHtml, renderWordDocument } from "../reports-export.js";
@@ -26,7 +27,8 @@ const createSchema = z.object({
   reportType: z.enum(["summary", "technical_comparison", "patent_survey", "paper_review", "proposal_research"]),
   documentIds: z.array(z.string().uuid()).max(100).optional(),
   comparisonId: z.string().uuid().optional(),
-  outputFormat: z.enum(["markdown"]).default("markdown")
+  outputFormat: z.enum(["markdown"]).default("markdown"),
+  audience: z.string().max(200).optional()
 });
 
 export function reportRoutes(): Hono<AppBindings> {
@@ -56,6 +58,16 @@ export function reportRoutes(): Hono<AppBindings> {
       documents.map((d) => d.id)
     );
     const provider = await getActiveAiProvider(db, resolveEnv(c.env));
+    if (provider) {
+      const limited = aiRateLimited(c);
+      if (!limited.allowed) {
+        return c.json(
+          { error: { code: "rate_limited", message: "AI 利用量の上限に達しました。1時間後に再試行してください" } },
+          429,
+          { "Retry-After": String(limited.retryAfterSeconds) }
+        );
+      }
+    }
     const rendered = await generateReportWithAi(
       {
         reportType: parsed.data.reportType as ReportType,
@@ -64,10 +76,12 @@ export function reportRoutes(): Hono<AppBindings> {
         documents,
         summaries,
         comparison,
-        title: parsed.data.title
+        title: parsed.data.title,
+        audience: parsed.data.audience
       },
       resolveEnv(c.env),
-      provider
+      provider,
+      c.get("userId")
     );
     const markdown = rendered.markdown;
     const report = await createReport(db, {

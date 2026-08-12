@@ -7,6 +7,7 @@ import { createAuditLog } from "../audit.js";
 import { HttpError, notFound } from "../errors.js";
 import { requireAuth } from "../auth.js";
 import { requireProjectAccess } from "../access.js";
+import { aiRateLimited } from "../ai-limits.js";
 import { expandKeywords } from "../keywords.js";
 import { runConnectors } from "../connectors.js";
 import { dedupeAndScore } from "../scoring.js";
@@ -29,7 +30,7 @@ const searchSchema = z.object({
   projectId: z.string().uuid().nullable().optional(),
   query: z.string().min(1).max(500),
   languageMode: z.enum(["ja", "en", "auto", "bilingual"]).optional(),
-  sourceTypes: z.array(z.enum(["web", "paper", "patent", "pdf"])).min(1).optional(),
+  sourceTypes: z.array(z.enum(["web", "paper", "patent"])).min(1).optional(),
   countries: z.array(z.string().max(10)).max(50).optional(),
   yearFrom: z.number().int().min(1900).max(2100).optional(),
   yearTo: z.number().int().min(1900).max(2100).optional(),
@@ -78,7 +79,17 @@ export function searchRoutes(): Hono<AppBindings> {
     };
 
     const provider = await getActiveAiProvider(db, env);
-    const expansion = await expandKeywords(params, env, provider);
+    if (provider) {
+      const limited = aiRateLimited(c);
+      if (!limited.allowed) {
+        return c.json(
+          { error: { code: "rate_limited", message: "AI 利用量の上限に達しました。1時間後に再試行してください" } },
+          429,
+          { "Retry-After": String(limited.retryAfterSeconds) }
+        );
+      }
+    }
+    const expansion = await expandKeywords(params, env, provider, userId);
     // 展開キーワードを実際の検索クエリへ反映する（最大 3 クエリ・1 クエリあたり件数を分散）
     const queriesToRun = Array.from(
       new Set([
@@ -92,15 +103,22 @@ export function searchRoutes(): Hono<AppBindings> {
       .filter((q) => q.length > 0)
       .slice(0, 3);
     const perQueryMax = Math.max(5, Math.ceil((parsed.data.maxResults ?? 20) / queriesToRun.length));
-    const allResults: Awaited<ReturnType<typeof runConnectors>>["results"] = [];
-    const allFailures: Awaited<ReturnType<typeof runConnectors>>["failures"] = [];
-    for (const query of queriesToRun) {
-      const { results, failures } = await runConnectors({ ...params, query, maxResults: perQueryMax }, env);
-      allResults.push(...results);
-      allFailures.push(...failures);
-    }
-    const results = allResults;
-    const failures = allFailures;
+    const settledQueries = await Promise.allSettled(
+      queriesToRun.map(async (query) => {
+        try {
+          return await runConnectors({ ...params, query, maxResults: perQueryMax }, env);
+        } catch (err) {
+          return {
+            results: [],
+            failures: [{ name: `query:${query}`, error: err instanceof Error ? err.message : String(err) }]
+          };
+        }
+      })
+    );
+    const results = settledQueries.flatMap((s) => (s.status === "fulfilled" ? s.value.results : []));
+    const failures = settledQueries.flatMap((s) =>
+      s.status === "fulfilled" ? s.value.failures : [{ name: "query", error: s.reason instanceof Error ? s.reason.message : String(s.reason) }]
+    );
     const scored = dedupeAndScore(parsed.data.query, results);
     let rank = 0;
     for (const item of scored) {

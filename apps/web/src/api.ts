@@ -276,6 +276,15 @@ export const api = {
         method: "POST",
         body: input
       }),
+    reviewSummary: (
+      documentId: string,
+      summaryId: string,
+      input: { status: "pending" | "approved" | "rejected" | "edited"; summaryText?: string }
+    ) =>
+      request<{ summary: import("@icrps/contracts").AiSummary }>(
+        `/api/documents/${documentId}/summaries/${summaryId}`,
+        { method: "PATCH", body: input }
+      ),
     import: (input: {
       sourceType: string;
       title: string;
@@ -338,7 +347,10 @@ export const api = {
       request<{ comparison: Comparison }>(`/api/comparisons/${id}`, { method: "PATCH", body: input })
   },
   reports: {
-    create: (projectId: string, input: { title: string; reportType: string; documentIds?: string[]; comparisonId?: string }) =>
+    create: (
+      projectId: string,
+      input: { title: string; reportType: string; documentIds?: string[]; comparisonId?: string; audience?: string }
+    ) =>
       request<{ report: Report }>(`/api/projects/${projectId}/reports`, { method: "POST", body: input }),
     get: (id: string) => request<{ report: Report }>(`/api/reports/${id}`),
     exportFile: (id: string, format: "markdown" | "word" | "excel" | "html") =>
@@ -370,6 +382,35 @@ export const api = {
         body: { message }
       })
   },
+  fit: {
+    check: (input: {
+      workType: string;
+      environment: string;
+      designStrength: string;
+      cover: string;
+      serviceLife: string;
+      co2Target: string;
+      candidates: string;
+    }) =>
+      request<{
+        mode: "rule";
+        note: string;
+        items: Array<{
+          candidate: string;
+          verdict: "有力" | "条件付き可" | "要確認";
+          confidence: number;
+          docs: Array<{
+            id: string;
+            title: string;
+            abstract: string | null;
+            url: string | null;
+            sourceName: string | null;
+            score: number;
+            matchedTerms: string[];
+          }>;
+        }>;
+      }>("/api/fit", { method: "POST", body: input })
+  },
   dashboard: {
     stats: () => request<{ stats: DashboardStats }>("/api/dashboard/stats")
   },
@@ -390,7 +431,17 @@ export const api = {
     users: () => request<{ users: User[] }>("/api/admin/users"),
     updateRole: (userId: string, role: string) =>
       request<{ user: User }>(`/api/admin/users/${userId}/role`, { method: "PATCH", body: { role } }),
-    auditLogs: () => request<{ auditLogs: Array<{ id: string; action: string; createdAt: string; detail: unknown }> }>("/api/admin/audit-logs"),
+    auditLogs: () =>
+      request<{
+        auditLogs: Array<{
+          id: string;
+          userId: string | null;
+          userName: string | null;
+          action: string;
+          createdAt: string;
+          detail: unknown;
+        }>;
+      }>("/api/admin/audit-logs"),
     ingestRuns: () =>
       request<{ runs: Array<{ id: string; createdAt: string; detail: Record<string, unknown> | null }> }>(
         "/api/admin/ingest/runs"

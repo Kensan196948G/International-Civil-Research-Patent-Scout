@@ -140,7 +140,9 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [teamStats, setTeamStats] = useState<Awaited<ReturnType<typeof api.teams.stats>>["stats"] | null>(null);
   const [projectDocs, setProjectDocs] = useState<Record<string, Array<ProjectDocument & { document: SourceDocument | null }>>>({});
   const [stats, setStats] = useState<{ projectCount: number; savedDocumentCount: number; reportCount: number; searchCount: number } | null>(null);
-  const [audit, setAudit] = useState<Array<{ id: string; action: string; createdAt: string; detail: unknown }>>([]);
+  const [audit, setAudit] = useState<
+    Array<{ id: string; userId: string | null; userName: string | null; action: string; createdAt: string; detail: unknown }>
+  >([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
@@ -230,7 +232,6 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   ]);
   const [chatInput, setChatInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
-  const [fitReady, setFitReady] = useState(true);
   const [digestText, setDigestText] = useState("");
   const [digestBusy, setDigestBusy] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -275,6 +276,24 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const [suggestDismissed, setSuggestDismissed] = useState(false);
   const [docActionMsg, setDocActionMsg] = useState<string | null>(null);
   const [reportEdit, setReportEdit] = useState(false);
+  const [savedReportId, setSavedReportId] = useState<string | null>(null);
+  const [audience, setAudience] = useState("技術研究所内（専門家）");
+  const [headerQuery, setHeaderQuery] = useState("");
+  const [searchFailureSources, setSearchFailureSources] = useState<string[]>([]);
+  const [summaryEditing, setSummaryEditing] = useState(false);
+  const [draftSummaryText, setDraftSummaryText] = useState("");
+  const [fitInput, setFitInput] = useState({
+    workType: "橋梁下部工（場所打ち）",
+    environment: "海洋・飛沫帯",
+    designStrength: "40 N/mm²",
+    cover: "70 mm",
+    serviceLife: "100 年",
+    co2Target: "30% 以上",
+    candidates: "高炉スラグ高置換コンクリート / LC3 / ジオポリマー"
+  });
+  const [fitBusy, setFitBusy] = useState(false);
+  const [fitError, setFitError] = useState<string | null>(null);
+  const [fitResult, setFitResult] = useState<Awaited<ReturnType<typeof api.fit.check>> | null>(null);
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -387,6 +406,12 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   useEffect(() => {
     if (page !== "dashboard" && page !== "watch") return;
     void refreshNotifications();
+  }, [page, refreshNotifications]);
+
+  useEffect(() => {
+    if (page !== "dashboard" && page !== "watch") return;
+    const timer = setInterval(() => void refreshNotifications(), 60_000);
+    return () => clearInterval(timer);
   }, [page, refreshNotifications]);
 
   useEffect(() => {
@@ -664,6 +689,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   const runSearch = useCallback(async () => {
     setPhase("running");
     setSearchResults([]);
+    setSearchFailureSources([]);
     try {
       const res = await api.search.start({
         query: q,
@@ -682,6 +708,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
         result = await api.search.get(res.searchQueryId);
       }
       setSearchResults(result.results ?? []);
+      setSearchFailureSources(result.failureSources ?? []);
       setExpanded(result.expandedQueries ? [...result.expandedQueries.translatedQueries, ...result.expandedQueries.synonymsEn] : []);
       setPhase("done");
     } catch {
@@ -706,6 +733,17 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     if (countriesParam.length) setCountries(new Set(countriesParam));
     void runSearch();
   }, [page, searchParams, runSearch]);
+
+  const runHeaderSearch = useCallback(
+    (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      searchParamsAppliedRef.current = false;
+      setQ(trimmed);
+      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+    },
+    [navigate]
+  );
 
   const shareSearch = useCallback(async () => {
     const params = new URLSearchParams();
@@ -812,16 +850,18 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       const res = await api.reports.create(projects[0]!.id, {
         title: reportTitle.trim() || "技術調査レポート",
         reportType,
-        documentIds: ids
+        documentIds: ids,
+        audience
       });
+      setSavedReportId(res.report.id);
       setReportText(res.report.contentMarkdown);
-      setReportStatus(`${REPORT_TYPES[reportType]} · ドラフト完了 · 引用 ${ids.length} 件`);
+      setReportStatus(`${REPORT_TYPES[reportType]} · ドラフト完了 · 引用 ${ids.length} 件${audience ? ` · 想定読者: ${audience}` : ""}`);
     } catch (err) {
       setReportStatus(err instanceof Error ? err.message : "生成失敗");
     } finally {
       setReportBusy(false);
     }
-  }, [projects, projectDocs, reportType, reportTitle]);
+  }, [projects, projectDocs, reportType, reportTitle, audience]);
 
   const sendChat = useCallback(() => {
     const question = chatInput.trim();
@@ -1015,7 +1055,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
       setWatchTerms("");
       setShowWatchForm(false);
       await refreshWatch();
-      setWatchMsg({ type: "ok", text: "ウォッチテーマを登録しました（新着監視ジョブは Phase 2 で有効化）" });
+      setWatchMsg({ type: "ok", text: "ウォッチテーマを登録しました。2時間ごとの自動監視（または「今すぐ監視」）で新着を検知します。" });
     } catch (err) {
       setWatchMsg({ type: "error", text: err instanceof Error ? err.message : "登録に失敗しました" });
     }
@@ -1330,7 +1370,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   }, [reportText]);
 
   const exportReportFile = useCallback(async (format: "word" | "excel") => {
-    const id = reportId;
+    const id = savedReportId ?? reportId;
     if (!id) return;
     try {
       const blob = await api.reports.exportFile(id, format);
@@ -1343,10 +1383,10 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     } catch {
       // エクスポート失敗時は何もしない
     }
-  }, [reportId]);
+  }, [savedReportId, reportId]);
 
   const exportReportPdf = useCallback(async () => {
-    const id = reportId;
+    const id = savedReportId ?? reportId;
     if (!id) return;
     try {
       const blob = await api.reports.exportFile(id, "html");
@@ -1361,7 +1401,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     } catch {
       // 印刷ウィンドウを開けない場合は何もしない
     }
-  }, [reportId]);
+  }, [savedReportId, reportId]);
 
   const acceptSuggest = useCallback(() => {
     setQ((prev) => `${prev} 実構造物データ 暴露試験`);
@@ -1370,15 +1410,50 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
 
   const dismissSuggest = useCallback(() => setSuggestDismissed(true), []);
 
-  const adoptSummary = useCallback(() => {
-    setDocActionMsg("この要約を採用しました（採用状態は要約一覧に反映されます）");
-  }, []);
-  const discardSummary = useCallback(() => {
-    setDocActionMsg("この要約を却下しました。再生成で別の要約を作成できます。");
-  }, []);
+  const currentSummary = useMemo(() => {
+    const type = sumLevel === "short" ? "short" : sumLevel === "tech" ? "technical" : "detailed";
+    return summaries.find((s) => s.summaryType === type && s.language === "ja") ?? null;
+  }, [summaries, sumLevel]);
+
+  const applySummaryReview = useCallback(
+    async (status: "approved" | "rejected" | "edited", summaryText?: string) => {
+      const id = documentId ?? lastDocId;
+      if (!id || !currentSummary) {
+        setDocActionMsg("要約がまだ生成されていません");
+        return;
+      }
+      try {
+        const res = await api.documents.reviewSummary(id, currentSummary.id, { status, summaryText });
+        setSummaries((prev) => prev.map((s) => (s.id === res.summary.id ? res.summary : s)));
+        setDocActionMsg(
+          status === "approved"
+            ? `要約を採用しました（${res.summary.reviewedAt?.slice(0, 19).replace("T", " ")}・レビュー済みとして記録）`
+            : status === "rejected"
+              ? "要約を却下しました（レビュー状態: rejected）"
+              : "編集内容を保存しました（レビュー状態: edited）"
+        );
+      } catch (err) {
+        setDocActionMsg(`レビュー保存に失敗しました: ${err instanceof Error ? err.message : "不明なエラー"}`);
+      }
+    },
+    [documentId, currentSummary]
+  );
+
+  const adoptSummary = useCallback(() => void applySummaryReview("approved"), [applySummaryReview]);
+  const discardSummary = useCallback(() => void applySummaryReview("rejected"), [applySummaryReview]);
   const editSummary = useCallback(() => {
-    setDocActionMsg("手動編集モードは要約テキストを選択して直接編集できます（保存は Phase 2）");
-  }, []);
+    if (!currentSummary) {
+      setDocActionMsg("要約がまだ生成されていません");
+      return;
+    }
+    setDraftSummaryText(currentSummary.summaryText);
+    setSummaryEditing(true);
+  }, [currentSummary]);
+  const saveEditedSummary = useCallback(() => {
+    void applySummaryReview("edited", draftSummaryText);
+    setSummaryEditing(false);
+  }, [applySummaryReview, draftSummaryText]);
+  const cancelSummaryEdit = useCallback(() => setSummaryEditing(false), []);
 
   const toggleReportEdit = useCallback(() => {
     setReportEdit((prev) => !prev);
@@ -1781,10 +1856,11 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
   );
 
   const chatCounts = useMemo(() => {
-    const counts = { paper: 0, patent: 0, book: 0 };
+    const counts = { paper: 0, patent: 0, book: 0, web: 0 };
     for (const d of allDocs) {
       if (d.sourceType === "patent") counts.patent += 1;
       else if (d.sourceType === "pdf") counts.book += 1;
+      else if (d.sourceType === "web") counts.web += 1;
       else counts.paper += 1;
     }
     return counts;
@@ -1879,7 +1955,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
         };
         return {
           at: a.createdAt.replace("T", " ").slice(5, 19),
-          user: "ユーザー",
+          user: a.userName ?? "システム",
           act,
           actStyle: actStyle[act] ?? actStyle.操作,
           detail: JSON.stringify(a.detail ?? {}).slice(0, 120)
@@ -1888,41 +1964,57 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     [audit]
   );
 
-  const fitResults = useMemo(() => {
-    if (!fitReady) return [];
-    const groups = [
-      { key: "低炭素", words: ["低炭素", "CO2", "CO₂", "carbon", "コンクリート"], title: "低炭素コンクリート候補" },
-      { key: "UAV", words: ["UAV", "点検", "crack", "segmentation"], title: "UAV 点検技術候補" },
-      { key: "TBM", words: ["TBM", "トンネル", "tunnel", "掘進"], title: "TBM・トンネル技術候補" }
-    ];
-    return groups
-      .map((g) => {
-        const docs = allDocs.filter((d) => g.words.some((w) => `${d.title} ${d.abstract ?? ""}`.includes(w)));
-        if (docs.length === 0) return null;
-        const checks = docs.slice(0, 3).map((d, i) => ({
-          icon: i === 0 ? "○" : "△",
+  const setFitField = useCallback(
+    (field: keyof typeof fitInput) => (e: { target: { value: string } }) => {
+      setFitInput((prev) => ({ ...prev, [field]: e.target.value }));
+    },
+    []
+  );
+
+  const runFit = useCallback(async () => {
+    setFitBusy(true);
+    setFitError(null);
+    try {
+      const res = await api.fit.check(fitInput);
+      setFitResult(res);
+    } catch (err) {
+      setFitError(err instanceof Error ? err.message : "適用可否チェックに失敗しました");
+      setFitResult(null);
+    } finally {
+      setFitBusy(false);
+    }
+  }, [fitInput]);
+
+  const fitResults = useMemo(
+    () =>
+      (fitResult?.items ?? []).map((item) => ({
+        name: `${item.candidate}（根拠文献 ${item.docs.length} 件）`,
+        conf: item.confidence.toFixed(2),
+        verdict: item.verdict,
+        verdictStyle:
+          item.verdict === "有力"
+            ? "font-size:11.5px;font-weight:700;color:#1F8255;background:#E4F3EC;padding:4px 11px;border-radius:7px;flex-shrink:0"
+            : item.verdict === "条件付き可"
+              ? "font-size:11.5px;font-weight:700;color:#B5701A;background:#FDEFE0;padding:4px 11px;border-radius:7px;flex-shrink:0"
+              : "font-size:11.5px;font-weight:700;color:#8A97A8;background:#F2F4F8;padding:4px 11px;border-radius:7px;flex-shrink:0",
+        headline: item.docs.length
+          ? `保存文献 ${item.docs.length} 件が候補条件に一致しました。原典と示方書で適用可否を確認してください。`
+          : "一致する保存文献がありません。検索で文献を追加するか、候補語を変えてください。",
+        checks: item.docs.map((d) => ({
+          icon: "○",
           iconStyle:
-            i === 0
-              ? "width:18px;height:18px;border-radius:50%;background:#E4F3EC;color:#1F8255;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:2px"
-              : "width:18px;height:18px;border-radius:50%;background:#FDEFE0;color:#B5701A;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:2px",
+            "width:18px;height:18px;border-radius:50%;background:#E4F3EC;color:#1F8255;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:2px",
           text: `${d.title}${d.abstract ? ` — ${d.abstract.slice(0, 80)}…` : ""}`,
           src: d.sourceName ?? "保存文献",
           url: d.url ?? "#"
-        }));
-        return {
-          name: `${g.title}（保存文献 ${docs.length} 件）`,
-          conf: (0.75 + docs.length * 0.03).toFixed(2),
-          verdict: docs.length >= 3 ? "有力" : "条件付き可",
-          verdictStyle:
-            docs.length >= 3
-              ? "font-size:11.5px;font-weight:700;color:#1F8255;background:#E4F3EC;padding:4px 11px;border-radius:7px;flex-shrink:0"
-              : "font-size:11.5px;font-weight:700;color:#B5701A;background:#FDEFE0;padding:4px 11px;border-radius:7px;flex-shrink:0",
-          headline: `${docs[0]?.title ?? ""} を中心に、保存文献 ${docs.length} 件の要旨から適用可否の論点を整理しました。`,
-          checks
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null);
-  }, [fitReady, allDocs]);
+        }))
+      })),
+    [fitResult]
+  );
+
+  const summaryMeta = currentSummary
+    ? `${currentSummary.modelName ?? "rule-based-fallback"} · ${currentSummary.promptVersion ?? "v1"}`
+    : "未生成";
 
   const statProjects = String(projects.length);
   const statProjectsSub = `保存文献 ${allDocs.length} 件`;
@@ -2237,6 +2329,7 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     chatPaperCount: chatCounts.paper,
     chatPatentCount: chatCounts.patent,
     chatBookCount: chatCounts.book,
+    chatWebCount: chatCounts.web,
     chatDocCount: allDocs.length,
     chatBusyText: `${allDocs.length} 件の文献から根拠を探しています…`,
     trendRows,
@@ -2322,15 +2415,18 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     llmUsage,
     projects: projectRows,
     audit: auditRows,
-    fitReady,
+    fitReady: !!fitResult,
     fitResults,
-    runFit: () => {
-      setFitReady(false);
-      setTimeout(() => setFitReady(true), 700);
-    },
+    runFit,
+    fitBusy,
+    fitError,
+    fitInput,
+    setFitField,
     user,
     DISCLAIMER,
-    aiEngineNote: "ルール応答モード · LLM キー未設定",
+    aiEngineNote: activeProvider
+      ? `AI: ${activeProvider === "openai" ? "OpenAI" : activeProvider}（${activeProvider === "deepseek" ? dsModel : anModel}）`
+      : "ルール応答モード · LLM キー未設定",
     userInitial: (user?.name ?? "U").slice(0, 1),
     userName: user?.name ?? "ゲスト",
     userOrg: user?.email ?? "",
@@ -2344,14 +2440,15 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     statWatch,
     statWatchSub,
     digestMeta,
+    summaryMeta,
     docVenue: doc?.sourceName ?? "—",
     docDoi: doc?.doi ?? doc?.patentNumber ?? "—",
-    docSource: doc?.sourceType === "patent" ? "Google Patents" : "Crossref / OpenAlex",
+    docSource: doc?.sourceName ?? (doc?.sourceType === "patent" ? "特許データベース" : "外部データベース"),
     docId: doc?.id ?? null,
     docUrl: doc?.url ?? "#",
     docUrlHost: doc?.url ? new URL(doc.url).hostname : "出典なし",
     docTypeLabel: doc ? (TYPE_LABEL[doc.sourceType === "pdf" ? "book" : doc.sourceType] ?? doc.sourceType) : "文書",
-    docDomain: doc?.sourceType === "patent" ? "特許" : "保存文献",
+    docDomain: doc ? (TYPE_LABEL[doc.sourceType === "pdf" ? "book" : doc.sourceType] ?? doc.sourceType) : "保存文献",
     compareHeaders: comparison ? comparison.rows.slice(0, 4).map((r) => r.technologyName) : [],
     settingsDeepSeekConfigured: dsConfigured,
     settingsAnthropicConfigured: anConfigured,
@@ -2381,6 +2478,18 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     ingestBusy,
     ingestMsg,
     runIngestNow,
+    searchFailureSources,
+    headerQuery,
+    setHeaderQuery: (e: { target: { value: string } }) => setHeaderQuery(e.target.value),
+    runHeaderSearch,
+    audience,
+    setAudience: (e: { target: { value: string } }) => setAudience(e.target.value),
+    summaryEditing,
+    setSummaryEditing,
+    draftSummaryText,
+    setDraftSummaryText: (e: { target: { value: string } }) => setDraftSummaryText(e.target.value),
+    saveEditedSummary,
+    cancelSummaryEdit,
     dsMsgStyle:
       dsMsg.type === "ok"
         ? "margin-top:4px;padding:10px 13px;background:#E4F3EC;border:1px solid #B7E0C5;color:#1F8255;border-radius:8px;font-size:12px;line-height:1.7;white-space:pre-wrap"

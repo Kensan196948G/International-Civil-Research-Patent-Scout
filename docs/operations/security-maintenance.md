@@ -9,6 +9,8 @@
 | RESEND_API_KEY / 外部 API キー | 同上 | 各サービスでローテーション |
 | CLOUDFLARE_API_TOKEN | 環境変数（GitHub Secret 相当） | 権限見直し・四半期 |
 | NEON_API_KEY | 環境変数 | 四半期 |
+| REGISTRATION_MODE / ALLOWED_EMAIL_DOMAINS | `/etc/icrps/icrps.env` | 入退社に合わせて許可ドメインを更新 |
+| AI_RATE_LIMIT_PER_HOUR | `/etc/icrps/icrps.env` | 費用状況に応じて見直し |
 
 秘密はリポジトリ・ログ・監査ログへ出力しない。`.env.example` は変数名と安全な例のみ。
 
