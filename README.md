@@ -210,6 +210,7 @@ curl http://127.0.0.1:8787/api/health
 ## 🛡️ セキュリティ
 
 - パスワードは bcrypt でハッシュ化、JWT は HS256 + 12 時間期限
+- ブラウザ認証は HttpOnly Cookie（`icrps_token`）＋ CSRF ダブルサブミット（`icrps_csrf`）。API クライアントは Bearer 継続可
 - 登録制御: `REGISTRATION_MODE=domain` 設定時は許可ドメインのみ登録・SSO 利用可（本番推奨）
 - 初回管理者: `BOOTSTRAP_ADMIN_EMAIL` のユーザーが最初の管理者になります
 - 全データ操作に所有者チェック、admin 専用ルートはロールチェック

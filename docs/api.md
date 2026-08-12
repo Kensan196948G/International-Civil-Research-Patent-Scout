@@ -14,6 +14,10 @@
 
 認証が必要なエンドポイントには `Authorization: Bearer <token>` を付与。トークン期限は 12 時間（`JWT_EXPIRES_IN` で変更可）。
 
+ブラウザではログイン/登録/マジックリンク/SSO 時に HttpOnly Cookie（`icrps_token`）と CSRF Cookie（`icrps_csrf`）が設定されます。
+Cookie 認証を利用する非 GET/HEAD リクエストには `X-CSRF-Token` ヘッダーが必要です（Web UI は自動付与）。
+`POST /api/auth/logout` で Cookie を削除します。外部 API クライアントは従来どおり Bearer を使用できます。
+
 ## エラー形式
 
 すべてのエラーは `{ "error": { "code", "message", "details?" } }`。ステータスは 400/401/403/404/409/500。

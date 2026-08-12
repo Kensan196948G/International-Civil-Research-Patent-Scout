@@ -20,6 +20,7 @@ import { teamRoutes } from "./routes/teams.js";
 import { fitRoutes } from "./routes/fit.js";
 import { HttpError } from "./errors.js";
 import type { ApiErrorBody } from "@icrps/contracts";
+import { csrfGuard } from "./auth-cookie.js";
 
 export function createApp(): Hono<AppBindings> {
   const app = new Hono<AppBindings>();
@@ -30,6 +31,7 @@ export function createApp(): Hono<AppBindings> {
     c.header("X-Request-Id", requestId);
     await next();
   });
+  app.use("*", csrfGuard);
   app.use("*", async (c, next) => {
     await next();
     c.header("X-Content-Type-Options", "nosniff");

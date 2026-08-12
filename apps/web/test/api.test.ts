@@ -25,8 +25,7 @@ describe("api client", () => {
     vi.unstubAllGlobals();
   });
 
-  it("sends auth header and parses json", async () => {
-    setToken("tok");
+  it("uses credentials include and parses json", async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ user: { id: "1", role: "user" } }), { status: 200 })
     );
@@ -34,8 +33,23 @@ describe("api client", () => {
     expect(res.user.id).toBe("1");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/auth/me",
-      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer tok" }) })
+      expect.objectContaining({ credentials: "include" })
     );
+  });
+
+  it("sends CSRF token for state-changing requests when cookie is present", async () => {
+    document.cookie = "icrps_csrf=csrf-abc; path=/";
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await api.logout();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/logout",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({ "X-CSRF-Token": "csrf-abc" })
+      })
+    );
+    document.cookie = "icrps_csrf=; Max-Age=0";
   });
 
   it("throws ApiError with body message", async () => {
