@@ -1,7 +1,7 @@
 # ICRPS 統合評価・改善報告書（v0.10.0）
 
 報告日: 2026-08-12 / 対象: International-Civil-Research-Patent-Scout（ICRPS）
-評価・改善ブランチ: `improvement/production-hardening-v0.10.0`（PR 作成済み）
+評価・改善ブランチ: `improvement/production-hardening-v0.10.0`（PR: https://github.com/Kensan196948G/International-Civil-Research-Patent-Scout/pull/25）
 
 ## 1. プロジェクト概要
 
@@ -84,7 +84,7 @@
 - ブランチ: `improvement/production-hardening-v0.10.0`（main から作成）
 - ローカル検証: typecheck / lint / test（115）/ build / npm audit すべて PASS
 - 稼働確認: `http://127.0.0.1:8787` 200・LAN 200・Cloudflare 302（Access 設計どおり）
-- CI: 本ブランチの PR 作成後に GitHub Actions 実行予定（本報告時点では PR 作成待ち）
+- CI: PR #25 の GitHub Actions 実行中（typecheck / lint / test / build / audit）
 - デプロイ: 本番（ローカル systemd / Cloudflare）への v0.10.0 適用は未実施（承認待ち）
 
 ## 9. 残課題

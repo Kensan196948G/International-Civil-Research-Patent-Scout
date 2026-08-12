@@ -31,6 +31,7 @@
   },
   "deploy": {
     "ready": true,
+    "evaluation_pr": 25,
     "scope": "ローカル運用（自動割当IP:8787・systemd 自動起動）。Cloudflare はサブドメイン承認後に移行",
     "runbook": "docs/operations/deploy-runbook.md",
     "rollback": "docs/operations/rollback.md",
