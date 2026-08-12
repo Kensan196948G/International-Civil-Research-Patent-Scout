@@ -36,7 +36,17 @@ echo "==> /etc/icrps を作成"
 install -d -m 700 /etc/icrps
 
 if [[ -n "${DATABASE_URL:-}" ]]; then
+  read_env_value() {
+    local key="$1"
+    if [[ -f "${ENV_FILE}" ]]; then
+      sed -n "s/^${key}=//p" "${ENV_FILE}" | head -1
+    fi
+  }
   JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32)}"
+  REGISTRATION_MODE="${REGISTRATION_MODE:-$(read_env_value REGISTRATION_MODE)}"
+  ALLOWED_EMAIL_DOMAINS="${ALLOWED_EMAIL_DOMAINS:-$(read_env_value ALLOWED_EMAIL_DOMAINS)}"
+  BOOTSTRAP_ADMIN_EMAIL="${BOOTSTRAP_ADMIN_EMAIL:-$(read_env_value BOOTSTRAP_ADMIN_EMAIL)}"
+  AI_RATE_LIMIT_PER_HOUR="${AI_RATE_LIMIT_PER_HOUR:-$(read_env_value AI_RATE_LIMIT_PER_HOUR)}"
   {
     echo "APP_ENV=production"
     echo "APP_URL=${APP_URL:-http://$(hostname -I | awk '{print $1}'):${PORT}}"
