@@ -1,6 +1,6 @@
 {
   "name": "@icrps/api",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
   "description": "Cloudflare Workers API — 認証・横断検索・AI要約・比較・レポート（Neon PostgreSQL）",
