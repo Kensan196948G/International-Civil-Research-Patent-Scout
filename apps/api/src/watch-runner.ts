@@ -15,6 +15,7 @@ import {
   findUserById,
   insertDocument,
   listEnabledWatchTopics,
+  normalizeContentHash,
   notificationExistsForDocument,
   updateWatchTopicCheck,
   type WatchTopicRow
@@ -103,7 +104,7 @@ export async function runWatchTopic(
       };
       let document = await findDocumentByKey(db, key);
       if (!document) {
-        document = await insertDocument(db, item.result, key.contentHash ?? null);
+        document = await insertDocument(db, item.result, await normalizeContentHash(key.contentHash));
         inserted += 1;
       }
       const alreadyNotified = await notificationExistsForDocument(db, topic.id, document.id);

@@ -32,5 +32,7 @@
 | 2026-08-14 | デモデータシード実装・投入（scripts/seed-demo.mjs・--force 対応） | OK（ユーザー3/チーム2/プロジェクト4/文献16/要約18/比較2/レポート3/ウォッチ4/通知6） | MVP 実装セッション |
 | 2026-08-14 | 不正 UUID 500 → 404 修正・E2E スモーク検証条件修正 | OK（typecheck/lint/test 123/build 全 PASS・smoke-e2e ALL PASSED） | MVP 実装セッション |
 | 2026-08-14 | v0.12.0 をローカル systemd へデプロイ | OK（health 0.12.0・db ok・E2E PASS） | MVP 実装セッション |
+| 2026-08-14 | v0.12.1: 検索500（content_hash 超過）修正・CSP/React警告/chat変数修正・実ブラウザE2E追加 | OK（typecheck/lint/test 127/build 全 PASS・UI-E2E 14項目 PASS・console error 0） | MVP 検証セッション |
+| 2026-08-14 | v0.12.1 をローカル systemd へデプロイ | OK（health 0.12.1・db ok・smoke PASS） | MVP 検証セッション |
 
 今後はこの表に日付・結果・担当を追記する。

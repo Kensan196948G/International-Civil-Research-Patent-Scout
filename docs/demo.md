@@ -50,10 +50,15 @@ DATABASE_URL=postgresql://... npm run seed:demo
 
 ```bash
 curl -s http://127.0.0.1:8787/api/health
-# {"ok":true,"app":"icrps-api","version":"0.12.0","env":"production","db":"ok",...}
+# {"ok":true,"app":"icrps-api","version":"0.12.1","env":"production","db":"ok",...}
 
 BASE_URL=http://127.0.0.1:8787 node scripts/smoke-e2e.mjs
 # 登録→プロジェクト→検索→保存→要約→比較→レポート→エクスポート→ウォッチ→チャットまで自動実行
+
+# 実ブラウザ E2E（Firefox・Playwright。初回のみ npm i --no-save playwright@1.49.1）
+npm run smoke:ui
+# ログイン→ダッシュボード→フィード→文書詳細→検索→プロジェクト→比較→適用可否→
+# レポート→チャット→ウォッチ→管理→システム設定→ログアウトまで実操作で確認
 ```
 
 ## 6. デモデータの構成（件数はシード実行時の実値）
@@ -72,6 +77,8 @@ BASE_URL=http://127.0.0.1:8787 node scripts/smoke-e2e.mjs
 | reports | 3 | 技術比較・特許調査・論文レビュー |
 | watch_topics / notifications | 4 / 6 | 有効/停止・既読/未読 |
 | audit_logs / llm_usage | デモ分追加 | 操作履歴・コスト見積り |
+
+※ 検証操作（スモーク・実ブラウザ E2E）で追加された検索履歴・レポートも保持されます。
 
 ## 7. 注意
 

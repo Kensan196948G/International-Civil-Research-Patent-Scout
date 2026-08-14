@@ -843,6 +843,29 @@ export async function findDocumentByKey(
   return null;
 }
 
+/**
+ * 外部コネクタ由来のメタデータを DB カラム長に収める。
+ * 検索・収集・ウォッチのいずれでも使うため repositories 側で一括対応する。
+ */
+export function clampMeta(value: string | null | undefined, max: number): string | null {
+  if (value === null || value === undefined) return null;
+  const s = String(value);
+  return s.length > max ? s.slice(0, max) : s;
+}
+
+/**
+ * content_hash（varchar(128)）用の正規化。
+ * 短いキー（DOI・特許番号・URL）は既存データとの互換のためそのまま使い、
+ * 128 文字を超える場合は SHA-256 ハッシュ（64 文字 hex）にする。
+ */
+export async function normalizeContentHash(value: string | null | undefined): Promise<string | null> {
+  if (value === null || value === undefined) return null;
+  const s = String(value);
+  if (s.length <= 128) return s;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export async function insertDocument(db: Db, result: SearchConnectorResult, contentHash: string | null): Promise<SourceDocument> {
   const classificationsJson = normalizeClassifications(result.classifications);
   const rows = await db(
@@ -857,19 +880,19 @@ export async function insertDocument(db: Db, result: SearchConnectorResult, cont
       result.originalTitle ?? null,
       result.abstract ?? result.snippet ?? null,
       result.url ?? null,
-      result.doi ?? null,
-      result.patentNumber ?? null,
-      result.publicationNumber ?? null,
+      clampMeta(result.doi, 255),
+      clampMeta(result.patentNumber, 255),
+      clampMeta(result.publicationNumber, 255),
       result.patentStatus ?? null,
       classificationsJson?.length ? JSON.stringify(classificationsJson) : JSON.stringify([]),
       result.authors?.length ? JSON.stringify(result.authors) : null,
       result.inventors?.length ? JSON.stringify(result.inventors) : null,
       result.applicants?.length ? JSON.stringify(result.applicants) : null,
-      result.country ?? null,
+      clampMeta(result.country, 50),
       result.publicationDate ?? null,
-      result.sourceName ?? null,
+      clampMeta(result.sourceName, 255),
       "公開メタデータ・要旨を中心に利用（本文は原則保存しない）",
-      contentHash
+      contentHash?.slice(0, 128) ?? null
     ]
   );
   return mapDocument(rows[0]!);
@@ -895,7 +918,7 @@ export async function insertDocumentsBatch(db: Db, results: SearchConnectorResul
     const chunk = rows.slice(i, i + chunkSize);
     const placeholders: string[] = [];
     const values: unknown[] = [];
-    chunk.forEach((r, j) => {
+    for (const [j, r] of chunk.entries()) {
       const classificationsJson = normalizeClassifications(r.classifications);
       const base = j * 18;
       placeholders.push(
@@ -908,21 +931,21 @@ export async function insertDocumentsBatch(db: Db, results: SearchConnectorResul
         r.originalTitle ?? null,
         r.abstract ?? r.snippet ?? null,
         r.url ?? null,
-        r.doi ?? null,
-        r.patentNumber ?? null,
-        r.publicationNumber ?? null,
+        clampMeta(r.doi, 255),
+        clampMeta(r.patentNumber, 255),
+        clampMeta(r.publicationNumber, 255),
         r.patentStatus ?? null,
         classificationsJson?.length ? JSON.stringify(classificationsJson) : JSON.stringify([]),
         r.authors?.length ? JSON.stringify(r.authors) : null,
         r.inventors?.length ? JSON.stringify(r.inventors) : null,
         r.applicants?.length ? JSON.stringify(r.applicants) : null,
-        r.country ?? null,
+        clampMeta(r.country, 50),
         r.publicationDate ?? null,
-        r.sourceName ?? null,
+        clampMeta(r.sourceName, 255),
         "公開メタデータ・要旨を中心に利用（本文は原則保存しない）",
-        r.doi ?? r.url ?? null
+        await normalizeContentHash(r.doi ?? r.url ?? null)
       );
-    });
+    }
     const returned = await db(
       `INSERT INTO source_documents
          (source_type, title, original_title, abstract, url, doi, patent_number, publication_number,

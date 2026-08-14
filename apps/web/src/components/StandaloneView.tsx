@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 生成ファイル: ICRPS WebUI (standalone).html のテンプレートを機械変換した React ビュー
 // 元テンプレートとの差分を保つため、手動編集は最小限にする
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { css } from "../lib/css";
 
 export function StandaloneView({ v }: { v: any }) {
@@ -94,9 +94,9 @@ export function StandaloneView({ v }: { v: any }) {
     </div>
 
     <nav style={css("flex:1;overflow-y:auto;padding:10px 12px 14px;display:flex;flex-direction:column;gap:1px")}>
-      {(navGroups ).map((group: any) => (<>
+      {(navGroups ).map((group: any) => (<Fragment key={group.label}>
         <div style={css("padding:13px 8px 6px;font-size:10px;letter-spacing:1px;color:#A2AEBC;font-weight:600")}>{group.label}</div>
-        {(group.items ).map((item: any) => (<>
+        {(group.items ).map((item: any) => (<Fragment key={item.label}>
           <a onClick={item.go } style={css("position:relative;display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:7px;font-size:13px;font-weight:500;text-decoration:none;color:#5A6678;cursor:pointer")}>
             {(item.active ) && (<>
               <span style={css("position:absolute;inset:0;background:#FDEFE0;border-radius:7px")}></span>
@@ -108,8 +108,8 @@ export function StandaloneView({ v }: { v: any }) {
               <span style={css("position:relative;font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:1px 6px;border-radius:9px;background:#F2F4F8;color:#5A6678")}>{item.badge}</span>
             </>)}
           </a>
-        </>))}
-      </>))}
+        </Fragment>))}
+      </Fragment>))}
     </nav>
 
     <div style={css("padding:11px 14px;border-top:1px solid #EEF1F5;display:flex;align-items:center;gap:8px")}>
@@ -207,13 +207,13 @@ export function StandaloneView({ v }: { v: any }) {
                   <span style={css("font-size:11px;font-weight:600;color:#1F8255;background:#E4F3EC;padding:2px 8px;border-radius:6px")}>自動更新</span>
                 </div>
                 <div style={css("padding:16px 18px;display:flex;flex-direction:column;gap:13px")}>
-                  {(trendRows ).map((t: any) => (<>
+                  {(trendRows ).map((t: any) => (<Fragment key={t.label}>
                     <div style={css("display:flex;align-items:center;gap:12px")}>
                       <span style={css("width:150px;flex-shrink:0;font-size:12.5px;color:#5A6678")}>{t.label}</span>
                       <span style={css("flex:1;height:8px;background:#EEF1F5;border-radius:4px;overflow:hidden;display:block")}><span style={css("display:block;height:100%;width:" + t.width + "%;background:" + t.color + ";border-radius:4px")}></span></span>
                       <span style={css("width:110px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#1F8255;font-weight:600")}>{t.value}</span>
                     </div>
-                  </>))}
+                  </Fragment>))}
                   <div style={css("margin-top:4px;padding:11px 13px;background:#FDEFE0;border-radius:8px;font-size:12px;line-height:1.7;color:#7A4B10")}>
                     <b>キーワード分析の所見：</b>保存文献の件数が多いテーマから、低炭素コンクリートと UAV 点検・画像診断の 2 領域に集中しています。重点テーマの文献が少ない場合は、検索で補完してください。
                     <a onClick={goSearch } style={css("cursor:pointer;font-weight:600;white-space:nowrap")}>→ この観点で検索</a>
@@ -225,22 +225,22 @@ export function StandaloneView({ v }: { v: any }) {
             <div style={css("display:flex;flex-direction:column;gap:16px;min-width:0")}>
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
                 <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center")}><span style={css("flex:1;font-size:14px;font-weight:600")}>要確認のアラート</span><span style={css("font-size:11px;font-weight:600;color:#C5392F;background:#FCE9E7;padding:2px 8px;border-radius:6px")}>{alertRows.length}</span></div>
-                {(alertRows ).map((a: any, idx: number) => (<>
+                {(alertRows ).map((a: any, idx: number) => (<Fragment key={`alert-${idx}`}>
                   <div style={css("padding:13px 18px;" + (idx < alertRows.length - 1 ? "border-bottom:1px solid #EEF1F5;" : "") + "display:flex;gap:11px")}>
                     <span style={css("width:8px;height:8px;border-radius:50%;background:" + a.color + ";margin-top:5px;flex-shrink:0")}></span>
                     <div style={css("min-width:0")}><div style={css("font-size:12.5px;font-weight:600;line-height:1.5")}>{a.title}</div><div style={css("font-size:11.5px;color:#8A97A8;margin-top:3px")}>{a.sub}</div></div>
                   </div>
-                </>))}
+                </Fragment>))}
               </div>
 
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
                 <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center")}><span style={css("flex:1;font-size:14px;font-weight:600")}>最近の調査プロジェクト</span><a onClick={goProjects } style={css("cursor:pointer;font-size:11.5px")}>すべて</a></div>
-                {(recentProjectRows ).map((p: any, idx: number) => (<>
+                {(recentProjectRows ).map((p: any, idx: number) => (<Fragment key={`recent-${idx}`}>
                   <div style={css("padding:12px 18px;" + (idx < recentProjectRows.length - 1 ? "border-bottom:1px solid #EEF1F5;" : "") + "display:flex;align-items:center;gap:10px")}>
                     <div style={css("flex:1;min-width:0")}><div style={css("font-size:12.5px;font-weight:500;color:#1A2433")}>{p.title}</div><div style={css("font-size:11px;color:#8A97A8;margin-top:2px")}>{p.meta}</div></div>
                     <span style={css(p.statusStyle )}>{p.status}</span>
                   </div>
-                </>))}
+                </Fragment>))}
               </div>
             </div>
           </div>
@@ -312,22 +312,22 @@ export function StandaloneView({ v }: { v: any }) {
           <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:15px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:11px")}>
             <div style={css("display:flex;align-items:center;gap:10px;flex-wrap:wrap")}>
               <span style={css("font-size:11.5px;font-weight:600;color:#5A6678;width:52px")}>分野</span>
-              {(domainChips ).map((chip: any) => (<>
+              {(domainChips ).map((chip: any) => (<Fragment key={chip.label}>
                 <button onClick={chip.go } style={css(chip.style )}>{chip.label}<span style={css("font-family:'IBM Plex Mono',monospace;opacity:.65;margin-left:5px")}>{chip.n}</span></button>
-              </>))}
+              </Fragment>))}
             </div>
             <div style={css("display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid #EEF1F5;padding-top:11px")}>
               <span style={css("font-size:11.5px;font-weight:600;color:#5A6678;width:52px")}>種別</span>
-              {(typeChips ).map((chip: any) => (<>
+              {(typeChips ).map((chip: any) => (<Fragment key={chip.label}>
                 <button onClick={chip.go } style={css(chip.style )}>{chip.label}</button>
-              </>))}
+              </Fragment>))}
               <div style={css("flex:1")}></div>
               <span style={css("font-size:11.5px;color:#8A97A8")}>{feedCount} 件 · AI 選別スコア順</span>
             </div>
           </div>
 
           <div style={css("display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:16px;align-items:start")}>
-            {(feed ).map((it: any) => (<>
+            {(feed ).map((it: any) => (<Fragment key={it.id}>
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden;display:flex;flex-direction:column;animation:icrps-in .25s ease both")}>
                 <div style={css("padding:14px 17px 0;display:flex;align-items:center;gap:7px;flex-wrap:wrap")}>
                   <span style={css(it.typeStyle )}>{it.typeLabel}</span>
@@ -349,9 +349,9 @@ export function StandaloneView({ v }: { v: any }) {
                   <div style={css("font-size:12.5px;line-height:1.75;color:#1A2433")}>{it.summary}</div>
                 </div>
                 <div style={css("padding:12px 17px 0;display:flex;flex-direction:column;gap:5px")}>
-                  {(it.points ).map((p: any) => (<>
+                  {(it.points ).map((p: any) => (<Fragment key={p}>
                     <div style={css("display:flex;gap:8px;font-size:12px;line-height:1.65;color:#5A6678")}><span style={css("color:#E08A2B;font-weight:700")}>•</span><span>{p}</span></div>
-                  </>))}
+                  </Fragment>))}
                 </div>
                 <div style={css("margin-top:auto;padding:14px 17px;display:flex;gap:8px;flex-wrap:wrap;align-items:center")}>
                   <button onClick={it.goDoc } style={css("cursor:pointer;border:1px solid #C9D7EC;background:#fff;color:#2E5AAC;padding:6px 11px;border-radius:8px;font:inherit;font-size:12px;font-weight:600")}>詳細と全文要約</button>
@@ -360,7 +360,7 @@ export function StandaloneView({ v }: { v: any }) {
                   <a href={it.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
                 </div>
               </div>
-            </>))}
+            </Fragment>))}
           </div>
           </>)}
 
@@ -384,7 +384,7 @@ export function StandaloneView({ v }: { v: any }) {
             {(litError ) && (<div style={css("margin-bottom:14px;padding:10px 13px;background:#FCE9E7;border:1px solid #F5B3AD;color:#C5392F;border-radius:8px;font-size:12px;line-height:1.7")}>{litError}</div>)}
 
             <div style={css("display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:16px;align-items:start")}>
-              {(litRows ).map((it: any) => (<>
+              {(litRows ).map((it: any) => (<Fragment key={it.id}>
                 <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden;display:flex;flex-direction:column;animation:icrps-in .25s ease both")}>
                   <div style={css("padding:14px 17px 0;display:flex;align-items:center;gap:7px;flex-wrap:wrap")}>
                     <span style={css(it.typeStyle )}>{it.typeLabel}</span>
@@ -412,7 +412,7 @@ export function StandaloneView({ v }: { v: any }) {
                     <a href={it.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
                   </div>
                 </div>
-              </>))}
+              </Fragment>))}
             </div>
 
             {(litLoading ) && (<div style={css("text-align:center;padding:18px;font-size:12px;color:#8A97A8")}>読み込み中…</div>)}
@@ -514,7 +514,7 @@ export function StandaloneView({ v }: { v: any }) {
                 <button onClick={toggleQueryEdit } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:5px 10px;border-radius:8px;font:inherit;font-size:11.5px;font-weight:600")}>展開語を手で修正</button>
               </div>
               <div style={css("padding:14px 18px;display:flex;flex-direction:column;gap:10px")}>
-                {(steps ).map((s: any) => (<>
+                {(steps ).map((s: any) => (<Fragment key={s.label}>
                   <div style={css("display:flex;gap:11px;align-items:flex-start;animation:icrps-in .3s ease both")}>
                     <span style={css(s.dot )}></span>
                     <div style={css("min-width:0;flex:1")}>
@@ -522,13 +522,13 @@ export function StandaloneView({ v }: { v: any }) {
                       <div style={css("font-size:12px;color:#5A6678;line-height:1.7;margin-top:3px")}>{s.detail}</div>
                     </div>
                   </div>
-                </>))}
+                </Fragment>))}
                 {(termsReady ) && (<>
                   <div style={css("border-top:1px solid #EEF1F5;padding-top:12px;display:flex;gap:7px;flex-wrap:wrap;align-items:center")}>
                     <span style={css("font-size:11.5px;font-weight:600;color:#5A6678;margin-right:3px")}>展開クエリ</span>
-                    {(terms ).map((t: any) => (<>
+                    {(terms ).map((t: any) => (<Fragment key={t.text}>
                       <span style={css(t.style )}>{t.text}</span>
-                    </>))}
+                    </Fragment>))}
                   </div>
                 </>)}
               </div>
@@ -552,7 +552,7 @@ export function StandaloneView({ v }: { v: any }) {
                     <button onClick={goCompare } style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:7px 13px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>選択 {compareCount} 件で AI 比較表</button>
                   </>)}
                 </div>
-                {(results ).map((r: any) => (<>
+                {(results ).map((r: any) => (<Fragment key={r.title}>
                   <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:16px 18px;animation:icrps-in .25s ease both")}>
                     <div style={css("display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:9px")}>
                       <span style={css(r.typeStyle )}>{r.typeLabel}</span>
@@ -577,7 +577,7 @@ export function StandaloneView({ v }: { v: any }) {
                       <a href={r.url} target="_blank" rel="noreferrer" style={css("font-size:11.5px;font-weight:600")}>出典 ↗</a>
                     </div>
                   </div>
-                </>))}
+                </Fragment>))}
               </div>
 
               <div style={css("display:flex;flex-direction:column;gap:16px")}>
@@ -680,18 +680,18 @@ export function StandaloneView({ v }: { v: any }) {
 
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
                 <div style={css("display:flex;gap:2px;padding:10px 14px 0;border-bottom:1px solid #EEF1F5")}>
-                  {(docTabs ).map((t: any) => (<>
+                  {(docTabs ).map((t: any) => (<Fragment key={t.label}>
                     <button onClick={t.go } style={css(t.style )}>{t.label}</button>
-                  </>))}
+                  </Fragment>))}
                 </div>
 
                 {(docTabSummary ) && (<>
                   <div style={css("padding:16px 20px 20px")}>
                     <div style={css("display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:14px")}>
                       <span style={css("font-size:11.5px;font-weight:600;color:#5A6678;margin-right:3px")}>要約の粒度</span>
-                      {(sumLevels ).map((l: any) => (<>
+                      {(sumLevels ).map((l: any) => (<Fragment key={l.label}>
                         <button onClick={l.go } style={css(l.style )}>{l.label}</button>
-                      </>))}
+                      </Fragment>))}
                       <div style={css("flex:1")}></div>
                       <span style={css("font-size:11px;color:#8A97A8")}>生成モデル</span>
                       <span style={css("font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#5A6678")}>{summaryMeta}</span>
@@ -813,14 +813,14 @@ export function StandaloneView({ v }: { v: any }) {
                     )}
                     <div style={css("font-size:12.5px;color:#5A6678;line-height:1.8;margin-bottom:14px")}>類似文献（主題の近さスコア）</div>
                     <div style={css("display:flex;flex-direction:column;gap:9px")}>
-                      {(related ).map((rl: any) => (<>
+                      {(related ).map((rl: any) => (<Fragment key={rl.title}>
                         <div onClick={rl.go} style={css("display:flex;align-items:center;gap:13px;padding:11px 13px;border:1px solid #E3E8EF;border-radius:8px;cursor:pointer")}>
                           <span style={css(rl.relStyle )}>{rl.rel}</span>
                           <div style={css("flex:1;min-width:0")}><div style={css("font-size:12.5px;font-weight:500;line-height:1.6")}>{rl.title}</div><div style={css("font-size:11px;color:#8A97A8;margin-top:3px;font-family:'IBM Plex Mono',monospace")}>{rl.venue}</div></div>
                           <span style={css("width:64px;height:6px;background:#EEF1F5;border-radius:3px;overflow:hidden;display:block;flex-shrink:0")}><span style={css(rl.barStyle )}></span></span>
                           <span style={css("font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#5A6678;width:34px;text-align:right")}>{rl.sim}</span>
                         </div>
-                      </>))}
+                      </Fragment>))}
                     </div>
                   </div>
                 </>)}
@@ -908,14 +908,14 @@ export function StandaloneView({ v }: { v: any }) {
               <div style={css("flex:1")}><div style={css("font-size:14px;font-weight:600")}>比較軸の提案</div><div style={css("font-size:11.5px;color:#8A97A8")}>選択した 4 文献の内容から、意味のある比較軸を AI が提案しました。採否を選んでください。</div></div>
             </div>
             <div style={css("padding:14px 18px;display:flex;flex-direction:column;gap:8px")}>
-              {(axes ).map((ax: any) => (<>
+              {(axes ).map((ax: any) => (<Fragment key={ax.name}>
                 <div style={css("display:flex;align-items:center;gap:12px;padding:10px 13px;border:1px solid #E3E8EF;border-radius:8px")}>
                   <span style={css(ax.markStyle )}>{ax.mark}</span>
                   <div style={css("flex:1;min-width:0")}><div style={css("font-size:12.5px;font-weight:600")}>{ax.name}</div><div style={css("font-size:11.5px;color:#8A97A8;margin-top:2px;line-height:1.6")}>{ax.why}</div></div>
                   <button onClick={ax.accept } style={css(ax.acceptStyle )}>採用</button>
                   <button onClick={ax.reject } style={css(ax.rejectStyle )}>却下</button>
                 </div>
-              </>))}
+              </Fragment>))}
               <div style={css("display:flex;gap:9px;align-items:center;margin-top:5px")}>
                 <button onClick={buildCompare } style={css("cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:9px 15px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>採用 {axesOnCount} 軸で比較表を生成</button>
                 <button style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:9px 15px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>軸を自分で追加</button>
@@ -944,7 +944,7 @@ export function StandaloneView({ v }: { v: any }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {(compareRows ).map((row: any) => (<>
+                    {(compareRows ).map((row: any) => (<Fragment key={row.axis}>
                       <tr>
                         <td style={css("padding:12px 14px;border-bottom:1px solid #EEF1F5;font-weight:600;color:#5A6678;background:#FAFBFC;position:sticky;left:0")}>{row.axis}</td>
                         <td style={css("padding:12px 14px;border-bottom:1px solid #EEF1F5;line-height:1.75;vertical-align:top")}>{row.a}</td>
@@ -952,7 +952,7 @@ export function StandaloneView({ v }: { v: any }) {
                         <td style={css("padding:12px 14px;border-bottom:1px solid #EEF1F5;line-height:1.75;vertical-align:top")}>{row.c}</td>
                         <td style={css("padding:12px 14px;border-bottom:1px solid #EEF1F5;line-height:1.75;vertical-align:top")}>{row.d}</td>
                       </tr>
-                    </>))}
+                    </Fragment>))}
                   </tbody>
                 </table>
               </div>
@@ -991,7 +991,7 @@ export function StandaloneView({ v }: { v: any }) {
             <div style={css("display:flex;flex-direction:column;gap:16px;min-width:0")}>
               {!fitReady && !fitBusy && !fitError && <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;padding:24px 18px;text-align:center;font-size:12.5px;color:#8A97A8")}>左の条件を入力して「適用可否を判定」を実行してください。</div>}
               {(fitReady ) && (<>
-                {(fitResults ).map((f: any) => (<>
+                {(fitResults ).map((f: any) => (<Fragment key={f.name}>
                   <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden;animation:icrps-in .3s ease both")}>
                     <div style={css("padding:15px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:11px;flex-wrap:wrap")}>
                       <span style={css(f.verdictStyle )}>{f.verdict}</span>
@@ -999,15 +999,15 @@ export function StandaloneView({ v }: { v: any }) {
                       <div style={css("flex:1 1 100%;min-width:0")}><div style={css("font-size:14px;font-weight:600;line-height:1.5;text-wrap:pretty")}>{f.name}</div><div style={css("font-size:11.5px;color:#8A97A8;margin-top:3px;line-height:1.6")}>{f.headline}</div></div>
                     </div>
                     <div style={css("padding:14px 18px;display:flex;flex-direction:column;gap:9px")}>
-                      {(f.checks ).map((c: any) => (<>
+                      {(f.checks ).map((c: any) => (<Fragment key={c.text}>
                         <div style={css("display:flex;gap:11px;align-items:flex-start")}>
                           <span style={css(c.iconStyle )}>{c.icon}</span>
                           <div style={css("flex:1;min-width:0")}><div style={css("font-size:12.5px;line-height:1.75")}>{c.text}</div><div style={css("font-size:11px;color:#8A97A8;margin-top:3px")}>根拠：<a href={c.url} target="_blank" rel="noreferrer">{c.src} ↗</a></div></div>
                         </div>
-                      </>))}
+                      </Fragment>))}
                     </div>
                   </div>
-                </>))}
+                </Fragment>))}
               </>)}
               <div style={css("padding:12px 15px;background:#FDEFE0;border-radius:8px;font-size:11.5px;line-height:1.8;color:#7A4B10")}>本チェックは保存文献とのキーワード照合によるルールベース判定です（AI 生成ではありません）。設計判断・施工可否・安全性を保証するものではないため、採用前に必ず原典と示方書を確認し、社内基準に従って専門家の承認を得てください。</div>
             </div>
@@ -1033,13 +1033,13 @@ export function StandaloneView({ v }: { v: any }) {
               <div style={css("background:#fff;border:1px solid #E3E8EF;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden")}>
                 <div style={css("padding:14px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:8px")}><span style={css("font-size:10px;font-weight:700;color:#B5701A;background:#FDEFE0;padding:1px 6px;border-radius:5px")}>AI</span><span style={css("flex:1;font-size:13.5px;font-weight:600")}>章立ての提案</span></div>
                 <div style={css("padding:12px 15px;display:flex;flex-direction:column;gap:6px")}>
-                  {(outline ).map((o: any) => (<>
+                  {(outline ).map((o: any) => (<Fragment key={o.no}>
                     <div style={css("display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid #E3E8EF;border-radius:8px")}>
                       <span style={css("font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8A97A8;width:16px")}>{o.no}</span>
                       <span style={css("flex:1;font-size:12.5px;line-height:1.5")}>{o.title}</span>
                       <button onClick={o.toggle } style={css(o.style )}>{o.state}</button>
                     </div>
-                  </>))}
+                  </Fragment>))}
                 </div>
                 <div style={css("padding:0 15px 15px")}><button onClick={genReport } style={css("width:100%;cursor:pointer;border:1px solid #E08A2B;background:#E08A2B;color:#fff;padding:10px 15px;border-radius:8px;font:inherit;font-size:13px;font-weight:600")}>この構成でドラフト生成</button></div>
               </div>
@@ -1071,23 +1071,23 @@ export function StandaloneView({ v }: { v: any }) {
             </div>
 
             <div style={css("flex:1;min-height:240px;overflow:auto;padding:20px 22px;display:flex;flex-direction:column;gap:18px")}>
-              {(chat ).map((m: any) => (<>
+              {(chat ).map((m: any, i: number) => (<Fragment key={`chat-${i}`}>
                 <div style={css(m.wrapStyle )}>
                   <div style={css(m.bubbleStyle )}>{m.text}</div>
                   {(m.hasCites ) && (<>
                     <div style={css("display:flex;flex-direction:column;gap:6px;margin-top:10px;max-width:760px")}>
                       <div style={css("font-size:11px;font-weight:700;color:#8A97A8")}>出典</div>
-                      {(m.cites ).map((c: any) => (<>
+                      {(m.cites ).map((c: any) => (<Fragment key={c.n}>
                         <a href={c.url} target="_blank" rel="noreferrer" style={css("display:flex;gap:9px;align-items:center;padding:9px 11px;border:1px solid #E3E8EF;border-radius:8px;text-decoration:none")}>
                           <span style={css("font-family:'IBM Plex Mono',monospace;font-size:11px;color:#B5701A;background:#FDEFE0;padding:1px 6px;border-radius:5px;flex-shrink:0")}>{c.n}</span>
                           <span style={css("flex:1;min-width:0;font-size:12px;color:#1A2433;line-height:1.55")}>{c.title}</span>
                           <span style={css("font-size:11px;color:#8A97A8;flex-shrink:0")}>↗</span>
                         </a>
-                      </>))}
+                      </Fragment>))}
                     </div>
                   </>)}
                 </div>
-              </>))}
+              </Fragment>))}
               {(chatBusy ) && (<>
                 <div style={css("display:flex;gap:6px;align-items:center;color:#8A97A8;font-size:12px")}><span style={css("width:6px;height:6px;border-radius:50%;background:#E08A2B;animation:icrps-pulse 1.1s infinite")}></span>{chatBusyText}</div>
               </>)}
@@ -1095,9 +1095,9 @@ export function StandaloneView({ v }: { v: any }) {
 
             <div style={css("border-top:1px solid #EEF1F5;padding:13px 18px;display:flex;flex-direction:column;gap:9px")}>
               <div style={css("display:flex;gap:7px;flex-wrap:wrap")}>
-                {(chatSuggests ).map((s: any) => (<>
+                {(chatSuggests ).map((s: any) => (<Fragment key={s.label}>
                   <button onClick={s.go } style={css("cursor:pointer;border:1px solid #E3E8EF;background:#fff;color:#5A6678;padding:6px 11px;border-radius:8px;font:inherit;font-size:11.5px")}>{s.label}</button>
-                </>))}
+                </Fragment>))}
               </div>
               <div style={css("display:flex;gap:9px;align-items:flex-end")}>
                 <textarea value={chatInput} onChange={setChatInput} rows={1} placeholder="保存文献に対して質問してください（例：室内試験と実構造物試験の結果が食い違う点は？）" style={css("font:inherit;font-size:13px;padding:10px 12px;border:1px solid #E3E8EF;border-radius:8px;width:100%;outline:none;resize:none;line-height:1.6")}></textarea>
@@ -1154,7 +1154,7 @@ export function StandaloneView({ v }: { v: any }) {
                   {(watchMsg.text ) && (<div style={css(watchMsgStyle )}>{watchMsg.text}</div>)}
                 </div>
               </>)}
-              {(topics ).map((t: any) => (<>
+              {(topics ).map((t: any) => (<Fragment key={t.name}>
                 <div style={css("padding:14px 18px;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:14px")}>
                   <div style={css("flex:1;min-width:0")}>
                     <div style={css("display:flex;align-items:center;gap:8px;flex-wrap:wrap")}><span style={css("font-size:13px;font-weight:600")}>{t.name}</span>{(t.isNew ) && (<><span style={css("font-size:10.5px;font-weight:700;color:#C5392F;background:#FCE9E7;padding:1px 7px;border-radius:5px")}>新着 {t.newCount}</span></>)}</div>
@@ -1166,7 +1166,7 @@ export function StandaloneView({ v }: { v: any }) {
                     <span style={css("font-size:10.5px;color:#8A97A8")}>{t.freq} · <a onClick={t.remove } style={css("cursor:pointer;color:#C5392F")}>削除</a></span>
                   </div>
                 </div>
-              </>))}
+              </Fragment>))}
               <div style={css("padding:15px 18px;background:#FAFBFC")}>
                 <div style={css("font-size:11px;font-weight:700;color:#B5701A;margin-bottom:7px")}>AI 選別ルール</div>
                 <div style={css("font-size:12.5px;line-height:1.9;color:#5A6678")}>2時間ごとの自動監視（systemd timer）が、テーマのキーワード・用語から論文・特許・Web を横断検索し、未通知の新着候補を検知します。初回実行は既存マッチをベースライン登録するため、初回以降の新規分だけが未読通知になります。監視間隔はテーマの頻度（毎日/毎週/毎月）に従います。</div>
@@ -1331,7 +1331,7 @@ export function StandaloneView({ v }: { v: any }) {
                 <th style={css("text-align:left;padding:11px 16px;border-bottom:1px solid #EEF1F5;font-size:11px;color:#8A97A8;font-weight:600;background:#FAFBFC;width:96px")}>更新</th>
               </tr></thead>
               <tbody>
-                {(projects ).map((p: any) => (<>
+                {(projects ).map((p: any) => (<Fragment key={p.title}>
                   <tr onClick={p.go } style={css("cursor:pointer")}>
                     <td style={css("padding:13px 16px;border-bottom:1px solid #EEF1F5")}><div style={css("font-weight:500;color:#1A2433;line-height:1.5")}>{p.title}</div><div style={css("font-size:11px;color:#8A97A8;margin-top:3px")}>{p.owner}</div></td>
                     <td style={css("padding:13px 16px;border-bottom:1px solid #EEF1F5")}><span style={css("font-family:'IBM Plex Mono',monospace;background:#F2F4F8;color:#5A6678;border-radius:5px;padding:2px 7px;font-size:11px")}>{p.tag1}</span> <span style={css("font-family:'IBM Plex Mono',monospace;background:#F2F4F8;color:#5A6678;border-radius:5px;padding:2px 7px;font-size:11px")}>{p.tag2}</span></td>
@@ -1340,7 +1340,7 @@ export function StandaloneView({ v }: { v: any }) {
                     <td style={css("padding:13px 16px;border-bottom:1px solid #EEF1F5")}><span style={css(p.statusStyle )}>{p.status}</span></td>
                     <td style={css("padding:13px 16px;border-bottom:1px solid #EEF1F5;color:#8A97A8")}>{p.updated}</td>
                   </tr>
-                </>))}
+                </Fragment>))}
               </tbody>
             </table>
           </div>
@@ -1411,14 +1411,14 @@ export function StandaloneView({ v }: { v: any }) {
                 <th style={css("text-align:left;padding:11px 16px;border-bottom:1px solid #EEF1F5;font-size:11px;color:#8A97A8;font-weight:600;background:#FAFBFC")}>対象・詳細</th>
               </tr></thead>
               <tbody>
-                {(audit ).map((a: any) => (<>
+                {(audit ).map((a: any) => (<Fragment key={`${a.at}-${a.user}-${a.act}`}>
                   <tr>
                     <td style={css("padding:12px 16px;border-bottom:1px solid #EEF1F5;font-family:'IBM Plex Mono',monospace;color:#8A97A8")}>{a.at}</td>
                     <td style={css("padding:12px 16px;border-bottom:1px solid #EEF1F5")}>{a.user}</td>
                     <td style={css("padding:12px 16px;border-bottom:1px solid #EEF1F5")}><span style={css(a.actStyle )}>{a.act}</span></td>
                     <td style={css("padding:12px 16px;border-bottom:1px solid #EEF1F5;color:#5A6678;line-height:1.6")}>{a.detail}</td>
                   </tr>
-                </>))}
+                </Fragment>))}
               </tbody>
             </table>
           </div>
