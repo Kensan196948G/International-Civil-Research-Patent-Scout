@@ -105,7 +105,8 @@ async function main() {
   if (!report.report.contentMarkdown.includes("# ")) throw new Error("report markdown invalid");
 
   const exported = await call(`/api/reports/${report.report.id}/export`, { method: "POST" });
-  if (!exported.includes("参考文献")) throw new Error("export content invalid");
+  // テンプレートモードは「参考文献・出典」、AI モードは「参考資料」を出力するため両対応で検証する
+  if (!exported.includes("参考文献") && !exported.includes("参考資料")) throw new Error("export content invalid");
   ok("report export", `${exported.length} chars`);
 
   const stats = await call("/api/dashboard/stats");

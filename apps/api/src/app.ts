@@ -65,6 +65,13 @@ export function createApp(): Hono<AppBindings> {
       const body: ApiErrorBody = { error: { code: err.code, message: err.message, details: err.details } };
       return c.json(body, err.status as 400 | 401 | 403 | 404 | 409 | 500);
     }
+    // 不正な UUID 等による PostgreSQL 型変換エラーは 404 として扱う（500 にしない）
+    const pgMessage = err instanceof Error ? err.message : String(err);
+    const pgCode = (err as { code?: string } | undefined)?.code;
+    if (pgCode === "22P02" || /invalid input syntax for type uuid/i.test(pgMessage)) {
+      const body: ApiErrorBody = { error: { code: "not_found", message: "リソースが見つかりません" } };
+      return c.json(body, 404);
+    }
     console.error(`request_id=${c.get("requestId") ?? "-"} unhandled error`, err);
     const body: ApiErrorBody = { error: { code: "internal_error", message: "サーバー内部エラーが発生しました" } };
     return c.json(body, 500);

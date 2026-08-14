@@ -135,3 +135,17 @@ Phase 1（Cookie 認証・復旧試験・E2E CI・AI 承認）を完了させる
 | 要件定義 | 特許コネクタ（J-PlatPat/PATENTSCOPE）とデータ品質ダッシュボードの要件書を追加 |
 
 残課題: Cloudflare への v0.10/v0.11 再デプロイ（トークン承認待ち）、`REGISTRATION_MODE=domain` 切替（会社ドメイン確認待ち）、`EMAIL_FROM` の Resend 送信元検証、ブラウザ実操作での Cookie 認証最終確認。
+
+## 14. 追記（2026-08-14 v0.12.0 MVPデモ完了分）
+
+MVP/Prototype として「実際に操作・評価できる状態」を整えました。
+
+| 作業 | 結果 |
+| --- | --- |
+| デモデータ投入 | `scripts/seed-demo.mjs` を実装し、架空のデモユーザー3・チーム2・プロジェクト4・文献16・要約18・比較2・レポート3・ウォッチ4・通知6 をローカル DB へ投入・保持 |
+| 検証 | typecheck / lint / test 123（API 107・Web 16）/ build 全 PASS。E2E スモーク（登録→検索→保存→要約→比較→レポート→エクスポート→ウォッチ→チャット）ALL PASSED |
+| 堅牢性 | 不正 UUID の 500 を 404 に修正。E2E スモークを AI/テンプレート両モード対応に修正 |
+| デプロイ | v0.12.0 をローカル systemd へ反映（health 0.12.0・db ok） |
+| 文書 | README・[docs/demo.md](../demo.md)・v0.12.0 リリースノート・運用台帳・state.json を更新 |
+
+残課題（バックログ）: Cloudflare 再デプロイ（承認待ち）、`REGISTRATION_MODE=domain` 切替、真の docx/xlsx/PDF 生成、E2E の CI 組込み、監査ログ IP/UA、AI 月次予算、React key 警告の解消（P3）。

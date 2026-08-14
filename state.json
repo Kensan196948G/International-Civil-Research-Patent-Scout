@@ -5,21 +5,21 @@
     "start_date": "2026-07-31",
     "phase_mode": "development"
   },
-  "goal": "v0.10.0（登録制御・AI コスト管理・要約レビュー・適用可否チェック・正直表示）を実装し、typecheck/lint/test/build をグリーンにする",
-  "phase": "Verify → Deploy Gate",
+  "goal": "v0.12.0（MVPデモデータ投入・堅牢性改善・文書整備）で、実際に操作・評価できる MVP/Prototype を完成させる",
+  "phase": "Verify → Review → Improvement",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": null,
     "test_pass_rate": 1.0,
-    "test_count": 115,
+    "test_count": 123,
     "security_critical": 0,
     "blocker_count": 0
   },
   "execution": {
     "max_duration_minutes": 300,
     "last_session": {
-      "date": "2026-08-05",
-      "summary": "v0.10.0 をマージ・本番デプロイ（health 0.10.0）。migration 0010 を本番適用。Cookie 認証（v0.11.0）を実装・PR 作成中。復元試験計画・特許/品質要件を文書化。"
+      "date": "2026-08-14",
+      "summary": "v0.12.0: デモデータシード（scripts/seed-demo.mjs）を実装し架空ダミーデータ（ユーザー3/チーム2/プロジェクト4/文献16/要約18/比較2/レポート3/ウォッチ4/通知6）を投入。不正UUID500→404修正、E2Eスモーク修正、README・デモ手順・リリースノート・運用台帳更新。typecheck/lint/test(123)/build/smoke-e2e 全PASS。ローカルsystemdへ反映（health 0.12.0）。"
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -38,8 +38,8 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.11.0（ローカル systemd 反映済み 2026-08-12） / Cloudflare は v0.9.0 のまま（再デプロイ待ち）",
-      "date": "2026-08-05",
+      "version": "v0.12.0（ローカル systemd 反映済み 2026-08-14） / Cloudflare は v0.9.0 のまま（再デプロイ待ち）",
+      "date": "2026-08-14",
       "production_url": "https://icrps.mirai-dx-platform.com",
       "local_fallback_url": "http://192.168.0.185:8787",
       "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer + icrps-ingest.timer + icrps-watch.timer",
@@ -52,6 +52,13 @@
       "migration_0008": "teams / team_members / team_id / pg_trgm 適用済み（2026-08-05）",
       "migration_0009": "auth_tokens / llm_usage 適用済み（2026-08-05）",
       "migration_0010": "ai_summaries レビュー状態（status/reviewed_by/reviewed_at）本番適用済み（2026-08-12）",
+      "demo_data": {
+        "status": "投入済み（2026-08-14・ローカル DB）",
+        "script": "scripts/seed-demo.mjs",
+        "accounts": "demo-admin / demo-researcher / demo-viewer（@icrps-demo.example・DemoPass-2026!）",
+        "marker": "全架空データ（【デモ用】表記・content_hash=demo-*）",
+        "guide": "docs/demo.md"
+      },
       "watch_monitoring": {
         "status": "稼働中",
         "schedule": "2時間ごと（icrps-watch.timer・cron 相当）",

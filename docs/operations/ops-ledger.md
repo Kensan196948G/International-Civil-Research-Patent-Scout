@@ -29,5 +29,8 @@
 | 2026-08-12 | PR #27（Cookie 認証）作成 | CI 実行中（実装・テスト完了） | 評価セッション |
 | 2026-08-12 | PR #27 / #28 マージ・v0.11.0 をローカル systemd へデプロイ | OK（health 0.11.0・smoke PASS） | 評価セッション |
 | 2026-08-12 | Cookie/CSRF の実機確認 | OK（CSRF欠落403・不正トークン401・Cookieなし401） | 評価セッション |
+| 2026-08-14 | デモデータシード実装・投入（scripts/seed-demo.mjs・--force 対応） | OK（ユーザー3/チーム2/プロジェクト4/文献16/要約18/比較2/レポート3/ウォッチ4/通知6） | MVP 実装セッション |
+| 2026-08-14 | 不正 UUID 500 → 404 修正・E2E スモーク検証条件修正 | OK（typecheck/lint/test 123/build 全 PASS・smoke-e2e ALL PASSED） | MVP 実装セッション |
+| 2026-08-14 | v0.12.0 をローカル systemd へデプロイ | OK（health 0.12.0・db ok・E2E PASS） | MVP 実装セッション |
 
 今後はこの表に日付・結果・担当を追記する。

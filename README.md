@@ -16,7 +16,7 @@
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
 | Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-05 v0.9.0 / version d427904b。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.11.0（ローカル systemd 反映済み 2026-08-12）／ Cloudflare は v0.9.0 のまま（再デプロイはトークン承認待ち） |
+| バージョン | v0.12.0（ローカル systemd 反映済み 2026-08-14）／ Cloudflare は v0.9.0 のまま（再デプロイはトークン承認待ち） |
 
 ## 🏗️ アーキテクチャ
 
@@ -197,6 +197,35 @@ npm run dev:web   # Web UI（Vite, http://localhost:5173）
 
 ローカル実行に必要な環境変数は [.env.example](.env.example) と `apps/api/.dev.vars.example` を参照。
 
+## 🧪 デモデータ（MVP / Prototype 確認用）
+
+ローカル（または Preview / Development）環境で、すぐに操作・評価できるように**架空のダミーデータ**を投入できます。
+人物名・会社名・文献・案件はすべて架空（`icrps-demo.example` / 「デモ用」表記）であり、実在情報・秘密情報は含みません。
+
+```bash
+# 投入（冪等。2回目以降は「投入済み」と表示され何もしない）
+DATABASE_URL=postgresql://... npm run seed:demo
+
+# デモ分だけ削除して再投入（実データ・収集文献は削除しない）
+DATABASE_URL=postgresql://... npm run seed:demo -- --force
+```
+
+| アカウント | メール | パスワード | ロール |
+| --- | --- | --- | --- |
+| デモ管理者 | `demo-admin@icrps-demo.example` | `DemoPass-2026!` | admin |
+| デモ研究者 | `demo-researcher@icrps-demo.example` | `DemoPass-2026!` | user |
+| デモ閲覧者 | `demo-viewer@icrps-demo.example` | `DemoPass-2026!` | viewer |
+
+投入される内容（概要）:
+
+- プロジェクト 4 件（低炭素コンクリート / UAV点検 / 塩害補修 / PC床版）、チーム 2 件、共有メンバー
+- デモ文献 16 件（論文・特許・Web・PDF。全て【デモ用】表記・架空 DOI/特許番号・`content_hash = demo-*`）
+- 保存文献 17 件・検索履歴 3 件（うちブックマーク 1 件）・検索結果 13 件
+- AI 要約 18 件（レビュー状態: approved / rejected / edited / pending を含む）
+- 比較表 2 件・レポート 3 件・ウォッチテーマ 4 件・通知 6 件・監査ログ・LLM 使用量
+
+確認手順の詳細は [docs/demo.md](docs/demo.md) を参照。
+
 ## 🏭 本番デプロイ（ローカル systemd）
 
 ```bash
@@ -235,3 +264,4 @@ curl http://127.0.0.1:8787/api/health
 - [リリースノート](docs/release-notes/v0.1.0.md) / [v0.1.1](docs/release-notes/v0.1.1.md) / [v0.1.2](docs/release-notes/v0.1.2.md) / [v0.2.0](docs/release-notes/v0.2.0.md) / [v0.3.0](docs/release-notes/v0.3.0.md) / [v0.4.0](docs/release-notes/v0.4.0.md) / [v0.5.0](docs/release-notes/v0.5.0.md) / [v0.6.0](docs/release-notes/v0.6.0.md) / [v0.7.0](docs/release-notes/v0.7.0.md) / [v0.8.0](docs/release-notes/v0.8.0.md) / [v0.9.0](docs/release-notes/v0.9.0.md)
 - [v0.10.0 改善記録](docs/release-notes/v0.10.0.md) / [評価・改善報告](docs/evaluation/report.md)
 - [v0.11.0 Cookie 認証](docs/release-notes/v0.11.0.md)
+- [v0.12.0 MVPデモデータ・堅牢性改善](docs/release-notes/v0.12.0.md)
