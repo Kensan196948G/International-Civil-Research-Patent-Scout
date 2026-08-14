@@ -17,6 +17,7 @@ on:
         type: choice
         options:
           - preview
+          - mvp
           - production
 
 permissions:
@@ -24,7 +25,7 @@ permissions:
 
 jobs:
   deploy:
-    if: ${{ inputs.subdomain_approval == 'approve-patent-scout' || inputs.subdomain_approval == 'approve-icrps' || inputs.subdomain_approval == 'approve-research-patent-scout' || inputs.subdomain_approval == 'approve-civil-research-patent-scout' }}
+    if: ${{ inputs.subdomain_approval == 'approve-patent-scout' || inputs.subdomain_approval == 'approve-icrps' || inputs.subdomain_approval == 'approve-icrps-mvp' || inputs.subdomain_approval == 'approve-research-patent-scout' || inputs.subdomain_approval == 'approve-civil-research-patent-scout' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +42,24 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler versions upload --env preview
+      - name: Deploy MVP (custom domain)
+        if: ${{ inputs.environment == 'mvp' }}
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --env mvp
+      - name: Set MVP secrets
+        if: ${{ inputs.environment == 'mvp' }}
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DATABASE_URL: ${{ secrets.MVP_DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.MVP_JWT_SECRET }}
+        run: |
+          printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL --env mvp
+          printf '%s' "$JWT_SECRET" | npx wrangler secret put JWT_SECRET --env mvp
       - name: Deploy production (custom domain)
         if: ${{ inputs.environment == 'production' }}
         working-directory: apps/api
@@ -64,3 +83,6 @@ jobs:
       - name: Smoke test
         if: ${{ inputs.environment == 'preview' }}
         run: curl -fsS "https://icrps-api-preview.kensan1969.workers.dev/api/health"
+      - name: Smoke test (MVP)
+        if: ${{ inputs.environment == 'mvp' }}
+        run: curl -fsS "https://icrps-mvp.mirai-dx-platform.com/api/health"

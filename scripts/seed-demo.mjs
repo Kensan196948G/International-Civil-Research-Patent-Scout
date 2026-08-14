@@ -943,6 +943,324 @@ async function main() {
     );
   }
 
+  // ================= 全項目カバー用の追加デモデータ =================
+  // ユーザー（合計 6 名）・チーム 3 ・プロジェクト 7 ・収集文献デモ 12 件・
+  // 全レポート種別 5 件・失敗検索・認証トークン等、MVP の全画面にデータを用意する。
+  const user2Id = randomUUID();
+  const user3Id = randomUUID();
+  const viewer2Id = randomUUID();
+  await sql.query(
+    `INSERT INTO users (id, email, name, password_hash, role) VALUES
+     ($1, $2, $3, $4, 'user'),
+     ($5, $6, $7, $8, 'user'),
+     ($9, $10, $11, $12, 'viewer')`,
+    [
+      user2Id, `demo-user2@${DEMO_DOMAIN}`, "山田 花子（デモ）", demoPasswordHash,
+      user3Id, `demo-user3@${DEMO_DOMAIN}`, "鈴木 一郎（デモ）", demoPasswordHash,
+      viewer2Id, `demo-viewer2@${DEMO_DOMAIN}`, "田中 美咲（デモ）", demoPasswordHash
+    ]
+  );
+
+  const constructionTeamId = randomUUID();
+  await sql.query(
+    `INSERT INTO teams (id, name, created_by) VALUES ($1, $2, $3)`,
+    [constructionTeamId, "施工技術グループ（デモ）", researcherId]
+  );
+  await sql.query(
+    `INSERT INTO team_members (id, team_id, user_id, role) VALUES
+     ($1, $2, $3, 'admin'),
+     ($4, $5, $6, 'editor'),
+     ($7, $8, $9, 'viewer')`,
+    [
+      randomUUID(), constructionTeamId, researcherId,
+      randomUUID(), constructionTeamId, user2Id,
+      randomUUID(), constructionTeamId, user3Id
+    ]
+  );
+
+  const projectDx = randomUUID();
+  const projectRecycle = randomUUID();
+  const projectArchived = randomUUID();
+  await sql.query(
+    `INSERT INTO research_projects (id, owner_user_id, title, description, status, tags, team_id) VALUES
+     ($1, $2, $3, $4, 'active', $5::jsonb, $6),
+     ($7, $8, $9, $10, 'completed', $11::jsonb, NULL),
+     ($12, $13, $14, $15, 'archived', $16::jsonb, NULL)`,
+    [
+      projectDx, user2Id,
+      "橋梁点検DXの現場適用検討（デモ）",
+      "UAV・AI 画像診断の現場適用条件と導入コストを評価し、点検調書のDX化方針を策定する。",
+      j(["DX", "点検", "UAV"]), structureTeamId,
+      projectRecycle, user3Id,
+      "再生骨材コンクリートの品質評価（デモ）",
+      "再生粗骨材の品質区分とコンクリート強度・耐久性の関係を整理した調査記録。",
+      j(["再生材", "材料", "品質"]),
+      projectArchived, adminId,
+      "過去の技術調査アーカイブ（デモ）",
+      "アーカイブ済みの調査テーマ。履歴確認用のダミーです。",
+      j(["過去調査", "アーカイブ"])
+    ]
+  );
+  await sql.query(
+    `INSERT INTO project_members (id, project_id, user_id, role) VALUES
+     ($1, $2, $3, 'editor'),
+     ($4, $5, $6, 'viewer'),
+     ($7, $8, $9, 'viewer')`,
+    [
+      randomUUID(), projectDx, researcherId,
+      randomUUID(), projectDx, viewer2Id,
+      randomUUID(), projectRecycle, viewerId
+    ]
+  );
+
+  // 収集文献タブ用のデモ文献（情報源ドメインの URL を持たせて sourceLabel を判定させる）
+  const collectedDocs = [
+    { n: 17, sourceType: "paper", title: "【デモ用】土木学会論文集：塩害環境におけるコンクリートの長期耐久性（架空収集）", originalTitle: "Long-Term Durability of Concrete under Chloride Environment (Demo)", abstract: "飛沫帯・干満帯の10年暴露データに基づく架空の収集文献。拡散係数の経年変化と補修効果を整理している。", url: "https://www.jstage.jst.go.jp/article/demo-icrps/1/1/_pdf", authors: ["架空 太郎"], country: "JP", publicationDate: "2026-02-01", sourceName: "J-STAGE" },
+    { n: 18, sourceType: "paper", title: "【デモ用】構造工学論文集：UAV点検の精度評価（架空収集）", originalTitle: "Accuracy Evaluation of UAV Inspection (Demo)", abstract: "橋梁点検へのUAV適用精度を模擬ひび割れで検証した架空論文。検出率と撮影条件の関係を報告している。", url: "https://www.jstage.jst.go.jp/article/demo-icrps/2/2/_pdf", authors: ["架空 花子"], country: "JP", publicationDate: "2026-01-20", sourceName: "J-STAGE" },
+    { n: 19, sourceType: "paper", title: "【デモ用】材料・施工：LC3の実用化研究（架空収集）", originalTitle: "Practical Application of LC3 Cement (Demo)", abstract: "LC3セメントの製造・施工性・耐久性をまとめた架空の収集資料。国内適用の課題を整理している。", url: "https://www.jstage.jst.go.jp/article/demo-icrps/3/3/_pdf", authors: ["架空 次郎"], country: "JP", publicationDate: "2025-12-10", sourceName: "J-STAGE" },
+    { n: 20, sourceType: "paper", title: "【デモ用】土木研究所資料：橋梁維持管理のDX（架空収集）", originalTitle: "DX in Bridge Maintenance (Demo)", abstract: "橋梁台帳・点検調書の電子化とデータ連携方針をまとめた架空の資料。", url: "https://www.thesis.pwri.go.jp/demo-icrps/001", authors: [], country: "JP", publicationDate: "2025-11-05", sourceName: "土木研究所" },
+    { n: 21, sourceType: "paper", title: "【デモ用】土木研究所資料：コンクリート構造物の塩分測定（架空収集）", originalTitle: "Chloride Measurement of Concrete Structures (Demo)", abstract: "コア採取・EPMA・可溶塩分量の測定手順を整理した架空の技術資料。", url: "https://www.thesis.pwri.go.jp/demo-icrps/002", authors: [], country: "JP", publicationDate: "2025-09-12", sourceName: "土木研究所" },
+    { n: 22, sourceType: "paper", title: "【デモ用】ITC論文集：デジタルツインと施工管理（架空収集）", originalTitle: "Digital Twin in Construction Management (Demo)", abstract: "施工現場のデジタルツイン活用事例を収録した架空の国際会議論文集。", url: "https://www.itc.scix.net/demo-icrps/001", authors: ["Fictional Author D"], country: "SG", publicationDate: "2025-10-18", sourceName: "ITC Digital Library" },
+    { n: 23, sourceType: "paper", title: "【デモ用】ITC論文集：プレキャスト部材の品質管理（架空収集）", originalTitle: "Quality Control of Precast Members (Demo)", abstract: "プレキャスト部材の非破壊検査と品質データ管理を扱う架空の論文。", url: "https://www.itc.scix.net/demo-icrps/002", authors: ["Fictional Author E"], country: "SG", publicationDate: "2025-08-22", sourceName: "ITC Digital Library" },
+    { n: 24, sourceType: "web", title: "【デモ用】国土交通省：i-Construction 点検支援技術の活用事例（架空収集）", originalTitle: null, abstract: "点検支援技術の現場適用事例を紹介する架空の記事。", url: "https://www.mlit.go.jp/tec/demo-icrps/001", authors: [], country: "JP", publicationDate: "2026-03-01", sourceName: "国土交通省" },
+    { n: 25, sourceType: "web", title: "【デモ用】国土交通省：低炭素型コンクリートの試行要領（架空収集）", originalTitle: null, abstract: "低炭素型コンクリートの試行適用に向けた架空の要領案。", url: "https://www.mlit.go.jp/tec/demo-icrps/002", authors: [], country: "JP", publicationDate: "2026-02-14", sourceName: "国土交通省" },
+    { n: 26, sourceType: "web", title: "【デモ用】国土交通省：橋梁点検データのオープン化（架空収集）", originalTitle: null, abstract: "点検データの標準化と公開方針をまとめた架空の資料。", url: "https://www.mlit.go.jp/tec/demo-icrps/003", authors: [], country: "JP", publicationDate: "2026-01-08", sourceName: "国土交通省" },
+    { n: 27, sourceType: "web", title: "【デモ用】関東地整：橋梁保全技術発表会資料（架空収集）", originalTitle: null, abstract: "橋梁保全の新技術発表を収録した架空の資料。", url: "https://www.ktr.mlit.go.jp/demo-icrps/001", authors: [], country: "JP", publicationDate: "2025-12-01", sourceName: "関東地整" },
+    { n: 28, sourceType: "web", title: "【デモ用】関東地整：維持管理の新技術現場実装（架空収集）", originalTitle: null, abstract: "維持管理の新技術を現場実装した架空の事例報告。", url: "https://www.ktr.mlit.go.jp/demo-icrps/002", authors: [], country: "JP", publicationDate: "2025-10-30", sourceName: "関東地整" }
+  ];
+  for (const d of collectedDocs) {
+    const id = randomUUID();
+    docIds[d.n] = id;
+    await sql.query(
+      `INSERT INTO source_documents
+       (id, source_type, title, original_title, abstract, body_text, url, doi, patent_number,
+        publication_number, authors, inventors, applicants, country, publication_date, source_name,
+        license_note, content_hash, classifications, patent_status)
+       VALUES ($1,$2,$3,$4,$5,NULL,$6,NULL,NULL,NULL,$7::jsonb,'[]'::jsonb,'[]'::jsonb,$8,$9,$10,
+               $11,$12,'[]'::jsonb,NULL)`,
+      [
+        id, d.sourceType, d.title, d.originalTitle ?? null, d.abstract ?? null,
+        d.url, j(d.authors ?? []), d.country ?? null, d.publicationDate ?? null, d.sourceName,
+        "デモ用ダミーデータ（架空・実在情報なし）", `demo-${String(d.n).padStart(3, "0")}`
+      ]
+    );
+  }
+
+  // 追加プロジェクトの保存文献・要約
+  await sql.query(
+    `INSERT INTO project_documents (id, project_id, source_document_id, user_note, tags, importance, status) VALUES
+     ($1,$2,$3,$4,$5::jsonb,5,'reviewed'),
+     ($6,$7,$8,$9,$10::jsonb,4,'saved'),
+     ($11,$12,$13,$14,$15::jsonb,3,'saved'),
+     ($16,$17,$18,$19,$20::jsonb,4,'saved'),
+     ($21,$22,$23,$24,$25::jsonb,2,'excluded')`,
+    [
+      randomUUID(), projectDx, docIds[4], "精度検証の根拠文献として採用。", j(["UAV", "AI"]),
+      randomUUID(), projectDx, docIds[18], "収集文献から追加。", j(["収集", "論文"]),
+      randomUUID(), projectDx, docIds[24], "現場適用事例の参考。", j(["i-Construction"]),
+      randomUUID(), projectRecycle, docIds[23], "品質管理事例として参照。", j(["プレキャスト"]),
+      randomUUID(), projectRecycle, docIds[26], "オープンデータ方針は対象外として保留。", j(["データ"])
+    ]
+  );
+  const collectedSummaryDefs = [
+    { doc: 17, type: "detailed", status: "approved", reviewedBy: user2Id, text: "塩害環境の10年暴露データに基づく架空の収集文献です。拡散係数の経年変化と含浸材による補修効果を整理しています。耐久性照査の初期検討に利用できます。", points: ["拡散係数の経年変化", "補修効果の定量化"], merits: ["実データベースの整理"], demerits: ["地域差の考慮が必要"], conditions: ["飛沫帯・干満帯"], risks: [] },
+    { doc: 18, type: "short", status: "pending", reviewedBy: null, text: "UAV点検の精度を模擬ひび割れで検証した架空論文です。撮影条件と検出率の関係を整理しています。", points: [], merits: [], demerits: [], conditions: [], risks: [] },
+    { doc: 19, type: "detailed", status: "pending", reviewedBy: null, text: "LC3セメントの実用化課題をまとめた架空の収集資料です。原料調達・粉砕・耐久性の順に整理されています。", points: ["製造プロセス", "国内適用の課題"], merits: [], demerits: [], conditions: [], risks: [] },
+    { doc: 20, type: "short", status: "pending", reviewedBy: null, text: "橋梁台帳・点検調書の電子化とデータ連携を扱う架空資料です。", points: [], merits: [], demerits: [], conditions: [], risks: [] },
+    { doc: 21, type: "short", status: "rejected", reviewedBy: user3Id, text: "塩分測定手順の架空資料。測定方法の詳細が不足しており、デモでは却下状態にしています。", points: [], merits: [], demerits: [], conditions: [], risks: [] },
+    { doc: 22, type: "short", status: "pending", reviewedBy: null, text: "施工現場のデジタルツイン活用事例を収録した架空の論文集です。", points: [], merits: [], demerits: [], conditions: [], risks: [] },
+    { doc: 23, type: "short", status: "pending", reviewedBy: null, text: "プレキャスト部材の非破壊検査と品質データ管理を扱う架空論文です。", points: [], merits: [], demerits: [], conditions: [], risks: [] },
+    { doc: 24, type: "short", status: "pending", reviewedBy: null, text: "点検支援技術の現場適用事例を紹介する架空記事です。", points: [], merits: [], demerits: [], conditions: [], risks: [] },
+    { doc: 25, type: "short", status: "edited", reviewedBy: user2Id, text: "低炭素型コンクリートの試行要領の架空案です（デモ編集済み）。", points: [], merits: [], demerits: [], conditions: [], risks: [] },
+    { doc: 27, type: "short", status: "pending", reviewedBy: null, text: "橋梁保全の新技術発表を収録した架空資料です。", points: [], merits: [], demerits: [], conditions: [], risks: [] }
+  ];
+  for (const s of collectedSummaryDefs) {
+    await sql.query(
+      `INSERT INTO ai_summaries
+       (id, source_document_id, summary_type, language, summary_text, key_points, merits, demerits,
+        application_conditions, risks, citations, model_name, prompt_version, status, reviewed_by, reviewed_at)
+       VALUES ($1,$2,$3,'ja',$4,$5::jsonb,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11,$12,$13,$14,$15)`,
+      [
+        randomUUID(), docIds[s.doc], s.type, s.text,
+        j(s.points), j(s.merits), j(s.demerits), j(s.conditions), j(s.risks),
+        j([{ claim: "デモ用の架空データに基づく", sourceUrl: s.doc >= 17 ? collectedDocs.find((d) => d.n === s.doc)?.url : null, quote: s.text.slice(0, 40) }]),
+        "rule-based-fallback", "v1-template", s.status, s.reviewedBy,
+        s.reviewedBy ? daysAgo(0, 13) : null
+      ]
+    );
+  }
+
+  // 追加の検索履歴（失敗ケース含む）
+  const sq4 = randomUUID();
+  const sq5 = randomUUID();
+  await sql.query(
+    `INSERT INTO search_queries
+     (id, user_id, project_id, query_text, expanded_queries, source_types, filters, status, failure_sources, executed_at, is_bookmarked)
+     VALUES
+     ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,'completed',$8::jsonb,$9,false),
+     ($10,$11,$12,$13,$14::jsonb,$15::jsonb,$16::jsonb,'failed',$17::jsonb,$18,false)`,
+    [
+      sq4, user2Id, projectDx, "橋梁点検 DX 自動化",
+      j({ originalQuery: "橋梁点検 DX 自動化", translatedQueries: ["bridge inspection DX automation"], synonymsJa: [], synonymsEn: ["drone inspection"], recommendedSearchQueries: [] }),
+      j(["paper", "web", "patent"]),
+      j({ languageMode: "bilingual", countries: ["JP", "US"], yearFrom: 2022, yearTo: 2026, includeSynonyms: true, includeTranslation: true }),
+      j([]), daysAgo(0, 10),
+      sq5, user3Id, projectRecycle, "再生骨材 コンクリート 品質",
+      j({ originalQuery: "再生骨材 コンクリート 品質", translatedQueries: [], synonymsJa: [], synonymsEn: ["recycled aggregate quality"], recommendedSearchQueries: [] }),
+      j(["paper", "web"]),
+      j({ languageMode: "ja", countries: [], yearFrom: 2020, yearTo: 2026, includeSynonyms: false, includeTranslation: false }),
+      j(["serpapi: タイムアウト", "google_patents: レート制限"]), daysAgo(1, 9)
+    ]
+  );
+  const sq4Docs = [4, 18, 20, 24, 7];
+  await Promise.all(
+    sq4Docs.map(async (docN, idx) => {
+      await sql.query(
+        `INSERT INTO search_results (id, search_query_id, source_document_id, rank, relevance_score, matched_keywords)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
+        [randomUUID(), sq4, docIds[docN], idx + 1, Math.round((95 - idx * 6) * 100) / 100, j(["点検", "DX"])]
+      );
+    })
+  );
+
+  // 追加の比較表
+  await sql.query(
+    `INSERT INTO comparisons (id, project_id, title, comparison_axes, rows, notes) VALUES
+     ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb)`,
+    [
+      randomUUID(), projectDx, "点検DX導入の比較（デモ）",
+      j(["技術概要", "適用条件", "主なメリット", "主なデメリット", "施工性・コスト傾向", "関連特許・実績"]),
+      j([
+        {
+          technologyName: "UAV外観＋AI解析",
+          values: { "技術概要": "UAV画像をAIで解析", "適用条件": "橋梁・高所", "主なメリット": "足場不要", "主なデメリット": "天候依存", "施工性・コスト傾向": "導入費中", "関連特許・実績": "デモ特許あり" },
+          sourceDocumentIds: [docIds[4], docIds[18], docIds[7]]
+        },
+        {
+          technologyName: "ロボット点検",
+          values: { "技術概要": "クローラ型ロボットで近接計測", "適用条件": "床版下面", "主なメリット": "高精細計測", "主なデメリット": "狭隘部は不可", "施工性・コスト傾向": "導入費高", "関連特許・実績": "実績少" },
+          sourceDocumentIds: [docIds[20], docIds[24]]
+        }
+      ]),
+      j(["デモ用の架空比較です。"])
+    ]
+  );
+
+  // 追加のレポート（全 5 種別を網羅）
+  const reportMd4 = `# 再生骨材コンクリートの品質評価（デモレポート）
+
+## 1. 調査概要
+- 調査テーマ: 再生骨材コンクリートの品質評価（デモ）
+
+## 2. 主要な発見
+- 再生粗骨材の品質区分ごとの強度・耐久性の関係を整理しました（架空データ）。
+
+## 3. 注意点・未確認事項
+- 本レポートはデモ用の架空データに基づきます。
+
+## 4. 参考文献・出典
+- 【デモ用】ITC論文集：プレキャスト部材の品質管理（架空収集）
+
+> デモ用レポートです。`;
+  const reportMd5 = `# 橋梁点検DXの技術提案下調べ（デモレポート）
+
+## 1. 調査概要
+- 調査テーマ: 橋梁点検DXの現場適用検討（デモ）
+- 想定読者: 発注者向け提案
+
+## 2. 技術動向
+- UAV・AI 画像診断、ロボット点検、点検データのオープン化の動向を整理しました（架空データ）。
+
+## 3. 当社の業務フローへの組込み方針
+- 点検調書の電子化と AI 一次スクリーニングの導入を提案します。
+
+## 4. 注意点・未確認事項
+- 精度検証と現場実証が前提です。
+
+## 5. 参考文献・出典
+- 【デモ用】構造工学論文集：UAV点検の精度評価（架空収集）
+
+> デモ用レポートです。`;
+  await sql.query(
+    `INSERT INTO reports (id, project_id, title, report_type, content_markdown, export_file_url, created_by) VALUES
+     ($1,$2,$3,'summary',$4,NULL,$5),
+     ($6,$7,$8,'proposal_research',$9,NULL,$10)`,
+    [
+      randomUUID(), projectRecycle, "再生骨材コンクリートの品質評価（デモ）", reportMd4, user3Id,
+      randomUUID(), projectDx, "橋梁点検DXの技術提案下調べ（デモ）", reportMd5, user2Id
+    ]
+  );
+
+  // 追加のウォッチテーマ（daily）
+  const watch5 = randomUUID();
+  await sql.query(
+    `INSERT INTO watch_topics
+     (id, user_id, project_id, keyword, frequency, display_name, terms, enabled, last_checked_at, last_new_count)
+     VALUES ($1,$2,$3,$4,'daily',$5,$6,true,$7,2)`,
+    [watch5, user2Id, projectDx, "橋梁点検DX", "橋梁点検DX", "UAV, ドローン, 点検DX, i-Construction", daysAgo(0, 7)]
+  );
+
+  // 追加の通知
+  await sql.query(
+    `INSERT INTO notifications
+     (id, user_id, watch_topic_id, source_document_id, kind, title, body, url, read_at, created_at)
+     VALUES
+     ($1,$2,$3,$4,'watch',$5,$6,$7,NULL,$8),
+     ($9,$10,NULL,NULL,'system',$11,$12,NULL,$13,$14)`,
+    [
+      randomUUID(), user2Id, watch5, docIds[18],
+      "【新着】UAV点検の精度評価（架空収集）",
+      "ウォッチテーマ「橋梁点検DX」に新着候補が2件あります。", "https://www.jstage.jst.go.jp/article/demo-icrps/2/2/_pdf", daysAgo(0, 8),
+      randomUUID(), user3Id,
+      "【システム】デモデータ更新のご案内",
+      "全項目カバーのデモデータが投入されました。", null, daysAgo(0, 6)
+    ]
+  );
+
+  // 追加の監査ログ（文献収集実行履歴＝設定画面の「今すぐ取得」履歴表示用を含む）
+  const extraAudit = [
+    { user: user2Id, action: "auth.login", days: 1, detail: { method: "cookie" } },
+    { user: user2Id, action: "project.create", days: 5, resourceType: "project", detail: { title: "橋梁点検DXの現場適用検討（デモ）" } },
+    { user: user2Id, action: "search.execute", days: 1, resourceType: "search_query", detail: { query: "橋梁点検 DX 自動化", resultCount: 5 } },
+    { user: user3Id, action: "search.execute", days: 1, resourceType: "search_query", detail: { query: "再生骨材 コンクリート 品質", resultCount: 0, failures: ["serpapi", "google_patents"] } },
+    { user: adminId, action: "report.export", days: 0, resourceType: "report", detail: { format: "markdown" } },
+    { user: adminId, action: "admin.user_role_update", days: 6, resourceType: "user", detail: { role: "user" } },
+    { user: adminId, action: "ingest.run", days: 1, resourceType: "system", detail: { source: "jstage", status: "ok", fetched: 20, inserted: 3, skipped: 17 } },
+    { user: adminId, action: "ingest.run", days: 1, resourceType: "system", detail: { source: "pwri", status: "ok", fetched: 8, inserted: 2, skipped: 6 } },
+    { user: adminId, action: "ingest.run", days: 1, resourceType: "system", detail: { source: "mlit", status: "ok", fetched: 12, inserted: 3, skipped: 9 } },
+    { user: user2Id, action: "watch.run_manual", days: 0, resourceType: "watch_topic", detail: { topicCount: 1, results: [{ topicId: watch5, notified: 2 }] } }
+  ];
+  for (const a of extraAudit) {
+    await sql.query(
+      `INSERT INTO audit_logs (id, user_id, action, resource_type, resource_id, detail, created_at)
+       VALUES ($1,$2,$3,$4,NULL,$5::jsonb,$6)`,
+      [randomUUID(), a.user, a.action, a.resourceType ?? null, j(a.detail ?? {}), daysAgo(a.days, 8 + (a.days % 7))]
+    );
+  }
+
+  // 追加の LLM 使用量
+  await sql.query(
+    `INSERT INTO llm_usage (id, user_id, action, provider, model, input_tokens, output_tokens, cost_estimate, created_at) VALUES
+     ($1,$2,'keyword.expand','deepseek','deepseek-chat',1500,220,0.00066,now() - interval '20 hours'),
+     ($3,$4,'summary.generate','deepseek','deepseek-chat',2600,700,0.00147,now() - interval '19 hours'),
+     ($5,$6,'report.generate','deepseek','deepseek-chat',3800,1200,0.00235,now() - interval '18 hours'),
+     ($7,$8,'chat.answer','deepseek','deepseek-chat',700,180,0.00039,now() - interval '17 hours'),
+     ($9,$10,'keyword.expand','deepseek','deepseek-chat',1100,150,0.00046,now() - interval '16 hours')`,
+    [randomUUID(), user2Id, randomUUID(), user2Id, randomUUID(), user2Id, randomUUID(), user3Id, randomUUID(), user3Id]
+  );
+
+  // 認証トークン（期限切れリセット・使用済みマジックリンクのデモ）
+  const sha256hex = async (s) => {
+    const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  };
+  await sql.query(
+    `INSERT INTO auth_tokens (id, user_id, kind, token_hash, expires_at, used_at, created_at) VALUES
+     ($1,$2,'reset',$3,now() - interval '2 days',NULL,now() - interval '3 days'),
+     ($4,$5,'magic',$6,now() + interval '1 day',now() - interval '1 day',now() - interval '2 days')`,
+    [randomUUID(), viewerId, await sha256hex("demo-reset-token-001"), randomUUID(), user2Id, await sha256hex("demo-magic-token-001")]
+  );
+
   // ---------- 結果サマリー ----------
   const counts = {};
   for (const t of [

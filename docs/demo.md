@@ -1,6 +1,8 @@
 # ICRPS デモ確認手順（MVP / Prototype）
 
-対象: ローカル systemd（`http://127.0.0.1:8787`）または Preview / Development 環境
+対象: MVP / Prototype 環境（`https://icrps-mvp.mirai-dx-platform.com`）またはローカル systemd（`http://127.0.0.1:8787`）
+
+MVP 環境は本番とは分離した Neon ブランチ（`icrps-mvp`）を使用し、**全データが架空のダミーデータ**です。
 
 ## 1. 準備
 
@@ -50,7 +52,7 @@ DATABASE_URL=postgresql://... npm run seed:demo
 
 ```bash
 curl -s http://127.0.0.1:8787/api/health
-# {"ok":true,"app":"icrps-api","version":"0.12.1","env":"production","db":"ok",...}
+# {"ok":true,"app":"icrps-api","version":"0.12.2","env":"mvp","db":"ok",...}
 
 BASE_URL=http://127.0.0.1:8787 node scripts/smoke-e2e.mjs
 # 登録→プロジェクト→検索→保存→要約→比較→レポート→エクスポート→ウォッチ→チャットまで自動実行
@@ -65,20 +67,21 @@ npm run smoke:ui
 
 | テーブル | 件数 | 内容 |
 | --- | --- | --- |
-| users | 4 | 実運用 admin 1 + デモ 3 |
-| research_projects | 4 | 低炭素 / UAV / 塩害補修 / PC床版 |
-| project_members | 3 | 共有設定 |
-| teams / team_members | 2 / 5 | 材料技術G・構造技術G |
-| source_documents | 2,566+ | 収集文献（実メタデータ）+ デモ 16 |
-| search_queries / results | 3 / 13 | 完了済み検索・ブックマーク 1 |
-| project_documents | 17 | タグ・重要度・メモ・状態 |
-| ai_summaries | 18 | レビュー状態を含む |
-| comparisons | 2 | 低炭素 3技術 / UAV 2手法 |
-| reports | 3 | 技術比較・特許調査・論文レビュー |
-| watch_topics / notifications | 4 / 6 | 有効/停止・既読/未読 |
-| audit_logs / llm_usage | デモ分追加 | 操作履歴・コスト見積り |
+| users | 6 | admin 1 / user 3 / viewer 2（全て架空） |
+| research_projects | 7 | active 4 / completed 2 / archived 1 |
+| project_members | 6 | 共有設定 |
+| teams / team_members | 3 / 8 | 材料・構造・施工技術G |
+| source_documents | 28 | デモ文献（情報源別の収集タブ用 12 件含む） |
+| search_queries / results | 5 / 18 | 完了・失敗・ブックマーク |
+| project_documents | 22 | タグ・重要度・メモ・状態 |
+| ai_summaries | 25 | 全要約種別・全レビュー状態 |
+| comparisons | 3 | 低炭素 / UAV / 点検DX |
+| reports | 5 | 全 5 テンプレート |
+| watch_topics / notifications | 5 / 8 | 全頻度・既読/未読 |
+| audit_logs / llm_usage | 27 / 12 | 操作履歴（ingest.run 含む）・コスト見積り |
+| auth_tokens | 2 | 期限切れリセット・使用済みマジック |
 
-※ 検証操作（スモーク・実ブラウザ E2E）で追加された検索履歴・レポートも保持されます。
+※ ローカル環境に実運用ユーザーがいる場合は users が 1 名増えます（MVP 環境はデモ 6 名のみ）。
 
 ## 7. 注意
 

@@ -5,7 +5,7 @@
     "start_date": "2026-07-31",
     "phase_mode": "development"
   },
-  "goal": "v0.12.1（検索500修正・CSP/React警告対応・実ブラウザE2E）で、実際に操作・評価できる MVP/Prototype を完成させる",
+  "goal": "v0.12.2（MVP専用サブドメイン・分離DB・全項目ダミーデータ・検索バッチ化）で MVP/Prototype を完成させる",
   "phase": "Verify → Review → Done",
   "kpi": {
     "success_rate_target": 0.9,
@@ -19,7 +19,7 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-08-14",
-      "summary": "v0.12.1: 横断検索で長いURLが content_hash(varchar128) を溢れ500になるバグを修正（SHA-256ハッシュ化・メタデータ長クランプ・失敗時failed化）。CSPでGoogle Fontsがブロックされる問題、React key警告、chatマップの変数ミスを修正。Firefox実ブラウザE2E（scripts/ui-e2e.mjs）で全14画面・主要操作PASS・console error 0。typecheck/lint/test(127)/build全PASS。ローカルsystemd反映済み（health 0.12.1）。"
+      "summary": "v0.12.2: MVP専用サブドメイン icrps-mvp.mirai-dx-platform.com を新設（分離Neonブランチ icrps-mvp・migration+全項目シード投入・Cloudflare Worker+Secrets）。検索を一括INSERT化し Workers サブリクエスト上限（50/回）超過による500を解消。MVP実ブラウザE2E 14項目PASS・console error 0。ローカルsystemd+MVP Worker反映済み（health 0.12.2）。"
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -38,7 +38,7 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.12.1（ローカル systemd 反映済み 2026-08-14） / Cloudflare は v0.9.0 のまま（再デプロイ待ち）",
+      "version": "v0.12.2（ローカル systemd・MVP Worker 反映済み 2026-08-14） / 本番 Cloudflare は v0.9.0 のまま（再デプロイ待ち）",
       "date": "2026-08-14",
       "production_url": "https://icrps.mirai-dx-platform.com",
       "local_fallback_url": "http://192.168.0.185:8787",
@@ -53,10 +53,11 @@
       "migration_0009": "auth_tokens / llm_usage 適用済み（2026-08-05）",
       "migration_0010": "ai_summaries レビュー状態（status/reviewed_by/reviewed_at）本番適用済み（2026-08-12）",
       "demo_data": {
-        "status": "投入済み（2026-08-14・ローカル DB）",
+        "status": "投入済み（2026-08-14・MVP 専用 Neon ブランチ icrps-mvp / br-damp-wave-azc1uolf）",
         "script": "scripts/seed-demo.mjs",
         "accounts": "demo-admin / demo-researcher / demo-viewer（@icrps-demo.example・DemoPass-2026!）",
-        "marker": "全架空データ（【デモ用】表記・content_hash=demo-*）",
+        "marker": "全項目カバー・全架空データ（ユーザー6/チーム3/プロジェクト7/文献28/検索5/要約25/比較3/レポート5/ウォッチ5/通知8/監査27/LLM12/トークン2）",
+        "url": "https://icrps-mvp.mirai-dx-platform.com",
         "guide": "docs/demo.md"
       },
       "watch_monitoring": {

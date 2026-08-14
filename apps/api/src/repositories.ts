@@ -960,6 +960,90 @@ export async function insertDocumentsBatch(db: Db, results: SearchConnectorResul
   return inserted;
 }
 
+/**
+ * 検索結果の一括登録用。
+ * Cloudflare Workers のサブリクエスト上限（既定 50/回）を超えないよう、
+ * 既存確認・登録・検索結果の登録をそれぞれ 1 クエリにまとめる。
+ */
+export async function findDocumentsByContentHashes(
+  db: Db,
+  contentHashes: Array<string | null>
+): Promise<Array<{ id: string; contentHash: string }>> {
+  const hashes = [...new Set(contentHashes.filter((h): h is string => !!h))];
+  if (hashes.length === 0) return [];
+  const rows = await db("SELECT id, content_hash FROM source_documents WHERE content_hash = ANY($1)", [hashes]);
+  return rows.map((r) => ({ id: String(r.id), contentHash: String(r.content_hash) }));
+}
+
+export async function insertDocumentsForSearch(
+  db: Db,
+  entries: Array<{ result: SearchConnectorResult; contentHash: string | null }>
+): Promise<Array<{ id: string; contentHash: string | null }>> {
+  if (entries.length === 0) return [];
+  const placeholders: string[] = [];
+  const values: unknown[] = [];
+  for (const [j, entry] of entries.entries()) {
+    const r = entry.result;
+    const classificationsJson = normalizeClassifications(r.classifications);
+    const base = j * 18;
+    placeholders.push(
+      `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8},` +
+        `$${base + 9},$${base + 10},$${base + 11},$${base + 12},$${base + 13},$${base + 14},$${base + 15},$${base + 16},$${base + 17},$${base + 18})`
+    );
+    values.push(
+      r.sourceType,
+      r.title,
+      r.originalTitle ?? null,
+      r.abstract ?? r.snippet ?? null,
+      r.url ?? null,
+      clampMeta(r.doi, 255),
+      clampMeta(r.patentNumber, 255),
+      clampMeta(r.publicationNumber, 255),
+      r.patentStatus ?? null,
+      classificationsJson?.length ? JSON.stringify(classificationsJson) : JSON.stringify([]),
+      r.authors?.length ? JSON.stringify(r.authors) : null,
+      r.inventors?.length ? JSON.stringify(r.inventors) : null,
+      r.applicants?.length ? JSON.stringify(r.applicants) : null,
+      clampMeta(r.country, 50),
+      r.publicationDate ?? null,
+      clampMeta(r.sourceName, 255),
+      "公開メタデータ・要旨を中心に利用（本文は原則保存しない）",
+      entry.contentHash
+    );
+  }
+  const rows = await db(
+    `INSERT INTO source_documents
+       (source_type, title, original_title, abstract, url, doi, patent_number, publication_number,
+        patent_status, classifications, authors, inventors, applicants, country, publication_date, source_name, license_note, content_hash)
+     VALUES ${placeholders.join(",")}
+     ON CONFLICT (content_hash) WHERE content_hash IS NOT NULL DO NOTHING
+     RETURNING id, content_hash`,
+    values
+  );
+  return rows.map((r) => ({ id: String(r.id), contentHash: r.content_hash == null ? null : String(r.content_hash) }));
+}
+
+export async function insertSearchResultsBatch(
+  db: Db,
+  searchQueryId: string,
+  rows: Array<{ sourceDocumentId: string; rank: number; relevanceScore: number; matchedKeywords: string[] }>
+): Promise<void> {
+  if (rows.length === 0) return;
+  const placeholders: string[] = [];
+  const values: unknown[] = [];
+  for (const [j, r] of rows.entries()) {
+    const base = j * 5;
+    placeholders.push(`($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5})`);
+    values.push(searchQueryId, r.sourceDocumentId, r.rank, r.relevanceScore, JSON.stringify(r.matchedKeywords));
+  }
+  await db(
+    `INSERT INTO search_results (search_query_id, source_document_id, rank, relevance_score, matched_keywords)
+     VALUES ${placeholders.join(",")}
+     ON CONFLICT (search_query_id, source_document_id) DO NOTHING`,
+    values
+  );
+}
+
 export async function getDocumentById(db: Db, id: string): Promise<SourceDocument | null> {
   const rows = await db("SELECT * FROM source_documents WHERE id = $1 LIMIT 1", [id]);
   return rows[0] ? mapDocument(rows[0]) : null;
