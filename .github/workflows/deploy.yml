@@ -28,7 +28,7 @@ jobs:
     if: ${{ inputs.subdomain_approval == 'approve-patent-scout' || inputs.subdomain_approval == 'approve-icrps' || inputs.subdomain_approval == 'approve-icrps-mvp' || inputs.subdomain_approval == 'approve-research-patent-scout' || inputs.subdomain_approval == 'approve-civil-research-patent-scout' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
