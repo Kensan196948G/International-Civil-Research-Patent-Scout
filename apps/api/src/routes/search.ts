@@ -15,6 +15,7 @@ import { getActiveAiProvider } from "../settings.js";
 import {
   completeSearchQuery,
   createSearchQuery,
+  failSearchQuery,
   findDocumentByKey,
   getSearchQuery,
   insertDocument,
@@ -22,6 +23,7 @@ import {
   listBookmarkedSearches,
   listRecentSearches,
   listSearchResults,
+  normalizeContentHash,
   setSearchBookmark,
   setSearchQueryRunning
 } from "../repositories.js";
@@ -67,89 +69,95 @@ export function searchRoutes(): Hono<AppBindings> {
       }
     });
     await setSearchQueryRunning(db, query.id);
-
-    const params = {
-      query: parsed.data.query,
-      languageMode: parsed.data.languageMode,
-      sourceTypes: parsed.data.sourceTypes,
-      countries: parsed.data.countries,
-      yearFrom: parsed.data.yearFrom,
-      yearTo: parsed.data.yearTo,
-      maxResults: parsed.data.maxResults
-    };
-
-    const provider = await getActiveAiProvider(db, env);
-    if (provider) {
-      const limited = aiRateLimited(c);
-      if (!limited.allowed) {
-        return c.json(
-          { error: { code: "rate_limited", message: "AI 利用量の上限に達しました。1時間後に再試行してください" } },
-          429,
-          { "Retry-After": String(limited.retryAfterSeconds) }
-        );
-      }
-    }
-    const expansion = await expandKeywords(params, env, provider, userId);
-    // 展開キーワードを実際の検索クエリへ反映する（最大 3 クエリ・1 クエリあたり件数を分散）
-    const queriesToRun = Array.from(
-      new Set([
-        parsed.data.query,
-        ...(expansion.translatedQueries ?? []),
-        ...(expansion.synonymsJa ?? []),
-        ...(expansion.synonymsEn ?? [])
-      ])
-    )
-      .map((q) => q.trim())
-      .filter((q) => q.length > 0)
-      .slice(0, 3);
-    const perQueryMax = Math.max(5, Math.ceil((parsed.data.maxResults ?? 20) / queriesToRun.length));
-    const settledQueries = await Promise.allSettled(
-      queriesToRun.map(async (query) => {
-        try {
-          return await runConnectors({ ...params, query, maxResults: perQueryMax }, env);
-        } catch (err) {
-          return {
-            results: [],
-            failures: [{ name: `query:${query}`, error: err instanceof Error ? err.message : String(err) }]
-          };
-        }
-      })
-    );
-    const results = settledQueries.flatMap((s) => (s.status === "fulfilled" ? s.value.results : []));
-    const failures = settledQueries.flatMap((s) =>
-      s.status === "fulfilled" ? s.value.failures : [{ name: "query", error: s.reason instanceof Error ? s.reason.message : String(s.reason) }]
-    );
-    const scored = dedupeAndScore(parsed.data.query, results);
-    let rank = 0;
-    for (const item of scored) {
-      rank += 1;
-      const key = {
-        doi: item.result.doi,
-        patentNumber: item.result.patentNumber,
-        url: item.result.url,
-        contentHash: item.result.doi ?? item.result.patentNumber ?? item.result.url
+    try {
+      const params = {
+        query: parsed.data.query,
+        languageMode: parsed.data.languageMode,
+        sourceTypes: parsed.data.sourceTypes,
+        countries: parsed.data.countries,
+        yearFrom: parsed.data.yearFrom,
+        yearTo: parsed.data.yearTo,
+        maxResults: parsed.data.maxResults
       };
-      let document = await findDocumentByKey(db, key);
-      if (!document) {
-        document = await insertDocument(db, item.result, key.contentHash ?? null);
+
+      const provider = await getActiveAiProvider(db, env);
+      if (provider) {
+        const limited = aiRateLimited(c);
+        if (!limited.allowed) {
+          return c.json(
+            { error: { code: "rate_limited", message: "AI 利用量の上限に達しました。1時間後に再試行してください" } },
+            429,
+            { "Retry-After": String(limited.retryAfterSeconds) }
+          );
+        }
       }
-      await insertSearchResult(db, {
-        searchQueryId: query.id,
-        sourceDocumentId: document.id,
-        rank,
-        relevanceScore: item.score,
-        matchedKeywords: item.matchedKeywords
+      const expansion = await expandKeywords(params, env, provider, userId);
+      // 展開キーワードを実際の検索クエリへ反映する（最大 3 クエリ・1 クエリあたり件数を分散）
+      const queriesToRun = Array.from(
+        new Set([
+          parsed.data.query,
+          ...(expansion.translatedQueries ?? []),
+          ...(expansion.synonymsJa ?? []),
+          ...(expansion.synonymsEn ?? [])
+        ])
+      )
+        .map((q) => q.trim())
+        .filter((q) => q.length > 0)
+        .slice(0, 3);
+      const perQueryMax = Math.max(5, Math.ceil((parsed.data.maxResults ?? 20) / queriesToRun.length));
+      const settledQueries = await Promise.allSettled(
+        queriesToRun.map(async (query) => {
+          try {
+            return await runConnectors({ ...params, query, maxResults: perQueryMax }, env);
+          } catch (err) {
+            return {
+              results: [],
+              failures: [{ name: `query:${query}`, error: err instanceof Error ? err.message : String(err) }]
+            };
+          }
+        })
+      );
+      const results = settledQueries.flatMap((s) => (s.status === "fulfilled" ? s.value.results : []));
+      const failures = settledQueries.flatMap((s) =>
+        s.status === "fulfilled" ? s.value.failures : [{ name: "query", error: s.reason instanceof Error ? s.reason.message : String(s.reason) }]
+      );
+      const scored = dedupeAndScore(parsed.data.query, results);
+      let rank = 0;
+      for (const item of scored) {
+        rank += 1;
+        const key = {
+          doi: item.result.doi,
+          patentNumber: item.result.patentNumber,
+          url: item.result.url,
+          contentHash: item.result.doi ?? item.result.patentNumber ?? item.result.url
+        };
+        let document = await findDocumentByKey(db, key);
+        if (!document) {
+          const contentHash = await normalizeContentHash(key.contentHash);
+          document = await insertDocument(db, item.result, contentHash);
+        }
+        await insertSearchResult(db, {
+          searchQueryId: query.id,
+          sourceDocumentId: document.id,
+          rank,
+          relevanceScore: item.score,
+          matchedKeywords: item.matchedKeywords
+        });
+      }
+      await completeSearchQuery(db, query.id, expansion, failures.map((f) => `${f.name}: ${f.error}`));
+      await createAuditLog(db, {
+        userId,
+        action: "search.execute",
+        resourceType: "search_query",
+        resourceId: query.id,
+        detail: { query: parsed.data.query, sourceTypes: parsed.data.sourceTypes, resultCount: scored.length, failures: failures.map((f) => f.name) }
       });
+      return c.json({ searchQueryId: query.id, status: "completed", partialFailures: failures.length > 0 }, 201);
+    } catch (err) {
+      // 検索失敗時もステータスを failed にして UI が「実行中」のままにならないようにする
+      await failSearchQuery(db, query.id, [err instanceof Error ? err.message : String(err)]).catch(() => undefined);
+      throw err;
     }
-    await completeSearchQuery(db, query.id, expansion, failures.map((f) => `${f.name}: ${f.error}`));
-    await createAuditLog(db, {
-      userId,
-      action: "search.execute",
-      resourceType: "search_query",
-      resourceId: query.id,
-      detail: { query: parsed.data.query, sourceTypes: parsed.data.sourceTypes, resultCount: scored.length, failures: failures.map((f) => f.name) }
-    });
-    return c.json({ searchQueryId: query.id, status: "completed", partialFailures: failures.length > 0 }, 201);
   });
 
   app.get("/history", async (c) => {

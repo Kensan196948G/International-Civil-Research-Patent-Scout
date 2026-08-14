@@ -25,6 +25,7 @@ import {
   insertSummary,
   listProjectDocuments,
   listSummaries,
+  normalizeContentHash,
   saveProjectDocument,
   updateProjectDocument,
   updateSummaryReview
@@ -168,7 +169,7 @@ export function documentRoutes(): Hono<AppBindings> {
           publicationDate: input.publicationDate ?? undefined,
           sourceName: input.sourceName ?? "手動登録"
         },
-        key.contentHash
+        await normalizeContentHash(key.contentHash)
       );
     }
     let saved: ProjectDocument | null = null;

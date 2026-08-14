@@ -16,7 +16,7 @@
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
 | Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-05 v0.9.0 / version d427904b。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.12.0（ローカル systemd 反映済み 2026-08-14）／ Cloudflare は v0.9.0 のまま（再デプロイはトークン承認待ち） |
+| バージョン | v0.12.1（ローカル systemd 反映済み 2026-08-14）／ Cloudflare は v0.9.0 のまま（再デプロイはトークン承認待ち） |
 
 ## 🏗️ アーキテクチャ
 
@@ -265,3 +265,4 @@ curl http://127.0.0.1:8787/api/health
 - [v0.10.0 改善記録](docs/release-notes/v0.10.0.md) / [評価・改善報告](docs/evaluation/report.md)
 - [v0.11.0 Cookie 認証](docs/release-notes/v0.11.0.md)
 - [v0.12.0 MVPデモデータ・堅牢性改善](docs/release-notes/v0.12.0.md)
+- [v0.12.1 検索500修正・CSP/React警告対応・実ブラウザE2E](docs/release-notes/v0.12.1.md)
