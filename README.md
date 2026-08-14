@@ -9,6 +9,7 @@
 | 項目 | 状態 |
 | --- | --- |
 | 本番 URL | `https://icrps.mirai-dx-platform.com`（Cloudflare Workers・HTTPS・Access 保護）／ フォールバック: `http://192.168.0.185:8787` |
+| MVP / Prototype URL | `https://icrps-mvp.mirai-dx-platform.com`（分離した MVP 専用 DB・全項目ダミーデータ・登録制限なし） |
 | Preview | `https://icrps-api-preview.kensan1969.workers.dev`（v0.9.0 検証済み） |
 | 稼働方式 | Node.js + systemd（`icrps.service`、起動時自動起動・異常時自動再起動） |
 | 文献データ連携 | systemd timer（`icrps-ingest.timer`）による **2時間ごとの自動収集**（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整） |
@@ -16,7 +17,7 @@
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
 | Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-05 v0.9.0 / version d427904b。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.12.1（ローカル systemd 反映済み 2026-08-14）／ Cloudflare は v0.9.0 のまま（再デプロイはトークン承認待ち） |
+| バージョン | v0.12.2（ローカル systemd・MVP Worker 反映済み 2026-08-14）／ 本番 Cloudflare は v0.9.0 のまま（再デプロイは承認待ち） |
 
 ## 🏗️ アーキテクチャ
 
@@ -216,13 +217,16 @@ DATABASE_URL=postgresql://... npm run seed:demo -- --force
 | デモ研究者 | `demo-researcher@icrps-demo.example` | `DemoPass-2026!` | user |
 | デモ閲覧者 | `demo-viewer@icrps-demo.example` | `DemoPass-2026!` | viewer |
 
-投入される内容（概要）:
+投入される内容（概要・全項目カバー）:
 
-- プロジェクト 4 件（低炭素コンクリート / UAV点検 / 塩害補修 / PC床版）、チーム 2 件、共有メンバー
-- デモ文献 16 件（論文・特許・Web・PDF。全て【デモ用】表記・架空 DOI/特許番号・`content_hash = demo-*`）
-- 保存文献 17 件・検索履歴 3 件（うちブックマーク 1 件）・検索結果 13 件
-- AI 要約 18 件（レビュー状態: approved / rejected / edited / pending を含む）
-- 比較表 2 件・レポート 3 件・ウォッチテーマ 4 件・通知 6 件・監査ログ・LLM 使用量
+- ユーザー 6 名（admin 1 / user 3 / viewer 2。全て架空・`@icrps-demo.example`）
+- チーム 3 件・メンバー 8 名・プロジェクト 7 件（active / completed / archived）
+- デモ文献 28 件（論文・特許・Web・PDF。全て【デモ用】表記・架空 DOI/特許番号・`content_hash = demo-*`）
+  - 収集文献タブ用の情報源別デモ文献 12 件（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整）
+- 保存文献 22 件・検索履歴 5 件（ブックマーク・失敗ケース含む）・検索結果 18 件
+- AI 要約 25 件（short/detailed/technical/patent・レビュー状態 approved/rejected/edited/pending）
+- 比較表 3 件・レポート 5 件（全 5 テンプレート）・ウォッチテーマ 5 件・通知 8 件
+- 監査ログ・LLM 使用量・認証トークン（期限切れ/使用済み）のダミーも投入
 
 確認手順の詳細は [docs/demo.md](docs/demo.md) を参照。
 
@@ -266,3 +270,4 @@ curl http://127.0.0.1:8787/api/health
 - [v0.11.0 Cookie 認証](docs/release-notes/v0.11.0.md)
 - [v0.12.0 MVPデモデータ・堅牢性改善](docs/release-notes/v0.12.0.md)
 - [v0.12.1 検索500修正・CSP/React警告対応・実ブラウザE2E](docs/release-notes/v0.12.1.md)
+- [v0.12.2 MVP専用環境・全項目ダミーデータ・検索バッチ化](docs/release-notes/v0.12.2.md)

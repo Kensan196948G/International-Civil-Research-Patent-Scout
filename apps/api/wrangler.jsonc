@@ -52,6 +52,23 @@
         "APP_ENV": "preview",
         "APP_URL": "https://icrps-api-preview.kensan1969.workers.dev"
       }
+    },
+    "mvp": {
+      "name": "icrps-api-mvp",
+      "workers_dev": false,
+      // MVP / Prototype 専用サブドメイン（デモデータ投入・レビュー用。Access 保護は付けない）
+      "routes": [
+        { "pattern": "icrps-mvp.mirai-dx-platform.com", "custom_domain": true }
+      ],
+      "assets": {
+        "directory": "../web/dist",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"]
+      },
+      "vars": {
+        "APP_ENV": "mvp",
+        "APP_URL": "https://icrps-mvp.mirai-dx-platform.com"
+      }
     }
   }
 }

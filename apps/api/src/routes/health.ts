@@ -17,7 +17,7 @@ export function healthRoutes(): Hono<AppBindings> {
     return c.json({
       ok: true,
       app: "icrps-api",
-      version: "0.12.1",
+      version: "0.12.2",
       env: env.APP_ENV,
       db,
       time: new Date().toISOString()

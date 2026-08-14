@@ -34,5 +34,7 @@
 | 2026-08-14 | v0.12.0 をローカル systemd へデプロイ | OK（health 0.12.0・db ok・E2E PASS） | MVP 実装セッション |
 | 2026-08-14 | v0.12.1: 検索500（content_hash 超過）修正・CSP/React警告/chat変数修正・実ブラウザE2E追加 | OK（typecheck/lint/test 127/build 全 PASS・UI-E2E 14項目 PASS・console error 0） | MVP 検証セッション |
 | 2026-08-14 | v0.12.1 をローカル systemd へデプロイ | OK（health 0.12.1・db ok・smoke PASS） | MVP 検証セッション |
+| 2026-08-14 | MVP 専用環境構築（Neon ブランチ icrps-mvp → migration+全項目シード → Cloudflare Worker icrps-api-mvp + custom domain icrps-mvp.mirai-dx-platform.com + Secrets） | OK（health 0.12.1→0.12.2・mvp 環境・db ok） | MVP 構築セッション |
+| 2026-08-14 | 検索の一括INSERT化（Workers サブリクエスト上限50/回の超過による500を解消） | OK（MVP API 検索 2.3s・21件・実ブラウザE2E 14項目PASS・console error 0） | MVP 構築セッション |
 
 今後はこの表に日付・結果・担当を追記する。

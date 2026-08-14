@@ -16,10 +16,10 @@ import {
   completeSearchQuery,
   createSearchQuery,
   failSearchQuery,
-  findDocumentByKey,
+  findDocumentsByContentHashes,
   getSearchQuery,
-  insertDocument,
-  insertSearchResult,
+  insertDocumentsForSearch,
+  insertSearchResultsBatch,
   listBookmarkedSearches,
   listRecentSearches,
   listSearchResults,
@@ -122,28 +122,37 @@ export function searchRoutes(): Hono<AppBindings> {
         s.status === "fulfilled" ? s.value.failures : [{ name: "query", error: s.reason instanceof Error ? s.reason.message : String(s.reason) }]
       );
       const scored = dedupeAndScore(parsed.data.query, results);
-      let rank = 0;
-      for (const item of scored) {
-        rank += 1;
-        const key = {
-          doi: item.result.doi,
-          patentNumber: item.result.patentNumber,
-          url: item.result.url,
-          contentHash: item.result.doi ?? item.result.patentNumber ?? item.result.url
-        };
-        let document = await findDocumentByKey(db, key);
-        if (!document) {
-          const contentHash = await normalizeContentHash(key.contentHash);
-          document = await insertDocument(db, item.result, contentHash);
-        }
-        await insertSearchResult(db, {
-          searchQueryId: query.id,
-          sourceDocumentId: document.id,
-          rank,
-          relevanceScore: item.score,
-          matchedKeywords: item.matchedKeywords
-        });
+      // Cloudflare Workers のサブリクエスト上限を守るため、既存確認・登録・結果登録を一括クエリにする
+      const entries = await Promise.all(
+        scored.map(async (item) => ({
+          item,
+          contentHash: await normalizeContentHash(item.result.doi ?? item.result.patentNumber ?? item.result.url)
+        }))
+      );
+      const byHash = new Map<string, string>();
+      for (const row of await findDocumentsByContentHashes(db, entries.map((e) => e.contentHash))) {
+        byHash.set(row.contentHash, row.id);
       }
+      const missing = entries.filter((e) => (e.contentHash ? !byHash.has(e.contentHash) : true));
+      const inserted = await insertDocumentsForSearch(
+        db,
+        missing.map((e) => ({ result: e.item.result, contentHash: e.contentHash }))
+      );
+      for (const row of inserted) {
+        if (row.contentHash) byHash.set(row.contentHash, row.id);
+      }
+      const insertedNulls = inserted.filter((r) => !r.contentHash);
+      let nullIdx = 0;
+      const searchRows: Array<{ sourceDocumentId: string; rank: number; relevanceScore: number; matchedKeywords: string[] }> = [];
+      let rank = 0;
+      for (const e of entries) {
+        rank += 1;
+        const id = e.contentHash ? byHash.get(e.contentHash) ?? null : insertedNulls[nullIdx++]?.id ?? null;
+        if (id) {
+          searchRows.push({ sourceDocumentId: id, rank, relevanceScore: e.item.score, matchedKeywords: e.item.matchedKeywords });
+        }
+      }
+      await insertSearchResultsBatch(db, query.id, searchRows);
       await completeSearchQuery(db, query.id, expansion, failures.map((f) => `${f.name}: ${f.error}`));
       await createAuditLog(db, {
         userId,
