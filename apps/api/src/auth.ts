@@ -3,11 +3,11 @@ import { jwtVerify, SignJWT } from "jose";
 import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
 import type { Role } from "@icrps/contracts";
-import { resolveEnv, expiresInToSeconds } from "./env.js";
+import { resolveEnv, expiresInToSeconds, type WorkerEnv } from "./env.js";
 import type { AppEnv } from "./types.js";
 import { forbidden, unauthorized } from "./errors.js";
 import { createDb } from "./db.js";
-import { findUserById } from "./repositories.js";
+import { findFirstAdminUser, findUserByEmail, findUserById } from "./repositories.js";
 import { TOKEN_COOKIE } from "./auth-cookie.js";
 
 export async function hashPassword(password: string): Promise<string> {
@@ -64,11 +64,39 @@ export type AuthContext = {
   role: Role;
 };
 
+/**
+ * MVP 公開デモ用のログイン認証バイパス。
+ * AUTH_BYPASS === "true" かつ APP_ENV が production 以外のときだけ有効（安全装置）。
+ * AUTH_BYPASS_EMAIL 未指定なら在籍中の admin を1件採用し、
+ * 該当ユーザーが居なければ認証しない（フェイルクローズ）。
+ */
+async function applyAuthBypass(c: Context<AppEnv>, env: WorkerEnv): Promise<boolean> {
+  if (env.AUTH_BYPASS !== "true" || env.APP_ENV === "production") return false;
+  try {
+    const db = createDb(env);
+    const user = env.AUTH_BYPASS_EMAIL
+      ? await findUserByEmail(db, env.AUTH_BYPASS_EMAIL)
+      : await findFirstAdminUser(db);
+    if (!user) return false;
+    c.set("userId", user.id);
+    c.set("role", user.role);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function requireAuth(c: Context<AppEnv>, next: Next): Promise<Response> {
   const env = resolveEnv(c.env);
   const header = c.req.header("authorization");
   const token = header?.startsWith("Bearer ") ? header.slice(7) : getCookie(c, TOKEN_COOKIE);
-  if (!token) throw unauthorized();
+  if (!token) {
+    if (await applyAuthBypass(c, env)) {
+      await next();
+      return c.res;
+    }
+    throw unauthorized();
+  }
   try {
     const payload = await verifyToken(token, env.JWT_SECRET);
     c.set("userId", payload.sub);

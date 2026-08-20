@@ -1,6 +1,10 @@
 // Worker と Node の両環境で動作する環境変数解決
 export interface WorkerEnv {
   APP_ENV: string;
+  /** MVP 公開デモ用のログイン認証バイパス（"true" で有効）。APP_ENV=production では無視される。 */
+  AUTH_BYPASS?: string;
+  /** バイパス時に成りすますユーザーの email。未指定なら在籍中の admin を1件採用 */
+  AUTH_BYPASS_EMAIL?: string;
   APP_URL: string;
   DATABASE_URL: string;
   JWT_SECRET: string;
@@ -49,6 +53,8 @@ export function resolveEnv(input: Partial<WorkerEnv> | undefined): WorkerEnv {
   };
   return {
     APP_ENV: get("APP_ENV") ?? DEFAULTS.APP_ENV,
+    AUTH_BYPASS: get("AUTH_BYPASS"),
+    AUTH_BYPASS_EMAIL: get("AUTH_BYPASS_EMAIL"),
     APP_URL: get("APP_URL") ?? DEFAULTS.APP_URL,
     DATABASE_URL: required("DATABASE_URL"),
     JWT_SECRET: required("JWT_SECRET"),
