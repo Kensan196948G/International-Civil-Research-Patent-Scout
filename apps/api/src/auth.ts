@@ -72,18 +72,24 @@ export type AuthContext = {
  */
 async function applyAuthBypass(c: Context<AppEnv>, env: WorkerEnv): Promise<boolean> {
   if (env.AUTH_BYPASS !== "true" || env.APP_ENV === "production") return false;
-  try {
-    const db = createDb(env);
-    const user = env.AUTH_BYPASS_EMAIL
-      ? await findUserByEmail(db, env.AUTH_BYPASS_EMAIL)
-      : await findFirstAdminUser(db);
-    if (!user) return false;
-    c.set("userId", user.id);
-    c.set("role", user.role);
-    return true;
-  } catch {
-    return false;
+  const db = createDb(env);
+  // Neon (serverless HTTP) は稀に一時エラーを返す。デモ URL がその都度ログイン画面へ
+  // 落ちないよう、一時エラーに限り 1 度だけ再試行する。失敗時はフェイルクローズ。
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const user = env.AUTH_BYPASS_EMAIL
+        ? await findUserByEmail(db, env.AUTH_BYPASS_EMAIL)
+        : await findFirstAdminUser(db);
+      if (!user) return false;
+      c.set("userId", user.id);
+      c.set("role", user.role);
+      return true;
+    } catch {
+      if (attempt === 1) return false;
+      await new Promise((r) => setTimeout(r, 120));
+    }
   }
+  return false;
 }
 
 export async function requireAuth(c: Context<AppEnv>, next: Next): Promise<Response> {
