@@ -10,14 +10,16 @@
 | --- | --- |
 | 本番 URL | `https://icrps.mirai-dx-platform.com`（Cloudflare Workers・HTTPS・Access 保護）／ フォールバック: `http://192.168.0.185:8787` |
 | MVP / Prototype URL | `https://icrps-mvp.mirai-dx-platform.com`（分離した MVP 専用 DB・全項目ダミーデータ・登録制限なし） |
-| Preview | `https://icrps-api-preview.kensan1969.workers.dev`（v0.9.0 検証済み） |
+| Preview | `https://icrps-api-preview.kensan1969.workers.dev`（**v0.12.2 検証済み** 2026-08-21 / version 91d95e21・E2E スモーク全 PASS） |
 | 稼働方式 | Node.js + systemd（`icrps.service`、起動時自動起動・異常時自動再起動） |
 | 文献データ連携 | systemd timer（`icrps-ingest.timer`）による **2時間ごとの自動収集**（J-STAGE / 土木研究所 / ITC / 国交省 / 関東地整） |
 | 更新監視（ウォッチ） | systemd timer（`icrps-watch.timer`）による **2時間ごとの新着検知＋アプリ内通知** |
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
-| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-05 v0.9.0 / version d427904b。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
+| Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-21 v0.12.2 / version 69e5a18e。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | v0.12.2（ローカル systemd・MVP Worker 反映済み 2026-08-14）／ 本番 Cloudflare は v0.9.0 のまま（再デプロイは承認待ち） |
+| バージョン | **v0.12.2 全環境反映済み**（本番 version `69e5a18e` / 2026-08-21 / commit `aa43fb3`・migration 不要） |
+| ロールバック先 | 本番 version `d427904b`（v0.9.0）。手順: [rollback.md](docs/operations/rollback.md) |
+| 既知の制約 | GitHub Actions Secrets 未登録のため `deploy.yml` 経路は未有効（[#39](../../issues/39)）。デプロイは wrangler CLI 経由 |
 
 ## 🏗️ アーキテクチャ
 
@@ -230,7 +232,9 @@ DATABASE_URL=postgresql://... npm run seed:demo -- --force
 
 確認手順の詳細は [docs/demo.md](docs/demo.md) を参照。
 
-## 🏭 本番デプロイ（ローカル systemd）
+## 🏭 本番デプロイ
+
+### ローカル systemd
 
 ```bash
 sudo DATABASE_URL=postgresql://... ./deploy/install-local.sh
@@ -238,7 +242,34 @@ systemctl status icrps
 curl http://127.0.0.1:8787/api/health
 ```
 
-詳細は [docs/operations/deploy-runbook.md](docs/operations/deploy-runbook.md) を参照。
+### Cloudflare Workers
+
+| 環境 | Worker | URL | Access |
+| --- | --- | --- | --- |
+| production | `icrps-api` | `https://icrps.mirai-dx-platform.com` | あり（未認証は 302） |
+| mvp | `icrps-api-mvp` | `https://icrps-mvp.mirai-dx-platform.com` | なし（架空デモデータ） |
+| preview | `icrps-api-preview` | `https://icrps-api-preview.kensan1969.workers.dev` | なし |
+
+```bash
+cd apps/api
+npx wrangler deploy --env preview   # 検証
+npx wrangler deploy --env mvp       # MVP デモ
+npx wrangler deploy                 # 本番
+```
+
+> ⚠️ GitHub Actions（`deploy.yml`）は Secrets 未登録のため現在使用できません（[Issue #39](../../issues/39)）。
+
+事前チェック・事後確認・rollback を含む詳細は
+[docs/operations/deploy-runbook.md](docs/operations/deploy-runbook.md) を参照。
+
+### データベースマイグレーション
+
+```bash
+DATABASE_URL='postgresql://...' node scripts/migrate.mjs   # 未適用のものだけ適用
+```
+
+適用済みは `schema_migrations` テーブルで管理され、再実行しても安全です。
+記述規約と検証手順は [db/migrations/README.md](db/migrations/README.md) を参照。
 
 ## 🛡️ セキュリティ
 
@@ -252,7 +283,8 @@ curl http://127.0.0.1:8787/api/health
 - AI 要約のレビュー（採用・却下・編集）状態を `ai_summaries.status` に記録し、監査ログへ出力
 - セキュリティヘッダー（CSP・X-Frame-Options 等）を API レスポンスに付与
 - 秘密情報（DATABASE_URL・JWT_SECRET・API キー）はリポジトリに置かず、`/etc/icrps/icrps.env`（0600）または GitHub Secrets で管理
-- 依存関係監査: `npm audit`（現在 0 vulnerabilities）
+- 依存関係監査: `npm audit --omit=dev --audit-level=high`（現在 **0 vulnerabilities**・CI の必須ゲート）
+- ⚠️ MVP デモ環境（`icrps-mvp`）は公開レビュー用に `AUTH_BYPASS` でログインを一時無効化しています。本番は `APP_ENV=production` により常に無効です（[Issue #40](../../issues/40) で終了時の無効化を追跡）
 
 ## 📚 ドキュメント
 

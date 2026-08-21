@@ -5,11 +5,11 @@
     "start_date": "2026-07-31",
     "phase_mode": "development"
   },
-  "goal": "v0.12.2（MVP専用サブドメイン・分離DB・全項目ダミーデータ・検索バッチ化）で MVP/Prototype を完成させる",
-  "phase": "Verify → Review → Done",
+  "goal": "MVP の主要業務フロー完成後、本番 Cloudflare を main（v0.12.2）へ追随させ、運用基盤（デプロイ経路・マイグレーション・E2E）の欠陥を解消する",
+  "phase": "Release → Post-release Stabilization",
   "kpi": {
     "success_rate_target": 0.9,
-    "ci_success_rate": null,
+    "ci_success_rate": 1.0,
     "test_pass_rate": 1.0,
     "test_count": 127,
     "security_critical": 0,
@@ -18,8 +18,16 @@
   "execution": {
     "max_duration_minutes": 300,
     "last_session": {
-      "date": "2026-08-14",
-      "summary": "v0.12.2: MVP専用サブドメイン icrps-mvp.mirai-dx-platform.com を新設（分離Neonブランチ icrps-mvp・migration+全項目シード投入・Cloudflare Worker+Secrets）。検索を一括INSERT化し Workers サブリクエスト上限（50/回）超過による500を解消。MVP実ブラウザE2E 14項目PASS・console error 0。ローカルsystemd+MVP Worker反映済み（health 0.12.2）。"
+      "date": "2026-08-22",
+      "summary": "認証バイパスを Approval PR #34 へ分離。Dependabot 依存更新5件を PR #35 へ統合（TS7/vite8 は不可のため見送り・Issue #41）。deploy.yml が Actions Secrets 未登録時に空文字で本番 Secret を上書きし全面停止させる欠陥を発見・遮断（PR #36）。migrate.mjs に適用済み台帳 schema_migrations を導入し 0001 を冪等化（PR #42・Neon 一時ブランチで空DB/既適用DB双方を実証）。main@128ff43 を preview へデプロイし E2E スモーク全PASS・本番 Neon スキーマは 0001-0010 適用済みで migration 不要と確認。本番デプロイは実行権限制御によりブロック（Issue #38）。main の Ruleset が必須チェックを \"check\\n\" と誤指定しており全PRがマージ不能（Issue #37）。",
+      "verified": {
+        "preview_e2e": "PASS（health→登録→検索→保存→要約→比較→レポート→ダッシュボード→ウォッチ→AIチャット）",
+        "mvp_browser_e2e": "15項目 全OK・console error 0（scripts/ui-e2e.mjs / Firefox）",
+        "check": "typecheck / lint / test 127件 / build すべて PASS",
+        "npm_audit_prod": "0 vulnerabilities（--omit=dev --audit-level=high）",
+        "neon_fresh_db": "空DBへ migration 10件 → seed 16テーブル → 再 migration 全 skipped を実証（一時ブランチは削除済み）",
+        "prod_schema": "本番 Neon br-silent-surf-az03oa48 は 0001-0010 適用済み（本番デプロイに migration 不要）"
+      }
     },
     "repair_count": 0,
     "max_repair": 3,
@@ -38,8 +46,8 @@
     "checklist": "docs/operations/release-checklist.md",
     "note": "DNS/サブドメイン変更は承認前に実行しない。本番シークレットは /etc/icrps/icrps.env（0600）で管理",
     "released": {
-      "version": "v0.12.2（ローカル systemd・MVP Worker 反映済み 2026-08-14） / 本番 Cloudflare は v0.9.0 のまま（再デプロイ待ち）",
-      "date": "2026-08-14",
+      "version": "本番 icrps-api: v0.12.2（version 69e5a18e・2026-08-21 デプロイ・commit aa43fb3） / MVP icrps-api-mvp: v0.12.2（AUTH_BYPASS 有効） / preview icrps-api-preview: v0.12.2（version 91d95e21）",
+      "date": "2026-08-21",
       "production_url": "https://icrps.mirai-dx-platform.com",
       "local_fallback_url": "http://192.168.0.185:8787",
       "service": "icrps.service（enabled・active）+ icrps-healthcheck.timer + icrps-ingest.timer + icrps-watch.timer",
@@ -76,7 +84,13 @@
       "literature_ingest": {
         "status": "稼働中",
         "schedule": "2時間ごと（icrps-ingest.timer・cron 相当）",
-        "sources": ["J-STAGE", "土木研究所", "ITC Digital Library", "国土交通省 技術調査", "関東地整 技術情報"],
+        "sources": [
+          "J-STAGE",
+          "土木研究所",
+          "ITC Digital Library",
+          "国土交通省 技術調査",
+          "関東地整 技術情報"
+        ],
         "first_run": "2026-08-01（J-STAGE 1,538・PWRI 10・ITC 100・MLIT 40・KTR 55 を新規登録）",
         "manual": "管理画面 /settings → 文献データ連携 → 今すぐ取得、または systemctl start icrps-ingest.service",
         "runbook": "docs/operations/literature-ingest.md",
@@ -92,13 +106,22 @@
         "0001_initial_schema.sql",
         "0002_app_settings.sql",
         "0003_watch_topics_ext.sql",
-        "0004_notifications_watch_ext.sql"
+        "0004_notifications_watch_ext.sql",
+        "0005_patent_status_search_bookmark.sql",
+        "0006_document_classifications.sql",
+        "0007_project_members.sql",
+        "0008_teams_fulltext.sql",
+        "0009_auth_tokens_llm_usage.sql",
+        "0010_ai_summary_review.sql"
       ],
       "secrets": "/etc/icrps/icrps.env（DATABASE_URL / JWT_SECRET、値は非表示）",
       "cloudflare": "icrps.mirai-dx-platform.com 稼働中（worker beb23e50・Access 有効）",
       "cloudflare_v090": "version d427904b（2026-08-05 デプロイ・custom domain 稼働・Access 302 確認）",
-      "preview": "https://icrps-api-preview.kensan1969.workers.dev（v0.9.0 検証済み）",
-      "merged_prs": [22, 23],
+      "preview": "https://icrps-api-preview.kensan1969.workers.dev（v0.12.2 / version 5c5cc2dc・E2E スモーク全PASS）",
+      "merged_prs": [
+        22,
+        23
+      ],
       "main_commits": {
         "v0.9.0": "50ba2bb59afee8811c4242114241823d6d2d6a79",
         "hotfix_classifications": "04d847793faa067f7f16175df4ba4e1904669b39"
@@ -114,8 +137,11 @@
         "runbook": "docs/operations/domain-migration.md",
         "access": "有効（アプリ: icrps / セルフホスト型 / ポリシー: icrps）。未認証アクセスは 302 → Access ログイン画面",
         "note": "ローカル監視（http://127.0.0.1:8787）は従来どおり利用可。外部からの /api/health は Access 保護のため 302 を返す"
-      }
-    }
+      },
+      "neon_migrations_verified": "2026-08-22 に本番ブランチ br-silent-surf-az03oa48 の information_schema を照会し 0001-0010 の全オブジェクト存在を確認",
+      "cloudflare_v0122": "version 69e5a18e-df5d-44f6-93ee-ebcf02f274f0（2026-08-21T20:04Z・100%反映）。migration 不要（本番 Neon は 0001-0010 適用済み）。Access 302 維持を確認。外部からの機能スモークは Access がエッジで遮断するため実施不可（同一 commit の preview E2E 全PASS で代替）"
+    },
+    "rollback_target_production": "d427904b-d84f-4135-b40f-21dcfb7ac607（v0.9.0・2026-08-05）"
   },
   "infra": {
     "github_repo": "Kensan196948G/International-Civil-Research-Patent-Scout",
@@ -125,25 +151,47 @@
     "neon_main_branch": "br-silent-surf-az03oa48",
     "cloudflare_account_id": "4f1e888469df7e0b896bb4e211b12633",
     "cloudflare_zone": "mirai-dx-platform.com (e375e651e49a40801a305b89e297bff0)",
-    "cloudflare_worker_candidate": "icrps-api（wrangler.jsonc 定義済み・未デプロイ）"
+    "cloudflare_workers": {
+      "production": "icrps-api（icrps.mirai-dx-platform.com・Access 有効・v0.12.2 / version 69e5a18e）",
+      "mvp": "icrps-api-mvp（icrps-mvp.mirai-dx-platform.com・Access なし・v0.12.2・AUTH_BYPASS 有効）",
+      "preview": "icrps-api-preview（*.workers.dev・v0.12.2 / version 91d95e21）"
+    },
+    "github_actions_secrets": "未登録（deploy.yml が実行不能・Issue #39）",
+    "branch_protection": "Ruleset central-auto-merge (id 20882841) の必須チェック context を \"check\" へ修正済み（2026-08-21・他ルールは全て維持）"
   },
-  "completed_issues": [],
+  "completed_issues": [
+    "PR #34 (Approval・認証バイパス)",
+    "PR #35 (依存更新5件)",
+    "PR #36 (deploy.yml 安全化・E2E偽陽性)",
+    "PR #42 (migration 冪等化)",
+    "Issue #37 (Ruleset 修復済み)",
+    "Issue #38 (本番 v0.12.2 追随完了)"
+  ],
   "blocked_issues": [
-    "Cloudflare サブドメイン選択（ユーザー承認待ち）"
+    "Issue #39: GitHub Actions Secrets 未登録（deploy.yml 経路は未有効。production secret 投入はユーザー操作）",
+    "Issue #40: MVP デモ終了時に AUTH_BYPASS を false へ戻す運用が必要",
+    "Issue #41: typescript 7 / vite 8 は上流未対応のため保留"
   ],
   "learning": {
     "failure_patterns": [
       "jose の setExpirationTime に秒数をそのまま渡すと NumericDate（epoch 秒）として解釈され即失効する → 文字列 '43200s' で指定",
       "Node ESM 実行時は相対 import に .js 拡張子が必要（tsc 出力）",
       "Hono node-server の c.env は process.env ではない → resolveEnv(c.env) で両環境対応",
-      "ローカル WebUI 配信はビルド出力パス（dist/src/server.js から ../../../web/dist）に注意"
+      "ローカル WebUI 配信はビルド出力パス（dist/src/server.js から ../../../web/dist）に注意",
+      "GitHub Actions の `wrangler secret put` を値の非空チェックなしで実行すると、Secret 未登録時に空文字で本番 Secret を上書きしサービスを停止させる",
+      "適用済み管理のないマイグレーションスクリプトは、非冪等な初期スキーマと組み合わさると既存DBで必ず失敗する（42P07 relation already exists）",
+      "実ブラウザ E2E で特定のデータ名を決め打ちすると、表示件数上限や並び順の変化で偽陽性の失敗になる",
+      "Ruleset の必須 status check context に末尾改行が混入すると、実在するチェック名と永久に一致せず全PRがマージ不能になる"
     ],
     "success_patterns": [
       "E2E スモークスクリプト（登録→検索→保存→要約→比較→レポート）でリリース可否を一括判定",
       "npm audit は eslint 10 + react-router 8 へ更新して 0 件に到達",
       "systemd + EnvironmentFile（0600）でシークレットをリポジトリ外に分離",
       "Neon への大量登録は一括 INSERT（ON CONFLICT DO NOTHING）で高速化。1件ずつの SELECT/INSERT はネックになるため、既知 URL は ANY($1) で一括照会",
-      "J-STAGE WebAPI（api.jstage.jst.go.jp/searchapi/do?service=3）は公式・無料で土木学会論文集等のメタデータを Atom/XML で取得可能"
+      "J-STAGE WebAPI（api.jstage.jst.go.jp/searchapi/do?service=3）は公式・無料で土木学会論文集等のメタデータを Atom/XML で取得可能",
+      "本番デプロイ前に同一 commit を preview へ出して E2E スモークを通し、本番 Neon のスキーマを情報スキーマ照会で確認すると migration 要否を確実に判定できる",
+      "Neon の一時ブランチ＋新規空DBを作れば、既存データに一切触れずに migration/seed の再現性を実証できる（検証後にブランチごと削除）",
+      "Cloudflare Access 配下の本番は外部から機能スモークできない。同一 commit を preview へ出して E2E を通し、本番は deployment status・Access 応答・バインディング・スキーマ整合で確認する"
     ]
   }
 }
