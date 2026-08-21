@@ -52,13 +52,17 @@ try {
   ok("ログイン成功（Cookie セッション）", page.url());
 
   // 2. ダッシュボード
+  // 最近のプロジェクトは表示件数に上限があり、並び順もデータ更新で変わる。
+  // 特定タイトルを決め打ちすると偽陽性の失敗になるため、「デモ用プロジェクトが
+  // 1件以上表示されていること」を判定条件にする。
   await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
-  await page.waitForSelector("text=低炭素コンクリートの実用化調査", { timeout: 30000 }).catch(() => {});
+  await page.waitForSelector("text=/（デモ）/", { timeout: 30000 }).catch(() => {});
   const dashText = await page.textContent("body");
-  if (dashText.includes("ダッシュボード") && dashText.includes("低炭素コンクリートの実用化調査")) {
-    ok("ダッシュボード表示（統計・プロジェクト）");
+  const demoProjects = dashText.match(/（デモ）/g) ?? [];
+  if (dashText.includes("ダッシュボード") && demoProjects.length > 0) {
+    ok("ダッシュボード表示（統計・プロジェクト）", `デモ項目 ${demoProjects.length} 件`);
   } else {
-    ng("ダッシュボード表示", "プロジェクト一覧待ちでタイムアウト");
+    ng("ダッシュボード表示", "デモ用プロジェクトが1件も表示されない");
   }
   await page.screenshot({ path: `${SHOT_DIR}/02-dashboard.png`, fullPage: true });
 

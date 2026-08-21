@@ -28,13 +28,35 @@ jobs:
     if: ${{ inputs.subdomain_approval == 'approve-patent-scout' || inputs.subdomain_approval == 'approve-icrps' || inputs.subdomain_approval == 'approve-icrps-mvp' || inputs.subdomain_approval == 'approve-research-patent-scout' || inputs.subdomain_approval == 'approve-civil-research-patent-scout' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build --workspace @icrps/web
+      - name: Verify required secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DATABASE_URL: ${{ inputs.environment == 'mvp' && secrets.MVP_DATABASE_URL || secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ inputs.environment == 'mvp' && secrets.MVP_JWT_SECRET || secrets.JWT_SECRET }}
+        run: |
+          # 値は絶対に出力しない。未設定のまま `wrangler secret put` を実行すると
+          # 空文字が本番 Secret を上書きし、DB 接続断＝全面停止になるため事前に落とす。
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          if [ "${{ inputs.environment }}" != "preview" ]; then
+            [ -n "$DATABASE_URL" ] || missing="$missing DATABASE_URL"
+            [ -n "$JWT_SECRET" ] || missing="$missing JWT_SECRET"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::必須 Secrets が未設定です:$missing"
+            echo "::error::Settings > Secrets and variables > Actions で登録してから再実行してください。"
+            exit 1
+          fi
+          echo "必須 Secrets: すべて設定済み"
       - name: Deploy preview (workers.dev)
         if: ${{ inputs.environment == 'preview' }}
         working-directory: apps/api
@@ -58,9 +80,14 @@ jobs:
           DATABASE_URL: ${{ secrets.MVP_DATABASE_URL }}
           JWT_SECRET: ${{ secrets.MVP_JWT_SECRET }}
         run: |
+          # 空文字での上書き（＝サービス停止）を防ぐため、必ず非空を確認してから put する
+          [ -n "$DATABASE_URL" ] || { echo "::error::MVP_DATABASE_URL 未設定"; exit 1; }
+          [ -n "$JWT_SECRET" ] || { echo "::error::MVP_JWT_SECRET 未設定"; exit 1; }
           printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL --env mvp
           printf '%s' "$JWT_SECRET" | npx wrangler secret put JWT_SECRET --env mvp
-      - name: Deploy production (custom domain)
+      # 本番は versions upload のみ（トラフィックへは未反映）。
+      # 反映には別途 `npx wrangler versions deploy` での昇格が必要。
+      - name: Upload production version (not promoted)
         if: ${{ inputs.environment == 'production' }}
         working-directory: apps/api
         env:
@@ -77,6 +104,9 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
+          # 空文字での上書き（＝本番 DB 接続断）を防ぐため、必ず非空を確認してから put する
+          [ -n "$DATABASE_URL" ] || { echo "::error::DATABASE_URL 未設定"; exit 1; }
+          [ -n "$JWT_SECRET" ] || { echo "::error::JWT_SECRET 未設定"; exit 1; }
           printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL
           printf '%s' "$JWT_SECRET" | npx wrangler secret put JWT_SECRET
           if [ -n "$OPENAI_API_KEY" ]; then printf '%s' "$OPENAI_API_KEY" | npx wrangler secret put OPENAI_API_KEY; fi
