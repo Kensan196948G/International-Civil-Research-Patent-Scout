@@ -67,7 +67,10 @@
       },
       "vars": {
         "APP_ENV": "mvp",
-        "APP_URL": "https://icrps-mvp.mirai-dx-platform.com"
+        "APP_URL": "https://icrps-mvp.mirai-dx-platform.com",
+        // MVP 公開デモ: ログイン認証を一時的に無効化（誰でも閲覧可）。
+        // 復旧は "false" に戻して再デプロイするだけ。本番は APP_ENV=production のため常に無効。
+        "AUTH_BYPASS": "true"
       }
     }
   }
