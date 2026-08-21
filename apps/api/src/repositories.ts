@@ -132,6 +132,12 @@ export async function findUserByEmail(db: Db, email: string): Promise<User | nul
   return rows[0] ? mapUser(rows[0]) : null;
 }
 
+/** MVP 公開デモのバイパス先として使う、最も古い admin ユーザー */
+export async function findFirstAdminUser(db: Db): Promise<User | null> {
+  const rows = await db("SELECT * FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1", []);
+  return rows[0] ? mapUser(rows[0]) : null;
+}
+
 export async function findUserCredentialsByEmail(
   db: Db,
   email: string
