@@ -11,6 +11,8 @@
 ## データ
 
 - [ ] `node scripts/migrate.mjs` でマイグレーション適用
+      （未適用分のみ適用される。適用状況は `schema_migrations` テーブルで確認。
+      記述規約と検証手順は `db/migrations/README.md`）
 - [ ] テーブル・インデックス確認
 - [ ] 本番データのバックアップ（Neon ブランチ）取得
 
