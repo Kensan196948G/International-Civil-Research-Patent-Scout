@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 論理バックアップ（Neon の全テーブルを JSON.gz で保存、7日保持）
 // 使用法: DATABASE_URL=... node scripts/backup.mjs [出力ディレクトリ]
-import { neon } from "@neondatabase/serverless";
+import { createSql } from "./lib/db.mjs";
 import { gzipSync } from "node:zlib";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -19,7 +19,7 @@ if (!dbUrl) {
   process.exit(1);
 }
 const outDir = resolve(process.argv[2] ?? "/var/backups/icrps");
-const sql = neon(dbUrl, { arrayMode: false });
+const sql = createSql(dbUrl);
 
 const payload = {};
 for (const table of TABLES) {
@@ -47,3 +47,4 @@ for (const name of readdirSync(outDir)) {
 }
 
 console.log(`backup written: ${file} (${Object.keys(payload).length} tables)`);
+if (sql.end) await sql.end();

@@ -12,4 +12,7 @@ try {
 const env = resolveEnv(undefined);
 const results = await runLiteratureIngest(env);
 console.log(JSON.stringify(results, null, 2));
-process.exitCode = results.some((r) => r.status === "error") ? 1 : 0;
+// ローカルPostgres接続時 (postgres.js) はTCPコネクションプールを保持し続け
+// イベントループが自然にdrainしないため、exitCodeの設定だけでは終了しない。
+// (neon()のHTTP駆動driverでは問題にならなかったため潜在化していたバグ)
+process.exit(results.some((r) => r.status === "error") ? 1 : 0);

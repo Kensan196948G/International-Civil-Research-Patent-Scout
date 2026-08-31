@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 最新バックアップの検証（JSON 展開・テーブル件数と DB の突合）
 // 使用法: DATABASE_URL=... node scripts/verify-backup.mjs [バックアップディレクトリ]
-import { neon } from "@neondatabase/serverless";
+import { createSql } from "./lib/db.mjs";
 import { gunzipSync } from "node:zlib";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -22,7 +22,7 @@ if (files.length === 0) {
 }
 const latest = join(dir, files[0]);
 const payload = JSON.parse(gunzipSync(readFileSync(latest)).toString("utf8"));
-const sql = neon(dbUrl, { arrayMode: false });
+const sql = createSql(dbUrl);
 let mismatches = 0;
 for (const [table, rows] of Object.entries(payload)) {
   const res = await sql.query(`SELECT count(*)::int AS c FROM ${table}`);
@@ -38,3 +38,4 @@ if (mismatches > 0) {
   process.exit(1);
 }
 console.log(`backup OK: ${files[0]} (${Object.keys(payload).length} tables verified)`);
+if (sql.end) await sql.end();

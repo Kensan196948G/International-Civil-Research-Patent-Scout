@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // マイグレーション 0004〜0009 の rollback DDL をトランザクション内で検証（自動 ROLLBACK で破棄）
-import { neon } from "@neondatabase/serverless";
+import { createSql } from "./lib/db.mjs";
 
 const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) {
   console.error("DATABASE_URL is required");
   process.exit(1);
 }
-const sql = neon(dbUrl, { arrayMode: false });
+const sql = createSql(dbUrl);
 const statements = [
   "DROP TABLE IF EXISTS llm_usage",
   "DROP TABLE IF EXISTS auth_tokens",
@@ -45,3 +45,4 @@ if (Number(check[0]?.c ?? 0) !== 1) {
   process.exit(1);
 }
 console.log(`rollback DDL verified OK (${statements.length} statements, rolled back, no side effects)`);
+if (sql.end) await sql.end();
