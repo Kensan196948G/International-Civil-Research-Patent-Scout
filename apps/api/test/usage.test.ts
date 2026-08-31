@@ -70,5 +70,23 @@ describe("recordLlmUsage", () => {
     expect(params[4]).toBe(1000);
     expect(params[5]).toBe(500);
     expect(Number(params[6])).toBeGreaterThan(0);
+    expect(params[7]).toBe(0);
+  });
+
+  it("records execution time when provided", async () => {
+    let params: unknown[] = [];
+    const db: Db = async (_q, p = []) => {
+      params = p;
+      return [];
+    };
+    await recordLlmUsage(db, {
+      action: "chat.answer",
+      provider: "openai",
+      model: "gpt-4o-mini",
+      inputTokens: 100,
+      outputTokens: 50,
+      durationMs: 1234
+    });
+    expect(params[7]).toBe(1234);
   });
 });

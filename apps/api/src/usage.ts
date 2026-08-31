@@ -37,12 +37,13 @@ export async function recordLlmUsage(
     model: string;
     inputTokens: number;
     outputTokens: number;
+    durationMs?: number;
   }
 ): Promise<void> {
   if (input.inputTokens <= 0 && input.outputTokens <= 0) return;
   await db(
-    `INSERT INTO llm_usage (user_id, action, provider, model, input_tokens, output_tokens, cost_estimate)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    `INSERT INTO llm_usage (user_id, action, provider, model, input_tokens, output_tokens, cost_estimate, duration_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
     [
       input.userId ?? null,
       input.action,
@@ -50,7 +51,8 @@ export async function recordLlmUsage(
       input.model,
       input.inputTokens,
       input.outputTokens,
-      estimateCost(input.provider, input.model, input.inputTokens, input.outputTokens)
+      estimateCost(input.provider, input.model, input.inputTokens, input.outputTokens),
+      input.durationMs ?? 0
     ]
   );
 }
