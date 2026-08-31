@@ -29,6 +29,8 @@ export interface WorkerEnv {
   ALLOWED_EMAIL_DOMAINS?: string;
   BOOTSTRAP_ADMIN_EMAIL?: string;
   AI_RATE_LIMIT_PER_HOUR?: string;
+  /** Cloudflare Queues バインディング（任意）。未設定時は waitUntil / Node タイマーで実行 */
+  SEARCH_QUEUE?: { send: (message: unknown) => Promise<void> };
 }
 
 export const DEFAULTS = {
