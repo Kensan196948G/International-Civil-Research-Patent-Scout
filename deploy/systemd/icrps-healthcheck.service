@@ -4,4 +4,5 @@ After=network-online.target icrps.service
 
 [Service]
 Type=oneshot
+EnvironmentFile=-/etc/icrps/icrps.env
 ExecStart=/usr/local/bin/icrps-healthcheck.sh
