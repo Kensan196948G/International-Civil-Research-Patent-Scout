@@ -192,6 +192,43 @@ try {
   }
   await page.screenshot({ path: `${SHOT_DIR}/13-settings.png`, fullPage: true });
 
+  // 14. キーボード操作（サイドバー nav が button で Enter 遷移できる）
+  await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle", timeout: 30000 });
+  const navInfo = await page.evaluate(() => {
+    const items = [...document.querySelectorAll(".icrps-nav-item")];
+    return {
+      count: items.length,
+      allButtons: items.length > 0 && items.every((b) => b.tagName === "BUTTON" && b.tabIndex === 0),
+      hasSearch: items.some((b) => (b.textContent ?? "").includes("AI 横断検索"))
+    };
+  });
+  if (navInfo.allButtons && navInfo.hasSearch) {
+    await page.locator(".icrps-nav-item", { hasText: "AI 横断検索" }).press("Enter");
+    await page.waitForURL(/\/search/, { timeout: 15000 });
+    ok("キーボード操作（nav の button + Enter で遷移）", `nav items=${navInfo.count}`);
+  } else {
+    ng("キーボード操作", JSON.stringify(navInfo));
+  }
+
+  // 15. モバイル（375px）: 横スクロールなし・サイドバー全幅
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle", timeout: 30000 });
+  const mobileInfo = await page.evaluate(() => {
+    const doc = document.documentElement;
+    const aside = document.querySelector(".icrps-aside");
+    return {
+      overflowX: doc.scrollWidth - doc.clientWidth,
+      asideWidth: aside ? Math.round(aside.getBoundingClientRect().width) : -1,
+      viewport: doc.clientWidth
+    };
+  });
+  if (mobileInfo.overflowX <= 1 && mobileInfo.asideWidth === mobileInfo.viewport) {
+    ok("モバイル 375px（横スクロールなし・サイドバー全幅）", JSON.stringify(mobileInfo));
+  } else {
+    ng("モバイル 375px", JSON.stringify(mobileInfo));
+  }
+  await page.screenshot({ path: `${SHOT_DIR}/15-mobile.png`, fullPage: true });
+
   // ログアウト
   const logoutBtns = page.getByRole("button", { name: /ログアウト/i });
   if (await logoutBtns.count()) {

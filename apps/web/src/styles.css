@@ -29,6 +29,7 @@ a:hover {
 
 button {
   font-family: inherit;
+  min-height: 24px;
 }
 
 textarea,
@@ -122,7 +123,7 @@ select {
 .auth-card .auth-sub {
   margin: 0 0 18px;
   font-size: 12px;
-  color: #8a97a8;
+  color: #5f6b7c;
 }
 
 .auth-card label {
@@ -146,15 +147,15 @@ select {
 }
 
 .auth-card input:focus {
-  border-color: #e08a2b;
-  box-shadow: 0 0 0 3px rgba(224, 138, 43, 0.15);
+  border-color: #b25e0f;
+  box-shadow: 0 0 0 3px rgba(178, 94, 15, 0.15);
 }
 
 .auth-button {
   width: 100%;
   cursor: pointer;
-  border: 1px solid #e08a2b;
-  background: #e08a2b;
+  border: 1px solid #b25e0f;
+  background: #b25e0f;
   color: #fff;
   padding: 10px 14px;
   border-radius: 8px;
@@ -165,13 +166,13 @@ select {
 }
 
 .auth-button:hover {
-  background: #c9781f;
+  background: #9b4e08;
 }
 
 .auth-card .muted {
   margin: 14px 0 0;
   font-size: 12px;
-  color: #8a97a8;
+  color: #5f6b7c;
   text-align: center;
 }
 
@@ -214,9 +215,9 @@ select {
 }
 
 .auth-tab.active {
-  border-color: #e08a2b;
+  border-color: #b25e0f;
   background: #fdefe0;
-  color: #b5701a;
+  color: #9a5a0e;
 }
 
 .auth-link-button {
@@ -241,11 +242,110 @@ select {
   background: #f2f4f8;
 }
 
-@media (max-width: 720px) {
-  aside {
-    width: 200px !important;
+/* ===================== アクセシビリティ ===================== */
+:focus-visible {
+  outline: 2px solid #2e5aac;
+  outline-offset: 2px;
+}
+
+.icrps-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: #fff;
+  color: #1a2433;
+  padding: 8px 12px;
+  border-radius: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.icrps-skip-link:focus {
+  left: 0;
+  outline: 2px solid #2e5aac;
+  outline-offset: 0;
+}
+
+.icrps-nav-item,
+.icrps-text-btn,
+.icrps-link-btn {
+  font-family: inherit;
+}
+
+.icrps-text-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.icrps-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2e5aac;
+}
+
+.icrps-card-title {
+  margin: 0;
+}
+
+.icrps-page-title {
+  margin: 0;
+}
+
+.icrps-page-sub {
+  margin: 2px 0 0;
+}
+
+.icrps-footer {
+  margin-top: 24px;
+  padding: 12px 15px;
+  border-top: 1px solid #e3e8ef;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: #5f6b7c;
+}
+
+/* ===================== モバイル ===================== */
+@media (max-width: 860px) {
+  .icrps-shell {
+    display: block !important;
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
   }
-  header {
-    padding: 0 14px !important;
+  .icrps-aside {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e3e8ef;
+  }
+  .icrps-aside nav {
+    overflow-x: auto;
+  }
+  .icrps-column {
+    display: block !important;
+    overflow: visible !important;
+  }
+  .icrps-header {
+    height: auto !important;
+    min-height: 62px;
+    flex-wrap: wrap;
+    padding: 10px 14px !important;
+    gap: 10px !important;
+  }
+  .icrps-content {
+    overflow: visible !important;
+    padding: 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .icrps-content {
+    padding: 12px !important;
+  }
+  .icrps-header {
+    padding: 10px 12px !important;
   }
 }

@@ -37,6 +37,7 @@ export function App() {
             <Route path="/compare" element={<StandalonePage page="compare" />} />
             <Route path="/fit" element={<StandalonePage page="fit" />} />
             <Route path="/report" element={<StandalonePage page="report" />} />
+            <Route path="/reports" element={<StandalonePage page="report" />} />
             <Route path="/reports/:reportId" element={<StandalonePage page="report" />} />
             <Route path="/chat" element={<StandalonePage page="chat" />} />
             <Route path="/watch" element={<StandalonePage page="watch" />} />

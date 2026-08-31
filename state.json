@@ -18,15 +18,14 @@
   "execution": {
     "max_duration_minutes": 300,
     "last_session": {
-      "date": "2026-08-22",
-      "summary": "認証バイパスを Approval PR #34 へ分離。Dependabot 依存更新5件を PR #35 へ統合（TS7/vite8 は不可のため見送り・Issue #41）。deploy.yml が Actions Secrets 未登録時に空文字で本番 Secret を上書きし全面停止させる欠陥を発見・遮断（PR #36）。migrate.mjs に適用済み台帳 schema_migrations を導入し 0001 を冪等化（PR #42・Neon 一時ブランチで空DB/既適用DB双方を実証）。main@128ff43 を preview へデプロイし E2E スモーク全PASS・本番 Neon スキーマは 0001-0010 適用済みで migration 不要と確認。本番デプロイは実行権限制御によりブロック（Issue #38）。main の Ruleset が必須チェックを \"check\\n\" と誤指定しており全PRがマージ不能（Issue #37）。",
+      "date": "2026-08-31",
+      "summary": "アクセシビリティ Issue #44（Critical 2 / High 4）を解消（nav の button 化・見出し階層・main/skip-link・ラベル 18 件・コントラスト AA・375px レスポンシブ・/reports エイリアス）。ローカル PostgreSQL 対応 WIP を完成・検証（postgres.js 接続分岐・scripts/lib/db.mjs 共通化・CLI の exit 修正）。ローカル DB（127.0.0.1:5432/icrps）は set_updated_at 所有者を icrps_app に揃えたうえで migration 0001-0010 適用・再実行 skipped・backup/verify/rollback 検証 OK。check 136 テスト PASS・npm audit 0・実ブラウザ E2E 17/17 PASS。",
       "verified": {
-        "preview_e2e": "PASS（health→登録→検索→保存→要約→比較→レポート→ダッシュボード→ウォッチ→AIチャット）",
-        "mvp_browser_e2e": "15項目 全OK・console error 0（scripts/ui-e2e.mjs / Firefox）",
-        "check": "typecheck / lint / test 127件 / build すべて PASS",
+        "local_browser_e2e": "17項目 全OK（scripts/ui-e2e.mjs / Firefox・キーボード nav 遷移・375px モバイル検証を追加。フォント console error 3 は一時的な外部フォント失敗）",
+        "check": "typecheck / lint / test 136件（API 117・Web 19）/ build すべて PASS",
         "npm_audit_prod": "0 vulnerabilities（--omit=dev --audit-level=high）",
-        "neon_fresh_db": "空DBへ migration 10件 → seed 16テーブル → 再 migration 全 skipped を実証（一時ブランチは削除済み）",
-        "prod_schema": "本番 Neon br-silent-surf-az03oa48 は 0001-0010 適用済み（本番デプロイに migration 不要）"
+        "local_pg": "127.0.0.1:5432/icrps で migration 10件適用・再実行 10 skipped・backup 18テーブル一致・verify-rollback OK",
+        "a11y_dom": "main/skip-link/h1・カード見出し・nav button 12件・未ラベル入力 0 をテストで固定"
       }
     },
     "repair_count": 0,

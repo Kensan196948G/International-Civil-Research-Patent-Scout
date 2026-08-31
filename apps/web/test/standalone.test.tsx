@@ -560,4 +560,40 @@ describe("StandaloneView", () => {
     fireEvent.click(screen.getByText("保存する"));
     expect(confirmSave).toHaveBeenCalledTimes(1);
   });
+
+  it("provides landmark, skip link and page heading", () => {
+    const v = baseVars();
+    const { container } = render(<StandaloneView v={v as never} />);
+    expect(container.querySelector("main#icrps-main")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "本文へ移動" }).getAttribute("href")).toBe("#icrps-main");
+    expect(screen.getByRole("heading", { level: 1, name: "ダッシュボード" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "リサーチ・ダイジェスト" })).toBeTruthy();
+  });
+
+  it("renders navigation items as keyboard-accessible buttons", () => {
+    const v = baseVars();
+    v.navGroups = [
+      { label: "リサーチ", items: [
+        { ico: "📊", label: "ダッシュボード", badge: null, active: true, go: () => undefined },
+        { ico: "🔍", label: "AI 横断検索", badge: null, active: false, go: () => undefined }
+      ] }
+    ];
+    const { container } = render(<StandaloneView v={v as never} />);
+    const dash = screen.getByRole("button", { name: /ダッシュボード/ });
+    expect(dash.tagName).toBe("BUTTON");
+    expect(dash.getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("button", { name: /AI 横断検索/ }).getAttribute("aria-current")).toBeNull();
+    expect(container.querySelector("a:not([href])")).toBeNull();
+  });
+
+  it("associates labels with form controls", () => {
+    const v = baseVars();
+    v.isDashboard = false;
+    v.isSearch = true;
+    v.pageTitle = "AI 横断検索";
+    render(<StandaloneView v={v as never} />);
+    expect(screen.getByLabelText("調べたいことを、そのまま日本語で書いてください")).toBeTruthy();
+    expect(screen.getByLabelText("発行年（開始）")).toBeTruthy();
+    expect(screen.getByLabelText("発行年（終了）")).toBeTruthy();
+  });
 });
