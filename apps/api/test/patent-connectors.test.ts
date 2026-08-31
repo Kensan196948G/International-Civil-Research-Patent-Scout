@@ -6,6 +6,7 @@ import {
   mapEspacenetSearchResult,
   mapSerpGooglePatentsResults,
   searchEspacenet,
+  searchGooglePatents,
   searchGooglePatentsSerpApi
 } from "../src/connectors";
 
@@ -65,6 +66,38 @@ const OPS_SEARCH = {
     }
   }
 };
+
+// Google Patents 検索結果ページの HTML スナップショット（2026-08 時点の構造）
+const GOOGLE_PATENTS_LIST_HTML = `<!doctype html>
+<html lang="ja"><head><title>低炭素コンクリート - Google Patents</title></head>
+<body>
+<search-results>
+  <result>
+    <a href="/patent/US11854321B2/en" aria-label="Low carbon concrete composition">
+      Low carbon concrete composition
+    </a>
+    <a href="/patent/JP2024123456A/ja" aria-label="低炭素コンクリート">
+      低炭素コンクリート
+    </a>
+    <a href="/patent/EP4123456A1/en" aria-label="Low-carbon binder">
+      Low-carbon binder
+    </a>
+    <a href="/patent/XX-not-a-number/en" aria-label="Invalid number">Invalid number</a>
+  </result>
+</search-results>
+</body></html>`;
+
+const GOOGLE_PATENTS_SNIPPET_HTML = `<!doctype html>
+<html><body>
+<h3 class="result-title">
+  <a href="/patent/JP2024000001A">高耐久コンクリートの製造方法</a>
+</h3>
+<span class="result-snippet">海洋環境の飛沫帯で使用する高耐久コンクリート。</span>
+<h3 class="result-title">
+  <a href="/patent/CN1187654321A">Low-carbon cement</a>
+</h3>
+<span class="result-snippet">slag based binder for marine structures</span>
+</body></html>`;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -140,6 +173,59 @@ describe("searchEspacenet", () => {
     const searchUrl = String(fetchMock.mock.calls[1]?.[0]);
     expect(searchUrl).toContain("/rest-services/search?q=");
     expect(searchUrl).toContain("Range=1-10");
+  });
+});
+
+describe("searchGooglePatents", () => {
+  it("parses the current result-list HTML snapshot", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(GOOGLE_PATENTS_LIST_HTML, { status: 200 }))
+    );
+    const results = await searchGooglePatents({ query: "low carbon concrete", maxResults: 10 });
+    expect(results).toHaveLength(3);
+    expect(results[0]).toMatchObject({
+      sourceType: "patent",
+      publicationNumber: "US11854321B2",
+      patentNumber: "US11854321B2",
+      country: "US",
+      title: "Low carbon concrete composition",
+      url: "https://patents.google.com/patent/US11854321B2/ja",
+      sourceName: "Google Patents"
+    });
+    expect(results[1]).toMatchObject({
+      publicationNumber: "JP2024123456A",
+      country: "JP",
+      title: "低炭素コンクリート"
+    });
+    // 不正な番号（XX...）はスキップされる
+    expect(results[2]).toMatchObject({ publicationNumber: "EP4123456A1", title: "Low-carbon binder" });
+  });
+
+  it("falls back to snippet markup when anchor-list structure changes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(GOOGLE_PATENTS_SNIPPET_HTML, { status: 200 }))
+    );
+    const results = await searchGooglePatents({ query: "高耐久コンクリート", maxResults: 10 });
+    expect(results).toHaveLength(2);
+    expect(results[0]).toMatchObject({
+      publicationNumber: "JP2024000001A",
+      title: "高耐久コンクリートの製造方法",
+      snippet: "海洋環境の飛沫帯で使用する高耐久コンクリート。"
+    });
+    expect(results[1]).toMatchObject({ publicationNumber: "CN1187654321A", snippet: "slag based binder for marine structures" });
+  });
+
+  it("returns empty array when no patent links are found", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html><body>no results</body></html>", { status: 200 })));
+    const results = await searchGooglePatents({ query: "nonexistent query" });
+    expect(results).toEqual([]);
+  });
+
+  it("propagates fetch failure so the pipeline records the patent source as failed", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    await expect(searchGooglePatents({ query: "low carbon" })).rejects.toThrow("network down");
   });
 });
 
