@@ -1,7 +1,7 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { expiresInToSeconds, isEmailDomainAllowed, resolveEnv } from "../env.js";
-import type { AppBindings } from "../types.js";
+import { expiresInToSeconds, isEmailDomainAllowed, resolveEnv, type WorkerEnv } from "../env.js";
+import type { AppBindings, AppEnv } from "../types.js";
 import { createDb } from "../db.js";
 import { createAuditLog } from "../audit.js";
 import { conflict, forbidden, HttpError, unauthorized } from "../errors.js";
@@ -244,8 +244,42 @@ export function authRoutes(): Hono<AppBindings> {
 
   app.get("/sso", async (c) => {
     const env = resolveEnv(c.env);
-    return c.json({ google: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) });
+    return c.json({
+      google: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+      microsoft: !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET)
+    });
   });
+
+  async function completeSsoLogin(
+    c: Context<AppEnv>,
+    env: WorkerEnv,
+    db: ReturnType<typeof createDb>,
+    info: { email: string; name?: string },
+    action: string
+  ) {
+    if (!isEmailDomainAllowed(info.email, env)) {
+      throw forbidden("このメールドメインは利用できません（管理者へ連絡してください）");
+    }
+    let user = await findUserByEmail(db, info.email);
+    if (!user) {
+      const role = await resolveBootstrapRole(db, env, info.email);
+      user = await createUser(db, {
+        email: info.email,
+        name: info.name ?? info.email.split("@")[0] ?? "SSO User",
+        passwordHash: await hashPassword(randomToken()),
+        role
+      });
+    } else {
+      const role = await resolveBootstrapRole(db, env, user.email);
+      if (role === "admin" && user.role !== "admin") {
+        user = (await updateUserRole(db, user.id, "admin")) ?? user;
+      }
+    }
+    const accessToken = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
+    setAuthCookies(c, accessToken, expiresInToSeconds(env.JWT_EXPIRES_IN));
+    await createAuditLog(db, { userId: user.id, action });
+    return c.redirect(`${env.APP_URL}/login?sso=success`);
+  }
 
   app.get("/sso/google/url", async (c) => {
     const env = resolveEnv(c.env);
@@ -295,26 +329,58 @@ export function authRoutes(): Hono<AppBindings> {
     if (!isEmailDomainAllowed(info.email, env)) {
       throw forbidden("このメールドメインは利用できません（管理者へ連絡してください）");
     }
-    const db = createDb(env);
-    let user = await findUserByEmail(db, info.email);
-    if (!user) {
-      const role = await resolveBootstrapRole(db, env, info.email);
-      user = await createUser(db, {
-        email: info.email,
-        name: info.name ?? info.email.split("@")[0] ?? "SSO User",
-        passwordHash: await hashPassword(randomToken()),
-        role
-      });
-    } else {
-      const role = await resolveBootstrapRole(db, env, user.email);
-      if (role === "admin" && user.role !== "admin") {
-        user = (await updateUserRole(db, user.id, "admin")) ?? user;
-      }
+    return completeSsoLogin(c, env, createDb(env), { email: info.email, name: info.name }, "auth.sso_google");
+  });
+
+  app.get("/sso/microsoft/url", async (c) => {
+    const env = resolveEnv(c.env);
+    if (!env.MICROSOFT_CLIENT_ID || !env.MICROSOFT_CLIENT_SECRET) {
+      throw new HttpError(400, "bad_request", "Microsoft SSO が設定されていません");
     }
-    const accessToken = await signToken(user.id, user.role, env.JWT_SECRET, env.JWT_EXPIRES_IN);
-    setAuthCookies(c, accessToken, expiresInToSeconds(env.JWT_EXPIRES_IN));
-    await createAuditLog(db, { userId: user.id, action: "auth.sso_google" });
-    return c.redirect(`${env.APP_URL}/login?sso=success`);
+    const redirectUri = `${env.APP_URL}/api/auth/sso/microsoft/callback`;
+    const params = new URLSearchParams({
+      client_id: env.MICROSOFT_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid profile email",
+      response_mode: "query",
+      prompt: "select_account"
+    });
+    return c.json({ url: `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}` });
+  });
+
+  app.get("/sso/microsoft/callback", async (c) => {
+    const env = resolveEnv(c.env);
+    const code = c.req.query("code");
+    if (!code || !env.MICROSOFT_CLIENT_ID || !env.MICROSOFT_CLIENT_SECRET) {
+      throw new HttpError(400, "bad_request", "SSO コールバックが不正です");
+    }
+    const redirectUri = `${env.APP_URL}/api/auth/sso/microsoft/callback`;
+    const tokenResponse = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: env.MICROSOFT_CLIENT_ID,
+        client_secret: env.MICROSOFT_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+        scope: "openid profile email"
+      }),
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!tokenResponse.ok) throw new HttpError(400, "bad_request", "Microsoft の認証に失敗しました");
+    const tokenData = (await tokenResponse.json()) as { access_token?: string };
+    if (!tokenData.access_token) throw new HttpError(400, "bad_request", "Microsoft の認証に失敗しました");
+    const infoResponse = await fetch("https://graph.microsoft.com/oidc/userinfo", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!infoResponse.ok) throw new HttpError(400, "bad_request", "Microsoft のユーザー情報を取得できませんでした");
+    const info = (await infoResponse.json()) as { email?: string; name?: string; preferred_username?: string };
+    const email = info.email ?? info.preferred_username;
+    if (!email) throw new HttpError(400, "bad_request", "メールアドレスが取得できませんでした");
+    return completeSsoLogin(c, env, createDb(env), { email, name: info.name }, "auth.sso_microsoft");
   });
 
   app.post("/logout", requireAuth, async (c) => {
