@@ -6,18 +6,57 @@ import { extractLlmUsage, recordLlmUsage } from "./usage.js";
 
 type JsonObject = Record<string, unknown>;
 
-export async function callLlmJson(
-  input: { system: string; user: string; meta?: { action?: string; userId?: string } },
-  env: WorkerEnv,
-  jsonSchema: Record<string, unknown>,
-  provider: ActiveAiProvider | null = null
-): Promise<JsonObject | null> {
-  const active = provider ?? (env.OPENAI_API_KEY
-    ? { provider: "openai" as const, apiKey: env.OPENAI_API_KEY, model: env.AI_MODEL, baseUrl: env.OPENAI_BASE_URL }
-    : null);
-  if (!active) return null;
+export class LlmOutputValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LlmOutputValidationError";
+  }
+}
 
-  let content: string;
+// JSON Schema の lightweight 型検証（required の存在＋properties の型・配列要素・ネスト）
+export function validateJsonOutput(parsed: JsonObject, jsonSchema: Record<string, unknown>): void {
+  const required = (jsonSchema.required ?? []) as string[];
+  for (const key of required) {
+    if (!(key in parsed)) throw new LlmOutputValidationError(`LLM output missing required key: ${key}`);
+  }
+  const properties = (jsonSchema.properties ?? {}) as Record<string, Record<string, unknown>>;
+  for (const [key, schema] of Object.entries(properties)) {
+    if (!(key in parsed)) continue;
+    const value = parsed[key];
+    const type = schema.type;
+    if (type === "string") {
+      if (typeof value !== "string") {
+        throw new LlmOutputValidationError(`LLM output key "${key}" must be a string`);
+      }
+    } else if (type === "array") {
+      if (!Array.isArray(value)) {
+        throw new LlmOutputValidationError(`LLM output key "${key}" must be an array`);
+      }
+      const itemSchema = (schema.items ?? {}) as Record<string, unknown>;
+      if (itemSchema.type === "string" && !value.every((v) => typeof v === "string")) {
+        throw new LlmOutputValidationError(`LLM output key "${key}" must be an array of strings`);
+      }
+      if (itemSchema.type === "object") {
+        value.forEach((v, i) => {
+          if (typeof v !== "object" || v === null) {
+            throw new LlmOutputValidationError(`LLM output key "${key}[${i}]" must be an object`);
+          }
+          validateJsonOutput(v as JsonObject, itemSchema);
+        });
+      }
+    } else if (type === "object") {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        throw new LlmOutputValidationError(`LLM output key "${key}" must be an object`);
+      }
+    }
+  }
+}
+
+async function requestLlmContent(
+  active: NonNullable<ReturnType<typeof resolveActiveProvider>>,
+  env: WorkerEnv,
+  input: { system: string; user: string }
+): Promise<{ content: string; usage: { inputTokens: number; outputTokens: number } }> {
   if (active.provider === "anthropic") {
     const base = active.baseUrl.replace(/\/+$/, "");
     const response = await fetch(`${base}/v1/messages`, {
@@ -41,67 +80,92 @@ export async function callLlmJson(
       content?: Array<{ type?: string; text?: string }>;
       usage?: { input_tokens?: number; output_tokens?: number };
     };
-    content = data.content?.map((c) => c.text ?? "").join("") ?? "";
-    const usage = extractLlmUsage(data, "anthropic");
-    if (usage.inputTokens > 0 || usage.outputTokens > 0) {
-      await recordLlmUsage(createDb(env), {
-        userId: input.meta?.userId ?? null,
-        action: input.meta?.action ?? "llm.call",
-        provider: "anthropic",
-        model: active.model,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens
-      });
-    }
-  } else {
-    const base = active.baseUrl.replace(/\/+$/, "");
-    const url = active.provider === "deepseek"
-      ? `${base.replace(/\/v1$/, "")}/chat/completions`
-      : `${base}/chat/completions`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${active.apiKey}`
-      },
-      body: JSON.stringify({
-        model: active.model,
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: input.system },
-          { role: "user", content: input.user }
-        ],
-        response_format: { type: "json_object" },
-        max_tokens: 2000
-      }),
-      signal: AbortSignal.timeout(25000)
-    });
-    if (!response.ok) throw new Error(`LLM API error ${response.status}`);
-    const data = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-      usage?: { prompt_tokens?: number; completion_tokens?: number };
+    return {
+      content: data.content?.map((c) => c.text ?? "").join("") ?? "",
+      usage: extractLlmUsage(data, "anthropic")
     };
-    content = data.choices?.[0]?.message?.content ?? "";
-    const usage = extractLlmUsage(data, active.provider);
-    if (usage.inputTokens > 0 || usage.outputTokens > 0) {
-      await recordLlmUsage(createDb(env), {
-        userId: input.meta?.userId ?? null,
-        action: input.meta?.action ?? "llm.call",
-        provider: active.provider,
-        model: active.model,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens
-      });
+  }
+  const base = active.baseUrl.replace(/\/+$/, "");
+  const url = active.provider === "deepseek"
+    ? `${base.replace(/\/v1$/, "")}/chat/completions`
+    : `${base}/chat/completions`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${active.apiKey}`
+    },
+    body: JSON.stringify({
+      model: active.model,
+      temperature: 0.2,
+      messages: [
+        { role: "system", content: input.system },
+        { role: "user", content: input.user }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 2000
+    }),
+    signal: AbortSignal.timeout(25000)
+  });
+  if (!response.ok) throw new Error(`LLM API error ${response.status}`);
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
+  };
+  return {
+    content: data.choices?.[0]?.message?.content ?? "",
+    usage: extractLlmUsage(data, active.provider)
+  };
+}
+
+function resolveActiveProvider(
+  env: WorkerEnv,
+  provider: ActiveAiProvider | null
+): ActiveAiProvider | null {
+  return provider ?? (env.OPENAI_API_KEY
+    ? { provider: "openai" as const, apiKey: env.OPENAI_API_KEY, model: env.AI_MODEL, baseUrl: env.OPENAI_BASE_URL }
+    : null);
+}
+
+export async function callLlmJson(
+  input: { system: string; user: string; meta?: { action?: string; userId?: string } },
+  env: WorkerEnv,
+  jsonSchema: Record<string, unknown>,
+  provider: ActiveAiProvider | null = null
+): Promise<JsonObject | null> {
+  const active = resolveActiveProvider(env, provider);
+  if (!active) return null;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const started = Date.now();
+    try {
+      const { content, usage } = await requestLlmContent(active, env, input);
+      if (!content) throw new LlmOutputValidationError("LLM returned empty content");
+      const parsed = JSON.parse(content) as JsonObject;
+      validateJsonOutput(parsed, jsonSchema);
+      if (usage.inputTokens > 0 || usage.outputTokens > 0) {
+        await recordLlmUsage(createDb(env), {
+          userId: input.meta?.userId ?? null,
+          action: input.meta?.action ?? "llm.call",
+          provider: active.provider,
+          model: active.model,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          durationMs: Date.now() - started
+        });
+      }
+      return parsed;
+    } catch (err) {
+      lastError = err;
+      // リトライは JSON パース・スキーマ検証・空応答のみ（API/ネットワーク失敗はコスト・遅延抑制のため再試行しない）
+      if (attempt === 0 && (err instanceof SyntaxError || err instanceof LlmOutputValidationError)) {
+        continue;
+      }
+      throw err;
     }
   }
-  if (!content) throw new Error("LLM returned empty content");
-  const parsed = JSON.parse(content) as JsonObject;
-  // JSON Schema の required を軽量検証
-  const required = (jsonSchema.required ?? []) as string[];
-  for (const key of required) {
-    if (!(key in parsed)) throw new Error(`LLM output missing required key: ${key}`);
-  }
-  return parsed;
+  throw lastError;
 }
 
 export interface SummaryOutput {
