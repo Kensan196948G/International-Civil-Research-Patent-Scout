@@ -316,6 +316,8 @@ export const api = {
       publicationDate?: string | null;
       sourceName?: string | null;
       projectId?: string | null;
+      bodyText?: string | null;
+      licenseConfirmed?: boolean;
     }) =>
       request<{ document: SourceDocument; created: boolean }>("/api/documents/import", {
         method: "POST",

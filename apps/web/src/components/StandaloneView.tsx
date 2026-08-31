@@ -17,6 +17,7 @@ export function StandaloneView({ v }: { v: any }) {
     bookmarks, visibleCount, facetActive, facetTypeOptions, facetCountryOptions, facetStatusOptions, clearFacets,
     facetYearFrom, setFacetYearFrom, facetYearTo, setFacetYearTo,
     importOpen, setImportOpen, importForm, setImportField, importBusy, importMsg, submitImport, importProjects,
+    pdfInfo, handlePdfFile, setImportLicense,
     pwdCurrent, setPwdCurrent, pwdNew, setPwdNew, pwdBusy, pwdMsg, changePassword, pwdMsgStyle,
     domainChips, typeChips, feed, feedCount,
     feedTab, setFeedTab, litSource, changeLitSource, litQueryInput, setLitQueryInput, applyLitSearch,
@@ -300,8 +301,25 @@ export function StandaloneView({ v }: { v: any }) {
                 <label style={css("font-size:11.5px;font-weight:600;color:#5A6678;display:flex;flex-direction:column;gap:5px")}>要旨
                   <textarea value={importForm.abstract} onChange={setImportField("abstract")} rows={2} placeholder="要旨・請求項の概要（任意）" style={css("font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid #E3E8EF;border-radius:8px;background:#fff;resize:vertical")} />
                 </label>
+                <label style={css("font-size:11.5px;font-weight:600;color:#5A6678;display:flex;flex-direction:column;gap:5px")}>PDF ファイル（本文抽出・任意）
+                  <input type="file" accept="application/pdf" aria-label="PDF ファイルを選択" onChange={(e) => void handlePdfFile(e.target.files?.[0])} style={css("font:inherit;font-size:12px;padding:6px 8px;border:1px solid #E3E8EF;border-radius:8px;background:#fff")} />
+                  {(pdfInfo?.text || pdfInfo?.error) && (
+                    <span style={css("font-size:11px;line-height:1.6;color:" + (pdfInfo.error ? "#B5322A" : "#1E7A50") + ";font-weight:400")}>
+                      {pdfInfo.error ?? `抽出済み: ${pdfInfo.pages} ページ・${pdfInfo.text.length.toLocaleString("ja-JP")} 文字${pdfInfo.truncated ? "（上限で切捨て）" : ""}`}
+                    </span>
+                  )}
+                </label>
+                <label style={css("font-size:11.5px;font-weight:600;color:#5A6678;display:flex;flex-direction:column;gap:5px")}>
+                  <span style={css("display:flex;gap:8px;align-items:flex-start")}>
+                    <input type="checkbox" checked={!!importForm.licenseConfirmed} onChange={(e) => setImportLicense(e.target.checked)} style={css("margin-top:2px;width:16px;height:16px")} />
+                    <span>本文の保存を許諾するライセンスがあります（公開資料・社内許諾等）。ライセンス不明の場合はチェックせず、メタデータのみ登録されます。</span>
+                  </span>
+                </label>
                 <div style={css("display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap")}>
                   <button onClick={submitImport} disabled={importBusy} style={css("cursor:pointer;border:1px solid #B25E0F;background:#B25E0F;color:#fff;padding:8px 15px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600")}>{importBusy ? "登録中…" : "登録する"}</button>
+                  {importForm.bodyText && !importForm.licenseConfirmed && (
+                    <span style={css("font-size:11px;color:#B5322A;line-height:1.6")}>ライセンス未確認のため、本文は保存せずメタデータのみ登録されます。</span>
+                  )}
                   {(importMsg.text) && <span style={css("font-size:11.5px;color:" + (importMsg.type === "ok" ? "#1E7A50" : importMsg.type === "error" ? "#B5322A" : "#2E5AAC") + ";line-height:1.6")}>{importMsg.text}</span>}
                 </div>
               </div>
