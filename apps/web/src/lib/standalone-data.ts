@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { extractPdfText, type PdfExtractResult } from "./pdf-extract";
 import type {
   AiSummary,
   Comparison,
@@ -175,8 +176,11 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     authors: "",
     publicationDate: "",
     sourceName: "",
-    projectId: ""
+    projectId: "",
+    bodyText: "",
+    licenseConfirmed: false
   });
+  const [pdfInfo, setPdfInfo] = useState<PdfExtractResult | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importMsg, setImportMsg] = useState<{ type: "ok" | "error" | "info"; text: string }>({ type: "info", text: "" });
   const [pwdCurrent, setPwdCurrent] = useState("");
@@ -500,13 +504,29 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
         authors,
         publicationDate: importForm.publicationDate.trim() || null,
         sourceName: importForm.sourceName.trim() || "手動登録",
-        projectId: importForm.projectId || null
+        projectId: importForm.projectId || null,
+        bodyText: importForm.bodyText && importForm.licenseConfirmed ? importForm.bodyText : null,
+        licenseConfirmed: importForm.licenseConfirmed
       });
       setImportMsg({
         type: "ok",
         text: res.created ? "新規文献として登録しました。" : "既存の文献を再利用しました（重複登録はされません）。"
       });
-      setImportForm((prev) => ({ ...prev, title: "", originalTitle: "", abstract: "", url: "", doi: "", patentNumber: "", authors: "", publicationDate: "", sourceName: "" }));
+      setImportForm((prev) => ({
+        ...prev,
+        title: "",
+        originalTitle: "",
+        abstract: "",
+        url: "",
+        doi: "",
+        patentNumber: "",
+        authors: "",
+        publicationDate: "",
+        sourceName: "",
+        bodyText: "",
+        licenseConfirmed: false
+      }));
+      setPdfInfo(null);
       setImportOpen(false);
       if (importForm.projectId) {
         const pd = await api.projects.documents.list(importForm.projectId);
@@ -525,6 +545,39 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     },
     []
   );
+
+  const handlePdfFile = useCallback(async (file: File | undefined) => {
+    if (!file) {
+      setPdfInfo(null);
+      setImportForm((prev) => ({ ...prev, bodyText: "" }));
+      return;
+    }
+    setImportBusy(true);
+    setImportMsg({ type: "info", text: "PDF の本文を抽出中…" });
+    try {
+      const result = await extractPdfText(file);
+      setPdfInfo(result);
+      if (result.error) {
+        setImportForm((prev) => ({ ...prev, bodyText: "" }));
+        setImportMsg({ type: "error", text: result.error });
+      } else {
+        setImportForm((prev) => ({ ...prev, bodyText: result.text }));
+        setImportMsg({
+          type: "info",
+          text: `PDF から本文を抽出しました（${result.pages} ページ・${result.text.length.toLocaleString("ja-JP")} 文字${result.truncated ? "・上限で切捨て" : ""}）`
+        });
+      }
+    } catch (err) {
+      setPdfInfo(null);
+      setImportMsg({ type: "error", text: err instanceof Error ? err.message : "PDF の本文抽出に失敗しました" });
+    } finally {
+      setImportBusy(false);
+    }
+  }, []);
+
+  const setImportLicense = useCallback((checked: boolean) => {
+    setImportForm((prev) => ({ ...prev, licenseConfirmed: checked }));
+  }, []);
 
   const changePassword = useCallback(async () => {
     if (!pwdCurrent || pwdNew.length < 8) {
@@ -2303,6 +2356,9 @@ export function useStandaloneData({ page, documentId, reportId }: StandaloneData
     setImportOpen,
     importForm,
     setImportField,
+    pdfInfo,
+    handlePdfFile,
+    setImportLicense,
     importBusy,
     importMsg,
     submitImport,

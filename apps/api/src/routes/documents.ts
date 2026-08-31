@@ -47,7 +47,7 @@ const saveSchema = z.object({
 
 const updateSchema = saveSchema.omit({ documentId: true }).partial();
 
-const importSchema = z
+export const importSchema = z
   .object({
     sourceType: z.enum(["web", "paper", "patent", "pdf"]),
     title: z.string().min(1).max(1000),
@@ -66,12 +66,18 @@ const importSchema = z
       .regex(/^\d{4}(-\d{2}(-\d{2})?)?$/, "公開日は YYYY / YYYY-MM / YYYY-MM-DD 形式で指定してください")
       .nullable()
       .optional(),
+    bodyText: z.string().max(500000).nullable().optional(),
+    licenseConfirmed: z.boolean().optional(),
     sourceName: z.string().max(255).nullable().optional(),
     projectId: z.string().uuid().nullable().optional()
   })
   .refine((v) => v.url || v.doi || v.patentNumber, {
     message: "URL・DOI・特許番号のいずれかを指定してください",
     path: ["url"]
+  })
+  .refine((v) => !v.bodyText || v.licenseConfirmed === true, {
+    message: "ライセンス不明の本文は保存できません（メタデータのみ保存可能）。利用許諾を確認してください",
+    path: ["licenseConfirmed"]
   });
 
 const reviewSchema = z.object({
@@ -169,7 +175,14 @@ export function documentRoutes(): Hono<AppBindings> {
           publicationDate: input.publicationDate ?? undefined,
           sourceName: input.sourceName ?? "手動登録"
         },
-        await normalizeContentHash(key.contentHash)
+        await normalizeContentHash(key.contentHash),
+        {
+          bodyText: input.bodyText ?? null,
+          licenseNote:
+            input.bodyText
+              ? "利用許諾確認済み（ユーザー申告・本文保存）"
+              : "公開メタデータ・要旨を中心に利用（本文は原則保存しない）"
+        }
       );
     }
     let saved: ProjectDocument | null = null;
@@ -182,7 +195,13 @@ export function documentRoutes(): Hono<AppBindings> {
       action: "document.import",
       resourceType: "source_document",
       resourceId: document.id,
-      detail: { created, sourceType: input.sourceType, projectId: input.projectId ?? null }
+      detail: {
+        created,
+        sourceType: input.sourceType,
+        projectId: input.projectId ?? null,
+        bodyTextChars: input.bodyText?.length ?? 0,
+        licenseConfirmed: input.licenseConfirmed ?? false
+      }
     });
     return c.json({ document, created, saved }, created ? 201 : 200);
   });

@@ -872,13 +872,19 @@ export async function normalizeContentHash(value: string | null | undefined): Pr
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function insertDocument(db: Db, result: SearchConnectorResult, contentHash: string | null): Promise<SourceDocument> {
+export async function insertDocument(
+  db: Db,
+  result: SearchConnectorResult,
+  contentHash: string | null,
+  options: { bodyText?: string | null; licenseNote?: string } = {}
+): Promise<SourceDocument> {
   const classificationsJson = normalizeClassifications(result.classifications);
   const rows = await db(
     `INSERT INTO source_documents
        (source_type, title, original_title, abstract, url, doi, patent_number, publication_number,
-        patent_status, classifications, authors, inventors, applicants, country, publication_date, source_name, license_note, content_hash)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+        patent_status, classifications, authors, inventors, applicants, country, publication_date, source_name,
+        license_note, content_hash, body_text)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
      RETURNING *`,
     [
       result.sourceType,
@@ -897,8 +903,9 @@ export async function insertDocument(db: Db, result: SearchConnectorResult, cont
       clampMeta(result.country, 50),
       result.publicationDate ?? null,
       clampMeta(result.sourceName, 255),
-      "公開メタデータ・要旨を中心に利用（本文は原則保存しない）",
-      contentHash?.slice(0, 128) ?? null
+      options.licenseNote ?? "公開メタデータ・要旨を中心に利用（本文は原則保存しない）",
+      contentHash?.slice(0, 128) ?? null,
+      options.bodyText ?? null
     ]
   );
   return mapDocument(rows[0]!);

@@ -75,9 +75,14 @@ function baseVars() {
       authors: "",
       publicationDate: "",
       sourceName: "",
-      projectId: ""
+      projectId: "",
+      bodyText: "",
+      licenseConfirmed: false
     },
     setImportField: () => () => undefined,
+    pdfInfo: null,
+    handlePdfFile: () => undefined,
+    setImportLicense: () => undefined,
     importBusy: false,
     importMsg: { type: "info", text: "" },
     submitImport: () => undefined,
@@ -595,5 +600,15 @@ describe("StandaloneView", () => {
     expect(screen.getByLabelText("調べたいことを、そのまま日本語で書いてください")).toBeTruthy();
     expect(screen.getByLabelText("発行年（開始）")).toBeTruthy();
     expect(screen.getByLabelText("発行年（終了）")).toBeTruthy();
+  });
+
+  it("renders the PDF extraction and license controls in the import form", () => {
+    const v = baseVars();
+    v.isDashboard = false;
+    v.isFeed = true;
+    v.importOpen = true;
+    render(<StandaloneView v={v as never} />);
+    expect(screen.getByLabelText("PDF ファイルを選択")).toBeTruthy();
+    expect(screen.getByRole("checkbox")).toBeTruthy();
   });
 });
