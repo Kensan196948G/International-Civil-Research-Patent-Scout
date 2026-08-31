@@ -15,7 +15,7 @@
 
 import { randomUUID } from "node:crypto";
 import { hash } from "bcryptjs";
-import { neon } from "@neondatabase/serverless";
+import { createSql } from "./lib/db.mjs";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -28,7 +28,7 @@ const DEMO_PASSWORD = "DemoPass-2026!";
 const DEMO_MARKER = `demo-admin@${DEMO_DOMAIN}`;
 const DEMO_SOURCE = "デモ用データ";
 
-const sql = neon(DATABASE_URL, { arrayMode: false });
+const sql = createSql(DATABASE_URL);
 
 const daysAgo = (n, h = 9) => {
   const d = new Date();
@@ -1277,7 +1277,11 @@ async function main() {
   console.log("[seed] テーブル件数:", JSON.stringify(counts));
 }
 
-main().catch((err) => {
-  console.error("[seed] 失敗:", err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+main()
+  .catch((err) => {
+    console.error("[seed] 失敗:", err instanceof Error ? err.message : err);
+    process.exit(1);
+  })
+  .finally(async () => {
+    if (sql.end) await sql.end();
+  });

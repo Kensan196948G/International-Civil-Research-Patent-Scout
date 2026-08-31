@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // AI システム設定の E2E スモーク（preview 用。本番 DB では実行しない）
 // 使用法: BASE_URL=http://127.0.0.1:8788 DATABASE_URL='postgresql://...' node scripts/smoke-settings.mjs
-import { neon } from "@neondatabase/serverless";
+import { createSql } from "./lib/db.mjs";
 
 const BASE = process.env.BASE_URL ?? "http://127.0.0.1:8788";
 const DB_URL = process.env.DATABASE_URL;
@@ -37,8 +37,9 @@ async function main() {
   token = reg.accessToken;
 
   // preview DB で admin に昇格（本番では実行しない）
-  const sql = neon(DB_URL, { arrayMode: false });
+  const sql = createSql(DB_URL);
   await sql.query("UPDATE users SET role = 'admin' WHERE lower(email) = lower($1)", [email]);
+  if (sql.end) await sql.end();
   // トークンのロールは発行時点のもののため、再ログインして admin トークンを取得する
   const login = await call("/api/auth/login", { method: "POST", body: { email, password }, auth: false });
   token = login.accessToken;
