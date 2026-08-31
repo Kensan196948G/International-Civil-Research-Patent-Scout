@@ -3,6 +3,7 @@ dist/
 dist-types/
 .wrangler/
 .dev.vars
+.claude/
 .env
 .env.local
 *.log

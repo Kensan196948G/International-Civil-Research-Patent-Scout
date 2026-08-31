@@ -22,5 +22,7 @@ if (failed > 0) {
   for (const r of results.filter((x) => x.error)) {
     console.error(`[icrps-watch] topic=${r.topicId} error=${r.error}`);
   }
-  process.exitCode = 1;
 }
+// ローカルPostgres接続時 (postgres.js) はTCPコネクションプールを保持し続け
+// イベントループが自然にdrainしないため、exitCodeの設定だけでは終了しない。
+process.exit(failed > 0 ? 1 : 0);

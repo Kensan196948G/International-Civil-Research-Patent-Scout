@@ -12,7 +12,7 @@
 import { basename, dirname, join, resolve } from "node:path";
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { neon } from "@neondatabase/serverless";
+import { createSql } from "./lib/db.mjs";
 
 function splitStatements(sql) {
   const parts = [];
@@ -64,7 +64,7 @@ const files = targets.length > 0
   ? targets.map((f) => resolve(f))
   : (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort().map((f) => join(dir, f));
 
-const sql = neon(dbUrl, { arrayMode: false });
+const sql = createSql(dbUrl);
 
 // 適用済み台帳。台帳自身の作成も冪等にする。
 await sql.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -97,3 +97,4 @@ for (const file of files) {
   appliedCount++;
 }
 console.log(`migrations done (applied ${appliedCount} / skipped ${skippedCount})`);
+if (sql.end) await sql.end();
