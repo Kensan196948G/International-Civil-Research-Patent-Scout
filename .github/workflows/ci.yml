@@ -23,3 +23,55 @@ jobs:
       # 開発専用 CLI（wrangler/miniflare/undici）の advisory は Dependabot で追跡し、
       # 修正版が公開され次第 update する（デプロイ成果物には含まれない）。
       - run: npm audit --omit=dev --audit-level=high
+
+  # 主要業務フローの E2E（ローカル PostgreSQL を使用。Neon ブランチ・Secrets 不要）
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: icrps_app
+          POSTGRES_PASSWORD: icrps_ci_password
+          POSTGRES_DB: icrps
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U icrps_app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://icrps_app:icrps_ci_password@127.0.0.1:5432/icrps
+      JWT_SECRET: icrps-ci-only-jwt-secret-not-for-production
+      APP_ENV: test
+      APP_URL: http://127.0.0.1:8787
+      PORT: 8787
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations to CI PostgreSQL
+        run: node scripts/migrate.mjs
+      - name: Build API and web
+        run: npm run build
+      - name: Start API server
+        run: |
+          npm run start --workspace @icrps/api > /tmp/icrps-api.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 3 http://127.0.0.1:8787/api/health | grep -q '"ok":true'; then
+              echo "API is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become ready"
+          cat /tmp/icrps-api.log
+          exit 1
+      - name: E2E smoke (main business flow)
+        run: BASE_URL=http://127.0.0.1:8787 node scripts/smoke-e2e.mjs
+      - name: Local smoke (health / top page / auth guard)
+        run: BASE_URL=http://127.0.0.1:8787 bash scripts/smoke-local.sh
