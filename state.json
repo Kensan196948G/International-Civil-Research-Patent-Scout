@@ -19,8 +19,9 @@
     "max_duration_minutes": 300,
     "last_session": {
       "date": "2026-08-31",
-      "summary": "アクセシビリティ Issue #44（Critical 2 / High 4）を解消（nav の button 化・見出し階層・main/skip-link・ラベル 18 件・コントラスト AA・375px レスポンシブ・/reports エイリアス）。ローカル PostgreSQL 対応 WIP を完成・検証（postgres.js 接続分岐・scripts/lib/db.mjs 共通化・CLI の exit 修正）。ローカル DB（127.0.0.1:5432/icrps）は set_updated_at 所有者を icrps_app に揃えたうえで migration 0001-0010 適用・再実行 skipped・backup/verify/rollback 検証 OK。check 136 テスト PASS・npm audit 0・実ブラウザ E2E 17/17 PASS。#12 を達成（CI へ postgres:17 + migrate + smoke-e2e の e2e ジョブを統合・PR #51）。healthcheck に Webhook 障害通知を追加し #10 の通知経路を実装（PR #52）。",
+      "summary": "アクセシビリティ Issue #44（Critical 2 / High 4）を解消（nav の button 化・見出し階層・main/skip-link・ラベル 18 件・コントラスト AA・375px レスポンシブ・/reports エイリアス）。ローカル PostgreSQL 対応 WIP を完成・検証（postgres.js 接続分岐・scripts/lib/db.mjs 共通化・CLI の exit 修正）。ローカル DB（127.0.0.1:5432/icrps）は set_updated_at 所有者を icrps_app に揃えたうえで migration 0001-0010 適用・再実行 skipped・backup/verify/rollback 検証 OK。check 136 テスト PASS・npm audit 0・実ブラウザ E2E 17/17 PASS。#12 を達成（CI へ postgres:17 + migrate + smoke-e2e の e2e ジョブを統合・PR #51）。healthcheck に Webhook 障害通知を追加し #10 の通知経路を実装（PR #52）。Google Patents / DuckDuckGo パーサのスナップショットテストと運用方針を追加し #4・#3 を達成（PR #53）。",
       "verified": {
+        "connector_snapshots": "Google Patents（結果一覧・スニペット・失敗伝播 4 件）と DuckDuckGo / SerpAPI（5 件）のスナップショットテストを追加し全 PASS",
         "ci_e2e": "GitHub Actions e2e ジョブ PASS（postgres:17 サービス・migration 10 件・smoke-e2e・smoke-local）",
         "healthcheck_alert": "Webhook 通知の受信・exit 1（障害時）/ exit 0（正常時）をローカルで検証・CI に自動検証を追加",
         "local_browser_e2e": "17項目 全OK（scripts/ui-e2e.mjs / Firefox・キーボード nav 遷移・375px モバイル検証を追加。フォント console error 3 は一時的な外部フォント失敗）",
