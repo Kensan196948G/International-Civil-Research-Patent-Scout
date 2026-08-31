@@ -19,6 +19,7 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+      - run: bash -n deploy/scripts/icrps-healthcheck.sh deploy/install-local.sh scripts/smoke-local.sh
       # 本番依存の脆弱性を必須ゲートとする。
       # 開発専用 CLI（wrangler/miniflare/undici）の advisory は Dependabot で追跡し、
       # 修正版が公開され次第 update する（デプロイ成果物には含まれない）。
@@ -75,3 +76,18 @@ jobs:
         run: BASE_URL=http://127.0.0.1:8787 node scripts/smoke-e2e.mjs
       - name: Local smoke (health / top page / auth guard)
         run: BASE_URL=http://127.0.0.1:8787 bash scripts/smoke-local.sh
+      - name: Verify healthcheck alert (webhook)
+        run: |
+          node -e 'const http=require("http");http.createServer((q,s)=>{let b="";q.on("data",c=>b+=c);q.on("end",()=>{console.log(b);s.end("ok");});}).listen(59998,"127.0.0.1")' > /tmp/icrps-webhook.log 2>&1 &
+          WEBHOOK_PID=$!
+          sleep 1
+          set +e
+          ICRPS_HEALTH_URL=http://127.0.0.1:59999 ICRPS_SKIP_RESTART=1 \
+            ICRPS_ALERT_WEBHOOK_URL=http://127.0.0.1:59998/hook \
+            bash deploy/scripts/icrps-healthcheck.sh
+          CODE=$?
+          set -e
+          kill "$WEBHOOK_PID" 2>/dev/null || true
+          test "$CODE" -eq 1 || { echo "healthcheck should exit 1"; exit 1; }
+          grep -q 'health check FAILED' /tmp/icrps-webhook.log || { echo "alert payload not received"; exit 1; }
+          echo "healthcheck alert verified"

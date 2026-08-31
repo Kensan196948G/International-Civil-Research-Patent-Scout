@@ -59,5 +59,26 @@ systemctl start icrps-watch.service         # 手動実行
 ## アラート
 
 - systemd 障害: ユニットは自動再起動（`Restart=always`）
-- DB 障害: `/api/health` の `db != "ok"`
+- DB 障害: `/api/health` の `db != "ok"`（ヘルスチェック失敗として検知・再起動）
 - 依存関係: `npm audit`（CI で high 以上を失敗扱い）
+
+### 障害通知（Webhook）
+
+`/etc/icrps/icrps.env` に `ICRPS_ALERT_WEBHOOK_URL` を設定すると、5 分間隔の
+ヘルスチェック失敗時に Slack 互換 incoming webhook（または任意の JSON POST 先）へ
+以下の形式で通知します。
+
+```json
+{"text":"[ICRPS] health check FAILED at <ISO時刻>\nurl=<対象URL>\nhealth=<health応答>"}
+```
+
+設定例:
+
+```bash
+ICRPS_ALERT_WEBHOOK_URL=https://hooks.slack.com/services/XXXX/YYYY/ZZZZ
+```
+
+設定後は `systemctl restart icrps-healthcheck.service` は不要（timer 実行時に環境ファイルを再読込）。
+通知試験は `ICRPS_HEALTH_URL` を存在しない URL に向けたうえで
+`ICRPS_SKIP_RESTART=1 ICRPS_ALERT_WEBHOOK_URL=... sudo /usr/local/bin/icrps-healthcheck.sh` を実行し、
+通知先で受信と終了コード 1 を確認します（CI でも自動検証）。

@@ -13,8 +13,8 @@
 
 | アラート | 閾値 | 通知 |
 | --- | --- | --- |
-| 警告 | ヘルスチェック 3回連続失敗 / 日次点検で1項目以上 NG | 管理者メール |
-| 重大 | サービス停止 5分以上 / DB degraded / バックアップ検証 NG | 管理者メール＋journal |
+| 警告 | ヘルスチェック失敗（5分間隔・再起動）/ 日次点検で1項目以上 NG | 管理者メール（Resend）＋Webhook（任意） |
+| 重大 | サービス停止 5分以上 / DB degraded / バックアップ検証 NG | 管理者メール＋journal＋Webhook（任意） |
 
 ## 監視の仕組み
 
@@ -22,6 +22,7 @@
 - 日次点検: `icrps-daily.timer`（毎日 03:30・ヘルス＋バックアップ＋検証・結果を `/var/log/icrps/daily-check.log`）
 - 定期処理: `icrps-watch.timer`（2時間） / `icrps-ingest.timer`（2時間）
 - Cloudflare: Workers ログ・トレース（sampling 100%）
+- Webhook 通知: `ICRPS_ALERT_WEBHOOK_URL`（Slack 互換）を `/etc/icrps/icrps.env` に設定（詳細: [monitoring.md](monitoring.md)）
 
 ## 通知試験
 
