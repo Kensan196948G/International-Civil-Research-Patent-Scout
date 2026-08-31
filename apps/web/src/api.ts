@@ -182,8 +182,9 @@ export const api = {
   magicLink: (email: string) => request<{ ok: boolean }>("/api/auth/magic-link", { method: "POST", body: { email } }),
   magicLinkVerify: (token: string) =>
     request<AuthResponse>("/api/auth/magic-link/verify", { method: "POST", body: { token } }),
-  ssoStatus: () => request<{ google: boolean }>("/api/auth/sso", { auth: false }),
+  ssoStatus: () => request<{ google: boolean; microsoft: boolean }>("/api/auth/sso", { auth: false }),
   ssoGoogleUrl: () => request<{ url: string }>("/api/auth/sso/google/url", { auth: false }),
+  ssoMicrosoftUrl: () => request<{ url: string }>("/api/auth/sso/microsoft/url", { auth: false }),
   ssoGoogleCallback: (code: string) =>
     request<AuthResponse>(`/api/auth/sso/google/callback?code=${encodeURIComponent(code)}`, { auth: false }),
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),

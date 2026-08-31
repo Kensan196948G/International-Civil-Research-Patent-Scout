@@ -25,6 +25,8 @@ export interface WorkerEnv {
   MEILISEARCH_API_KEY?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  MICROSOFT_CLIENT_ID?: string;
+  MICROSOFT_CLIENT_SECRET?: string;
   REGISTRATION_MODE?: string;
   ALLOWED_EMAIL_DOMAINS?: string;
   BOOTSTRAP_ADMIN_EMAIL?: string;
@@ -77,10 +79,13 @@ export function resolveEnv(input: Partial<WorkerEnv> | undefined): WorkerEnv {
     MEILISEARCH_API_KEY: get("MEILISEARCH_API_KEY"),
     GOOGLE_CLIENT_ID: get("GOOGLE_CLIENT_ID"),
     GOOGLE_CLIENT_SECRET: get("GOOGLE_CLIENT_SECRET"),
+    MICROSOFT_CLIENT_ID: get("MICROSOFT_CLIENT_ID"),
+    MICROSOFT_CLIENT_SECRET: get("MICROSOFT_CLIENT_SECRET"),
     REGISTRATION_MODE: get("REGISTRATION_MODE") ?? "open",
     ALLOWED_EMAIL_DOMAINS: get("ALLOWED_EMAIL_DOMAINS") ?? "",
     BOOTSTRAP_ADMIN_EMAIL: get("BOOTSTRAP_ADMIN_EMAIL") ?? "",
-    AI_RATE_LIMIT_PER_HOUR: get("AI_RATE_LIMIT_PER_HOUR") ?? "100"
+    AI_RATE_LIMIT_PER_HOUR: get("AI_RATE_LIMIT_PER_HOUR") ?? "100",
+    SEARCH_QUEUE: (input as Partial<WorkerEnv> | undefined)?.SEARCH_QUEUE
   };
 }
 
