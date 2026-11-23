@@ -17,7 +17,7 @@
 | データベース | Neon PostgreSQL（プロジェクト: `International-Civil-Research-Patent-Scout` / `green-dawn-58312822`、aws-ap-southeast-1） |
 | Cloudflare ドメイン | `icrps.mirai-dx-platform.com`（**稼働中** 2026-08-21 v0.12.2 / version 69e5a18e。手順: [domain-migration.md](docs/operations/domain-migration.md)） |
 | サブドメイン候補 | `patent-scout.mirai-dx-platform.com` / `icrps.mirai-dx-platform.com` / `research-patent-scout.mirai-dx-platform.com` / `civil-research-patent-scout.mirai-dx-platform.com` |
-| バージョン | **v0.12.2 全環境反映済み**（本番 version `69e5a18e` / 2026-08-21 / commit `aa43fb3`・migration 不要） |
+| バージョン | 本番 / MVP / preview: **v0.12.2**（2026-08-21）。main: **v0.12.3 / v0.12.4 相当**（ローカル systemd 反映済み・Cloudflare はトークン更新後に反映予定）。変更点: [v0.12.3](docs/release-notes/v0.12.3.md) / [v0.12.4](docs/release-notes/v0.12.4.md) |
 | ロールバック先 | 本番 version `d427904b`（v0.9.0）。手順: [rollback.md](docs/operations/rollback.md) |
 | 既知の制約 | GitHub Actions Secrets 未登録のため `deploy.yml` 経路は未有効（[#39](../../issues/39)）。デプロイは wrangler CLI 経由 |
 

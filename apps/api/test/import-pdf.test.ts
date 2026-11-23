@@ -90,5 +90,13 @@ describe("insertDocument (body_text 保存)", () => {
     expect(query).toContain("license_note");
     expect(params).toContain("抽出した本文");
     expect(params).toContain("利用許諾確認済み（ユーザー申告・本文保存）");
+
+    // 列・プレースホルダー・値の数が一致すること。$20 が余っていた不具合
+    // （PostgreSQL 42601 "INSERT has more expressions than target columns"）の再発防止。
+    const columns = /\(([^)]*)\)\s*VALUES/i.exec(query)![1]!.split(",").map((c) => c.trim());
+    const placeholders = [...query.matchAll(/\$(\d+)/g)].map((m) => Number(m[1]));
+    expect(placeholders).toHaveLength(columns.length);
+    expect(Math.max(...placeholders)).toBe(params.length);
+    expect(params).toHaveLength(columns.length);
   });
 });

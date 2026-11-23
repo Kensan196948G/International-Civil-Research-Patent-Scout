@@ -17,6 +17,7 @@ export function LoginPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [microsoftEnabled, setMicrosoftEnabled] = useState(false);
 
   useEffect(() => {
     if (!magic) return;
@@ -37,7 +38,10 @@ export function LoginPage() {
   useEffect(() => {
     void api
       .ssoStatus()
-      .then((res) => setGoogleEnabled(res.google))
+      .then((res) => {
+        setGoogleEnabled(res.google);
+        setMicrosoftEnabled(res.microsoft);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -74,6 +78,16 @@ export function LoginPage() {
     }
   };
 
+  const microsoftLogin = async () => {
+    setError(null);
+    try {
+      const res = await api.ssoMicrosoftUrl();
+      window.location.assign(res.url);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Microsoft ログインを開始できませんでした");
+    }
+  };
+
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={onSubmit}>
@@ -106,6 +120,9 @@ export function LoginPage() {
         )}
         {googleEnabled && (
           <button type="button" className="auth-button google" onClick={googleLogin}>Google でログイン</button>
+        )}
+        {microsoftEnabled && (
+          <button type="button" className="auth-button google" onClick={microsoftLogin}>Microsoft でログイン</button>
         )}
         <p className="muted">
           アカウントをお持ちでない場合は <Link to="/register">新規登録</Link>
